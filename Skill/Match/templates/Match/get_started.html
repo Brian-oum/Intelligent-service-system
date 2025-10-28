@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Get Started | Choose Role</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    h2 {
+      margin-top: 40px;
+      color: #333;
+    }
+    .card-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 40px;
+      margin-top: 60px;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      width: 250px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+      color: #333;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+    .icon {
+      font-size: 50px;
+      color: #0078D7;
+      margin-bottom: 15px;
+    }
+    p {
+      font-size: 1em;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h2>Select How You Want to Get Started</h2>
+
+  <div class="card-container">
+    <a href="{% url 'register_user' %}" class="card">
+      <div class="icon">🧑</div>
+      <h3>Service Seeker</h3>
+      <p>Looking for verified professionals to get work done.</p>
+    </a>
+
+    <a href="{% url 'register_company' %}" class="card">
+      <div class="icon">🏢</div>
+      <h3>Service Provider</h3>
+      <p>Provide quality services to clients in your area.</p>
+    </a>
+  </div>
+</body>
+</html>

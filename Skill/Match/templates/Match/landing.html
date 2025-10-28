@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Welcome | Intelligent Service Matching System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #0078D7, #00BFA5);
+      color: white;
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    p {
+      max-width: 500px;
+      font-size: 1.1em;
+      line-height: 1.4;
+      margin-bottom: 40px;
+    }
+    a.button {
+      background-color: white;
+      color: #0078D7;
+      text-decoration: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    a.button:hover {
+      background-color: #e1e1e1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Intelligent Service Matching System</h1>
+  <p>Connecting service seekers with verified service providers efficiently and transparently.</p>
+  <a href="{% url 'get_started' %}" class="button">Get Started</a>
+</body>
+</html>
