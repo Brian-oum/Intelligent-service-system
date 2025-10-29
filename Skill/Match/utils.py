@@ -1,4 +1,4 @@
-from .models import CompanyProfile
+from .models import ServiceProvider
 
 def find_best_company(service_request):
     """
@@ -6,7 +6,7 @@ def find_best_company(service_request):
     Based on service category, location, and rating.
     """
     # Step 1: Filter by service category
-    companies = CompanyProfile.objects.filter(
+    companies = ServiceProvider.objects.filter(
         service_category__icontains=service_request.service_type,
         verified=True
     )

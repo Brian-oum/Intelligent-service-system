@@ -17,44 +17,34 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
-class CompanyProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='company_profile')
-    company_name = models.CharField(max_length=200)
-    service_category = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    verified = models.BooleanField(default=False)
-    rating = models.FloatField(default=0.0)
-    location = models.CharField(max_length=100, blank=True)
-    address = models.CharField(max_length=255, blank=True)
+class ServiceProvider(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    company_name = models.CharField(max_length=255)
+    contact_number = models.CharField(max_length=20)
+    address = models.TextField()
+    website = models.URLField(blank=True, null=True)
+    services_offered = models.TextField()
+    logo = models.ImageField(upload_to='provider_logos/', blank=True, null=True)
+    profile_completed = models.BooleanField(default=False)
+
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
 
     def __str__(self):
-        return self.company_name
-    
+        return f"{self.company_name} ({self.user.username})"
+
+
+class CompanyDocument(models.Model):
+    service_provider = models.ForeignKey(ServiceProvider, on_delete=models.CASCADE, related_name='documents')
+    document_name = models.CharField(max_length=255)
+    document_file = models.FileField(upload_to='provider_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.document_name} - {self.service_provider.company_name}"
 STATUS_CHOICES = (
     ('pending', 'Pending'),
     ('matched', 'Matched'),
     ('completed', 'Completed'),
 )
 
-class ServiceRequest(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests')
-    service_type = models.CharField(max_length=100)
-    description = models.TextField()
-    location = models.CharField(max_length=100)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    date_requested = models.DateTimeField(default=timezone.now)
-    matched_company = models.ForeignKey(CompanyProfile, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.service_type} - {self.user.username}"
-
-    def save(self, *args, **kwargs):
-        # ✅ Move the import *inside* the method to break circular import
-        from .utils import find_best_company
-        
-        if not self.pk and not self.matched_company:
-            best_company = find_best_company(self)
-            if best_company:
-                self.matched_company = best_company
-                self.status = 'matched'
-        super().save(*args, **kwargs)

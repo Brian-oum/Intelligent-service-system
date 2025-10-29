@@ -3,9 +3,10 @@ from django.shortcuts import render
 # Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from .forms import UserRegistrationForm, ServiceProviderForm, CompanyDocumentForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .models import User, CompanyProfile
+from .models import User, ServiceProvider
 
 # --- Landing Page ---
 def landing_page(request):
@@ -40,41 +41,67 @@ def register_user(request):
     return render(request, 'Match/register_user.html')
 
 
-# --- Registration for company ---
-def register_company(request):
+# Step 1: Account Registration
+def provider_signup_step1(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password']
-        company_name = request.POST['company_name']
-        category = request.POST['service_category']
-        location = request.POST['location']
-
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Username already taken.")
-            return redirect('register_company')
-
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            role='company',
-            location=location
-        )
-
-        CompanyProfile.objects.create(
-            user=user,
-            company_name=company_name,
-            service_category=category,
-            location=location,
-            verified=False
-        )
-
-        messages.success(request, "Company registered successfully. Await admin verification.")
-        return redirect('login')
-    return render(request, 'Match/register_company.html')
+        user_form = UserRegistrationForm(request.POST)
+        if user_form.is_valid():
+            user = user_form.save(commit=False)
+            user.set_password(user_form.cleaned_data['password'])
+            user.save()
+            # Save user id in session for step 2
+            request.session['provider_user_id'] = user.id
+            return redirect('provider_signup_step2')
+    else:
+        user_form = UserRegistrationForm()
+    return render(request, 'Match/step1_signup.html', {'user_form': user_form})
 
 
+# Step 2: Company Profile + Documents
+def provider_signup_step2(request):
+    user_id = request.session.get('provider_user_id')
+    if not user_id:
+        return redirect('provider_signup_step1')
+    
+    user = User.objects.get(id=user_id)
+
+    if request.method == 'POST':
+        provider_form = ServiceProviderForm(request.POST, request.FILES)
+        doc_forms = [CompanyDocumentForm(request.POST, request.FILES, prefix=str(x)) for x in range(0, 3)]
+
+        forms_valid = provider_form.is_valid() and all([f.is_valid() for f in doc_forms])
+
+        if forms_valid:
+            provider = provider_form.save(commit=False)
+            provider.user = user
+            provider.profile_completed = True
+            provider.save()
+
+            for f in doc_forms:
+                if f.cleaned_data.get('document_file'):
+                    doc = f.save(commit=False)
+                    doc.service_provider = provider
+                    doc.save()
+
+            login(request, user)
+            # Clear session
+            del request.session['provider_user_id']
+            return redirect('provider_dashboard')
+    else:
+        provider_form = ServiceProviderForm()
+        doc_forms = [CompanyDocumentForm(prefix=str(x)) for x in range(0, 3)]
+
+    return render(request, 'Match/step2_signup.html', {
+        'provider_form': provider_form,
+        'doc_forms': doc_forms,
+        'user': user,
+    })
+
+@login_required
+def provider_dashboard(request):
+    provider = ServiceProvider.objects.get(user=request.user)
+    documents = provider.documents.all()
+    return render(request, 'Match/dashboard.html', {'provider': provider, 'documents': documents})
 # --- Login View ---
 def login_view(request):
     if request.method == 'POST':
@@ -84,8 +111,8 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            if user.role == 'company':
-                return redirect('dashboard')  # you can later make a company dashboard
+            if user.role == 'serviceprovider':
+                return redirect('provider_dashboard')  # you can later make a company dashboard
             else:
                 return redirect('dashboard')  # user dashboard
         else:
@@ -98,11 +125,3 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-
-# --- Dashboard (for both roles) ---
-@login_required
-def dashboard(request):
-    if request.user.role == 'company':
-        return render(request, 'Match/dashboard.html', {'role': 'Company'})
-    else:
-        return render(request, 'Match/dashboard.html', {'role': 'User'})
