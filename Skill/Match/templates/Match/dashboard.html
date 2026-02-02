@@ -1,46 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Provider Dashboard</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>{{ provider.company_name }} Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-  <div class="container">
-    <a class="navbar-brand" href="#">Welcome, {{ provider.company_name }}</a>
-  </div>
-</nav>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Service Dashboard</a>
+      <div class="d-flex align-items-center">
+        <span class="navbar-text text-white me-3">
+          Welcome, <strong>{{ provider.company_name }}</strong>
+        </span>
+        <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Logout</a>
+      </div>
+    </div>
+  </nav>
 
-<div class="container">
-  <div class="card mb-4">
-    <div class="card-body">
-      <h4>Company Profile</h4>
-      <p><strong>Contact:</strong> {{ provider.contact_number }}</p>
-      <p><strong>Address:</strong> {{ provider.address }}</p>
-      <p><strong>Website:</strong> <a href="{{ provider.website }}" target="_blank">{{ provider.website }}</a></p>
-      <p><strong>Services:</strong> {{ provider.services_offered }}</p>
-      <p><strong>Location:</strong> {{ provider.latitude }}, {{ provider.longitude }}</p>
+  <!-- Main Dashboard Container -->
+  <div class="container mt-4">
+    <div class="row g-4">
+
+      <!-- Summary Cards -->
+      <div class="col-md-3">
+        <div class="card shadow-sm text-center border-success">
+          <div class="card-body">
+            <h6 class="text-muted">Total Requests</h6>
+            <h2 class="text-success fw-bold">{{ total_requests|default:"0" }}</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card shadow-sm text-center border-primary">
+          <div class="card-body">
+            <h6 class="text-muted">Completed</h6>
+            <h2 class="text-primary fw-bold">{{ completed_requests|default:"0" }}</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card shadow-sm text-center border-warning">
+          <div class="card-body">
+            <h6 class="text-muted">Pending</h6>
+            <h2 class="text-warning fw-bold">{{ pending_requests|default:"0" }}</h2>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card shadow-sm text-center border-info">
+          <div class="card-body">
+            <h6 class="text-muted">Avg Rating</h6>
+            <h2 class="text-info fw-bold">{{ avg_rating|default:"0.0" }}</h2>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Charts and Documents -->
+    <div class="row mt-5">
+      <!-- Chart Section -->
+      <div class="col-md-8">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Monthly Requests Trend</h5>
+            <canvas id="requestsChart" height="120"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents Section -->
+      <div class="col-md-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Documents Uploaded</h5>
+            <ul class="list-group list-group-flush">
+              {% for doc in documents %}
+                <li class="list-group-item">
+                  📄 {{ doc.document_name }}
+                </li>
+              {% empty %}
+                <li class="list-group-item text-muted">
+                  No documents uploaded yet.
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-body">
-      <h4>Company Documents</h4>
-      <ul class="list-group">
-        {% for doc in documents %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          {{ doc.document_name }}
-          <a href="{{ doc.document_file.url }}" target="_blank" class="btn btn-sm btn-primary">View</a>
-        </li>
-        {% empty %}
-        <li class="list-group-item">No documents uploaded yet.</li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
-</div>
+  <!-- Chart.js Script -->
+  <script>
+  const months = JSON.parse('{{ months|safe|escapejs }}');
+  const monthlyRequests = JSON.parse('{{ monthly_requests|safe|escapejs }}');
+
+  const ctx = document.getElementById('requestsChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Monthly Requests',
+        data: monthlyRequests,
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+</script>
+
 
 </body>
 </html>

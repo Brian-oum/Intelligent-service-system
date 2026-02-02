@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Intelligent Service Matching System{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* Basic Reset */
+        * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
+
+        body { background: linear-gradient(135deg, #0078D7, #00BFA5); color:white; min-height:100vh; }
+
+        /* Header */
+        header {
+            width: 100%;
+            padding: 15px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header a.logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        nav a:hover { color: #f1f1f1; }
+
+        /* Dropdown */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: rgba(255,255,255,0.95);
+            min-width: 150px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .dropdown-content a {
+            color: #0078D7;
+            padding: 12px 15px;
+            text-decoration: none;
+            display: block;
+            font-weight: normal;
+        }
+
+        .dropdown-content a:hover { background-color: #f1f1f1; }
+
+        .dropdown:hover .dropdown-content { display: block; }
+
+        /* Main content wrapper */
+        main { display: flex; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 60px); text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="{% url 'landing_page' %}" class="logo">ISMS</a>
+    <nav>
+        {% if user.is_authenticated %}
+            <div class="dropdown">
+                <span>{{ user.username }} <i class="fa fa-caret-down"></i></span>
+                <div class="dropdown-content">
+                    {% if user.role == 'company' %}
+                        <a href="{% url 'provider_dashboard' %}">Profile</a>
+                    {% else %}
+                        <a href="{% url 'landing_page' %}">Profile</a>
+                    {% endif %}
+                    <a href="{% url 'logout' %}">Logout</a>
+                </div>
+            </div>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a>
+            <a href="{% url 'provider_signup_step1' %}">Sign Up as Pro</a>
+        {% endif %}
+    </nav>
+</header>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>
