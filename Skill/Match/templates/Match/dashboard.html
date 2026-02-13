@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "Match/base.html" %}
+{% load static %}
+{% block content %}
 <head>
   <meta charset="UTF-8">
   <title>{{ provider.company_name }} Dashboard</title>
@@ -8,19 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-light">
-
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="#">Service Dashboard</a>
-      <div class="d-flex align-items-center">
-        <span class="navbar-text text-white me-3">
-          Welcome, <strong>{{ provider.company_name }}</strong>
-        </span>
-        <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">Logout</a>
-      </div>
-    </div>
-  </nav>
 
   <!-- Main Dashboard Container -->
   <div class="container mt-4">
@@ -128,5 +116,4 @@
 </script>
 
 
-</body>
-</html>
+{% endblock %}

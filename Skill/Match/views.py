@@ -4,14 +4,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-
+from django.middleware.csrf import rotate_token
 from .forms import (
     UserRegistrationForm,
     ServiceProviderForm,
     CompanyDocumentForm,
     ServiceForm
 )
-from .models import User, ServiceProvider, Service
+from .models import User, ServiceProvider, Service, ServiceCategory
 
 
 # =========================
@@ -56,10 +56,8 @@ def register_user(request):
 
 
 # =========================
-# PROVIDER ONBOARDING
-# =========================
-
 # Step 1: Provider Account
+# =========================
 def provider_signup_step1(request):
     if request.method == 'POST':
         user_form = UserRegistrationForm(request.POST)
@@ -69,54 +67,96 @@ def provider_signup_step1(request):
             user.role = 'company'
             user.save()
 
-            request.session['provider_user_id'] = user.id
+            # Auto-login the new user
+            login(request, user)
+
+            # Redirect to Step 2
             return redirect('provider_signup_step2')
+        else:
+            messages.error(request, "Please fix the errors below.")
     else:
         user_form = UserRegistrationForm()
 
     return render(request, 'Match/step1_signup.html', {'user_form': user_form})
 
 
-# Step 2: Company Profile + Documents
+# =========================
+# Step 2: Provider Profile
+# =========================
+@login_required
 def provider_signup_step2(request):
-    user_id = request.session.get('provider_user_id')
-    if not user_id:
-        return redirect('provider_signup_step1')
+    if request.user.role != 'company':
+        return redirect('login')
 
-    user = get_object_or_404(User, id=user_id)
+    provider, created = ServiceProvider.objects.get_or_create(
+        user=request.user,
+        defaults={'profile_completed': False}
+    )
+
+    if provider.profile_completed:
+        return redirect('provider_dashboard')
 
     if request.method == 'POST':
-        provider_form = ServiceProviderForm(request.POST, request.FILES)
-        doc_forms = [
-            CompanyDocumentForm(request.POST, request.FILES, prefix=str(i))
-            for i in range(3)
-        ]
+        provider_form = ServiceProviderForm(
+            request.POST,
+            instance=provider,
+            prefix='provider'
+        )
 
-        if provider_form.is_valid() and all(f.is_valid() for f in doc_forms):
+        service_form = ServiceForm(
+            request.POST,
+            prefix='service'
+        )
+
+        document_form = CompanyDocumentForm(
+            request.POST,
+            request.FILES,
+            prefix='doc'
+        )
+
+        if provider_form.is_valid() and service_form.is_valid():
+
+            # Save provider
             provider = provider_form.save(commit=False)
-            provider.user = user
-            provider.profile_completed = False
+            provider.profile_completed = True
             provider.save()
 
-            for f in doc_forms:
-                if f.cleaned_data.get('document_file'):
-                    doc = f.save(commit=False)
-                    doc.service_provider = provider
-                    doc.save()
+            # Save service (IMPORTANT for Option 3 category logic)
+            service = service_form.save(commit=False)
+            service.provider = provider
+            service.category = service_form.cleaned_data['category']
+            service.save()
 
-            login(request, user)
-            del request.session['provider_user_id']
-            return redirect('add_service')
+            # Save document ONLY if file uploaded
+            if (
+                document_form.is_valid()
+                and document_form.cleaned_data.get('document_file')
+            ):
+                document = document_form.save(commit=False)
+                document.service_provider = provider
+                document.save()
+
+            messages.success(request, "Profile completed successfully!")
+            return redirect('provider_dashboard')
+
+        else:
+            messages.error(request, "Please check the form for errors.")
 
     else:
-        provider_form = ServiceProviderForm()
-        doc_forms = [CompanyDocumentForm(prefix=str(i)) for i in range(3)]
+        provider_form = ServiceProviderForm(
+            instance=provider,
+            prefix='provider'
+        )
+        service_form = ServiceForm(prefix='service')
+        document_form = CompanyDocumentForm(prefix='doc')
 
-    return render(request, 'Match/step2_signup.html', {
+    context = {
         'provider_form': provider_form,
-        'doc_forms': doc_forms
-    })
+        'service_form': service_form,
+        'document_form': document_form,
+    }
 
+    return render(request, 'Match/step2_signup.html', context)
 
 # =========================
 # SERVICES
@@ -191,7 +231,13 @@ def provider_dashboard(request):
     if request.user.role != 'company':
         return redirect('login')
 
-    provider = get_object_or_404(ServiceProvider, user=request.user)
+    provider = ServiceProvider.objects.filter(user=request.user).first()
+
+    # 🚫 HARD GATE
+    if not provider or not provider.profile_completed:
+        messages.info(request, "Complete your business profile to access the dashboard.")
+        return redirect('provider_signup_step2')
+
     services = provider.services.all()
     documents = provider.documents.all()
 
@@ -200,7 +246,6 @@ def provider_dashboard(request):
         'services': services,
         'documents': documents,
     })
-
 
 # =========================
 # AUTH
@@ -212,10 +257,18 @@ def login_view(request):
         password = request.POST['password']
 
         user = authenticate(request, username=username, password=password)
+
         if user:
             login(request, user)
+
             if user.role == 'company':
-                return redirect('provider_dashboard')
+                provider = ServiceProvider.objects.filter(user=user).first()
+
+                if provider and provider.profile_completed:
+                    return redirect('provider_dashboard')
+                else:
+                    return redirect('provider_signup_step2')
+
             return redirect('landing_page')
 
         messages.error(request, "Invalid username or password.")

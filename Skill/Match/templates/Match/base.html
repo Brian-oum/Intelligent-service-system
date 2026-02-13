@@ -8,7 +8,8 @@
         /* Basic Reset */
         * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
 
-        body { background: linear-gradient(135deg, #0078D7, #00BFA5); color:white; min-height:100vh; }
+        body { background: white;
+             color:#06253f; min-height:100vh; }
 
         /* Header */
         header {
@@ -17,7 +18,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background-color: rgba(0,0,0,0.2);
+            background-color:white;
             position: sticky;
             top: 0;
             z-index: 100;
@@ -26,7 +27,7 @@
         header a.logo {
             font-size: 1.5em;
             font-weight: bold;
-            color: white;
+            color: rgb(8, 3, 53);
             text-decoration: none;
         }
 
@@ -37,13 +38,11 @@
         }
 
         nav a {
-            color: white;
+            color: rgb(12, 4, 32);
             text-decoration: none;
             font-weight: bold;
             transition: 0.3s;
         }
-
-        nav a:hover { color: #f1f1f1; }
 
         /* Dropdown */
         .dropdown {
@@ -65,19 +64,21 @@
         }
 
         .dropdown-content a {
-            color: #0078D7;
+            color: #06253f;
             padding: 12px 15px;
             text-decoration: none;
             display: block;
             font-weight: normal;
         }
-
-        .dropdown-content a:hover { background-color: #f1f1f1; }
-
         .dropdown:hover .dropdown-content { display: block; }
 
-        /* Main content wrapper */
-        main { display: flex; flex-direction: column; justify-content: center; align-items: center; height: calc(100vh - 60px); text-align: center; padding: 20px; }
+    main {
+        display: block;        /* normal vertical flow */
+        padding: 20px;
+        min-height: auto;      /* let content decide height */
+        text-align: left;      /* optional for forms */
+    }
+
     </style>
 </head>
 <body>
