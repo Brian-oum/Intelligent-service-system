@@ -1,8 +1,10 @@
 from django.db import models
-
-# Create your models here.
 from django.contrib.auth.models import AbstractUser
-from django.utils import timezone
+from django.utils.text import slugify
+
+# =========================
+# User & Roles
+# =========================
 
 USER_ROLES = (
     ('user', 'Service Seeker'),
@@ -17,44 +19,87 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
-class CompanyProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='company_profile')
-    company_name = models.CharField(max_length=200)
-    service_category = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    verified = models.BooleanField(default=False)
-    rating = models.FloatField(default=0.0)
-    location = models.CharField(max_length=100, blank=True)
-    address = models.CharField(max_length=255, blank=True)
+
+# =========================
+# Service Provider Profile
+# =========================
+
+class ServiceProvider(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    company_name = models.CharField(max_length=255)
+    contact_number = models.CharField(max_length=20)
+    address = models.TextField()
+
+    website = models.URLField(blank=True, null=True)
+
+    profile_completed = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
+
+
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
 
     def __str__(self):
         return self.company_name
-    
-STATUS_CHOICES = (
-    ('pending', 'Pending'),
-    ('matched', 'Matched'),
-    ('completed', 'Completed'),
-)
 
-class ServiceRequest(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests')
-    service_type = models.CharField(max_length=100)
-    description = models.TextField()
-    location = models.CharField(max_length=100)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    date_requested = models.DateTimeField(default=timezone.now)
-    matched_company = models.ForeignKey(CompanyProfile, on_delete=models.SET_NULL, null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.service_type} - {self.user.username}"
+# =========================
+# Service Categories
+# =========================
+
+class ServiceCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(unique=True, blank=True)
 
     def save(self, *args, **kwargs):
-        # ✅ Move the import *inside* the method to break circular import
-        from .utils import find_best_company
-        
-        if not self.pk and not self.matched_company:
-            best_company = find_best_company(self)
-            if best_company:
-                self.matched_company = best_company
-                self.status = 'matched'
+        if not self.slug:
+            self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+# =========================
+# Services Offered
+# =========================
+
+class Service(models.Model):
+    provider = models.ForeignKey(
+        ServiceProvider,
+        on_delete=models.CASCADE,
+        related_name='services'
+    )
+    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE)
+
+    title = models.CharField(max_length=150)
+    description = models.TextField()
+
+    min_price = models.DecimalField(max_digits=10, decimal_places=2)
+    max_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - {self.provider.company_name}"
+
+
+# =========================
+# Company Verification Documents
+# =========================
+
+class CompanyDocument(models.Model):
+    service_provider = models.ForeignKey(
+        ServiceProvider,
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    document_name = models.CharField(max_length=255)
+    document_file = models.FileField(upload_to='provider_documents/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.document_name} - {self.service_provider.company_name}"

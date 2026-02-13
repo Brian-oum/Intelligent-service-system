@@ -1,8 +1,8 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Login | Skill</title>
-</head>
+{% extends 'Match/base.html' %}
+
+{% block title %}Welcome | Intelligent Service Matching System{% endblock %}
+
+{% block content %}
 <body>
   <h2>Login</h2>
   {% if messages %}
@@ -19,6 +19,6 @@
   </form>
 
   <p>New here? <a href="{% url 'register_user' %}">Register as User</a> |
-     <a href="{% url 'register_company' %}">Register as Company</a></p>
-</body>
-</html>
+     <a href="{% url 'provider_signup_step1' %}">Register as Company</a></p>
+{% endblock %}
+

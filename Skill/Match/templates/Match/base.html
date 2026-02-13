@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Intelligent Service Matching System{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* Basic Reset */
+        * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
+
+        body { background: white;
+             color:#06253f; min-height:100vh; }
+
+        /* Header */
+        header {
+            width: 100%;
+            padding: 15px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color:white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header a.logo {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: rgb(8, 3, 53);
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        nav a {
+            color: rgb(12, 4, 32);
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        /* Dropdown */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: rgba(255,255,255,0.95);
+            min-width: 150px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .dropdown-content a {
+            color: #06253f;
+            padding: 12px 15px;
+            text-decoration: none;
+            display: block;
+            font-weight: normal;
+        }
+        .dropdown:hover .dropdown-content { display: block; }
+
+    main {
+        display: block;        /* normal vertical flow */
+        padding: 20px;
+        min-height: auto;      /* let content decide height */
+        text-align: left;      /* optional for forms */
+    }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="{% url 'landing_page' %}" class="logo">ISMS</a>
+    <nav>
+        {% if user.is_authenticated %}
+            <div class="dropdown">
+                <span>{{ user.username }} <i class="fa fa-caret-down"></i></span>
+                <div class="dropdown-content">
+                    {% if user.role == 'company' %}
+                        <a href="{% url 'provider_dashboard' %}">Profile</a>
+                    {% else %}
+                        <a href="{% url 'landing_page' %}">Profile</a>
+                    {% endif %}
+                    <a href="{% url 'logout' %}">Logout</a>
+                </div>
+            </div>
+        {% else %}
+            <a href="{% url 'login' %}">Login</a>
+            <a href="{% url 'provider_signup_step1' %}">Sign Up as Pro</a>
+        {% endif %}
+    </nav>
+</header>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>
