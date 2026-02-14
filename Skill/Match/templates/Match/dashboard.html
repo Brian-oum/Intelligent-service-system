@@ -16,7 +16,7 @@
 
       <!-- Summary Cards -->
       <div class="col-md-3">
-        <div class="card shadow-sm text-center border-success">
+        <div class="card shadow-sm text-center">
           <div class="card-body">
             <h6 class="text-muted">Total Requests</h6>
             <h2 class="text-success fw-bold">{{ total_requests|default:"0" }}</h2>
@@ -25,7 +25,7 @@
       </div>
 
       <div class="col-md-3">
-        <div class="card shadow-sm text-center border-primary">
+        <div class="card shadow-sm text-center">
           <div class="card-body">
             <h6 class="text-muted">Completed</h6>
             <h2 class="text-primary fw-bold">{{ completed_requests|default:"0" }}</h2>
@@ -34,7 +34,7 @@
       </div>
 
       <div class="col-md-3">
-        <div class="card shadow-sm text-center border-warning">
+        <div class="card shadow-sm text-center">
           <div class="card-body">
             <h6 class="text-muted">Pending</h6>
             <h2 class="text-warning fw-bold">{{ pending_requests|default:"0" }}</h2>
@@ -43,7 +43,7 @@
       </div>
 
       <div class="col-md-3">
-        <div class="card shadow-sm text-center border-info">
+        <div class="card shadow-sm text-center">
           <div class="card-body">
             <h6 class="text-muted">Avg Rating</h6>
             <h2 class="text-info fw-bold">{{ avg_rating|default:"0.0" }}</h2>
@@ -53,7 +53,7 @@
 
     </div>
 
-    <!-- Charts and Documents -->
+    <!-- Charts and Current Requests -->
     <div class="row mt-5">
       <!-- Chart Section -->
       <div class="col-md-8">
@@ -65,22 +65,25 @@
         </div>
       </div>
 
-      <!-- Documents Section -->
+      <!-- Current Requests Section (replacing Documents) -->
       <div class="col-md-4">
         <div class="card shadow-sm">
           <div class="card-body">
-            <h5 class="card-title mb-3">Documents Uploaded</h5>
-            <ul class="list-group list-group-flush">
-              {% for doc in documents %}
-                <li class="list-group-item">
-                  📄 {{ doc.document_name }}
-                </li>
-              {% empty %}
-                <li class="list-group-item text-muted">
-                  No documents uploaded yet.
-                </li>
-              {% endfor %}
-            </ul>
+            <h5 class="card-title mb-3">Current Requests</h5>
+            {% if latest_requests %}
+              <ul class="list-group list-group-flush">
+                {% for request in latest_requests %}
+                  <li class="list-group-item">
+                    <strong>Service:</strong> {{ request.service.title }} <br>
+                    <strong>Location:</strong> {{ request.location }} <br>
+                    <strong>Requested by:</strong> {{ request.user.username }} <br>
+                    <strong>Status:</strong> {{ request.get_status_display }}
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-muted">No current requests.</p>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -114,6 +117,5 @@
     }
   });
 </script>
-
 
 {% endblock %}

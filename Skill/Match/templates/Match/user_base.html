@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Intelligent Service Matching System{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+    /* Basic Navbar Styling */
+    .main-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 40px;
+        background: white;
+        border-bottom: 1px solid #eee;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 25px;
+    }
+
+    .nav-link {
+        text-decoration: none;
+        color: #666;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+
+    /* Brand Logo Styles */
+    .brand-text {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2d2d2d;
+    }
+
+    .brand-icon {
+        background-color: #0096d6;
+        color: white;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    /* Sign Up Button (Logged Out) */
+    .btn-signup {
+        background-color: #0096d6;
+        color: white;
+        padding: 10px 24px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    /* User Profile Styles (Logged In) */
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+    .avatar {
+        background-color: #e8f0fe;
+        color: #1a73e8;
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+
+    .dropdown-arrow {
+        font-size: 0.6rem;
+        color: #999;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <nav class="main-nav">
+        
+        <!-- Brand -->
+        <div class="nav-brand">
+            <a href="{% url 'landing_page' %}">
+                {% if user.is_authenticated %}
+                    <div class="brand-icon">T</div>
+                {% else %}
+                    <span class="brand-text">eFundi</span>
+                {% endif %}
+            </a>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="nav-links">
+
+            {% if user.is_authenticated %}
+
+                <a href="#" class="nav-link">Plan</a>
+                <a href="#" class="nav-link">Team</a>
+                <a href="#" class="nav-link">Inbox</a>
+
+                <div class="user-profile">
+                    <div class="avatar">
+                        {{ user.first_name|slice:":1"|upper }}
+                    </div>
+                    <span class="username">{{ user.first_name }}</span>
+                    <i class="fas fa-chevron-down dropdown-arrow"></i>
+                </div>
+
+                <a href="{% url 'logout' %}" class="nav-link">Logout</a>
+
+            {% else %}
+                <a href="{% url 'provider_signup_step1' %}" class="nav-link">Join as a pro</a>
+                <a href="{% url 'register_user' %}" class="btn-signup">Sign up</a>
+                <a href="{% url 'login' %}" class="nav-link">Log in</a>
+
+            {% endif %}
+
+        </div>
+
+    </nav>
+</header>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

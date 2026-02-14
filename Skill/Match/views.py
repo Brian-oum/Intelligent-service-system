@@ -11,7 +11,7 @@ from .forms import (
     CompanyDocumentForm,
     ServiceForm
 )
-from .models import User, ServiceProvider, Service, ServiceCategory
+from .models import User, ServiceProvider, Service, ServiceRequest
 
 
 # =========================
@@ -54,6 +54,38 @@ def register_user(request):
 
     return render(request, 'Match/register_user.html')
 
+# =========================
+# AUTH
+# =========================
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+
+        user = authenticate(request, username=username, password=password)
+
+        if user:
+            login(request, user)
+
+            if user.role == 'company':
+                provider = ServiceProvider.objects.filter(user=user).first()
+
+                if provider and provider.profile_completed:
+                    return redirect('provider_dashboard')
+                else:
+                    return redirect('provider_signup_step2')
+
+            return redirect('landing_page')
+
+        messages.error(request, "Invalid username or password.")
+
+    return render(request, 'Match/login.html')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
 
 # =========================
 # Step 1: Provider Account
@@ -226,6 +258,10 @@ def delete_service(request, service_id):
 # PROVIDER DASHBOARD
 # =========================
 
+# =========================
+# PROVIDER DASHBOARD
+# =========================
+
 @login_required
 def provider_dashboard(request):
     if request.user.role != 'company':
@@ -233,49 +269,21 @@ def provider_dashboard(request):
 
     provider = ServiceProvider.objects.filter(user=request.user).first()
 
-    # 🚫 HARD GATE
+    # 🚫 HARD GATE: Ensure profile is completed
     if not provider or not provider.profile_completed:
         messages.info(request, "Complete your business profile to access the dashboard.")
         return redirect('provider_signup_step2')
 
     services = provider.services.all()
-    documents = provider.documents.all()
+
+    # Get the latest 5 requests for this provider's services
+    latest_requests = ServiceRequest.objects.filter(
+        service__provider=provider
+    ).order_by('-created_at')[:5]
 
     return render(request, 'Match/dashboard.html', {
         'provider': provider,
         'services': services,
-        'documents': documents,
+        'latest_requests': latest_requests,
+        # documents removed since we are replacing it
     })
-
-# =========================
-# AUTH
-# =========================
-
-def login_view(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-
-        user = authenticate(request, username=username, password=password)
-
-        if user:
-            login(request, user)
-
-            if user.role == 'company':
-                provider = ServiceProvider.objects.filter(user=user).first()
-
-                if provider and provider.profile_completed:
-                    return redirect('provider_dashboard')
-                else:
-                    return redirect('provider_signup_step2')
-
-            return redirect('landing_page')
-
-        messages.error(request, "Invalid username or password.")
-
-    return render(request, 'Match/login.html')
-
-
-def logout_view(request):
-    logout(request)
-    return redirect('login')
