@@ -1,0 +1,206 @@
+{% extends 'Match/user_base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<style>
+    :root {
+        --form-border-color: #d1d5db;
+        --text-main: #374151;
+    }
+
+    .request-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .request-card {
+        background: #fff;
+        padding: 40px;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 550px;
+    }
+
+    /* Minimalist Header from your Screenshot */
+    .request-header {
+        font-size: 1.6rem;
+        font-weight: 500;
+        color: var(--text-main);
+        border-bottom: 3px solid #000;
+        display: inline-block;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+    }
+
+    .service-subtitle {
+        display: block;
+        color: #6b7280;
+        font-size: 0.9rem;
+        margin-bottom: 30px;
+    }
+
+    /* Pill-shaped inputs */
+    .form-control-pill {
+        width: 100%;
+        padding: 12px 25px;
+        border: 1px solid var(--form-border-color);
+        border-radius: 50px !important;
+        font-size: 15px;
+        transition: all 0.2s ease;
+        background-color: #fff;
+        margin-bottom: 20px;
+    }
+
+    textarea.form-control-pill {
+        border-radius: 20px !important; /* Slightly less rounded for textareas */
+        resize: none;
+        height: 120px;
+    }
+
+    .form-control-pill:focus {
+        border-color: #000;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+    }
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: block;
+        color: var(--text-main);
+        padding-left: 15px;
+        font-size: 0.9rem;
+    }
+
+    .map-trigger {
+        cursor: pointer;
+        background-color: #f9fafb !important;
+        border: 1px dashed var(--form-border-color);
+    }
+
+    .btn-submit {
+        background-color: #000;
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 14px;
+        width: 100%;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s;
+    }
+
+    .btn-submit:hover {
+        background-color: #333;
+        transform: translateY(-1px);
+    }
+
+    #map { height: 350px; width: 100%; border-radius: 15px; }
+
+    /* Custom Search bar inside modal */
+    .search-pill-container {
+        display: flex;
+        background: #fff;
+        border: 1px solid var(--form-border-color);
+        border-radius: 50px;
+        overflow: hidden;
+        padding: 4px;
+    }
+    .search-pill-container input { border: none !important; flex-grow: 1; padding-left: 15px; }
+</style>
+
+<div class="request-container">
+    <div class="request-card shadow-sm">
+        
+        <h2 class="request-header">Request {{ service.title }}</h2>
+        <form method="POST">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label">Service Location</label>
+                <input type="text" name="location" id="display_location" class="form-control-pill map-trigger" 
+                       placeholder="📍 Tap to pin exact location on map" readonly 
+                       data-bs-toggle="modal" data-bs-target="#mapModal" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Describe your needs</label>
+                <textarea name="description" class="form-control-pill" placeholder="Example: I need the cleaning done by Friday afternoon..."></textarea>
+            </div>
+
+            <input type="hidden" name="latitude" id="id_latitude">
+            <input type="hidden" name="longitude" id="id_longitude">
+
+            <button type="submit" class="btn-submit">Submit Request</button>
+        </form>
+
+    </div>
+</div>
+
+<div class="modal fade" id="mapModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold m-0">Pin Service Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="search-pill-container mb-3">
+                    <input type="text" id="map-search" class="form-control" placeholder="Search neighborhood...">
+                    <button class="btn btn-dark btn-sm rounded-pill px-3" type="button" id="search-btn">Find</button>
+                </div>
+                <div id="map"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-success px-5 text-white rounded-pill" id="confirmLocation">Set Location</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let map, marker;
+    const latInput = document.getElementById("id_latitude");
+    const lngInput = document.getElementById("id_longitude");
+    const displayInput = document.getElementById("display_location");
+    const modalElement = document.getElementById('mapModal');
+
+    modalElement.addEventListener('shown.bs.modal', function () {
+        setTimeout(() => {
+            if (!map) {
+                map = L.map("map").setView([-1.286389, 36.817223], 13);
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+                map.on("click", function (e) {
+                    if (marker) map.removeLayer(marker);
+                    marker = L.marker(e.latlng).addTo(map);
+                    latInput.value = e.latlng.lat;
+                    lngInput.value = e.latlng.lng;
+                });
+            } else { map.invalidateSize(); }
+        }, 200);
+    });
+
+    document.getElementById("confirmLocation").addEventListener("click", function() {
+        if (latInput.value) {
+            displayInput.value = "Location pinned ✅";
+            bootstrap.Modal.getInstance(modalElement).hide();
+        } else { alert("Please pin a location on the map."); }
+    });
+
+    document.getElementById("search-btn").addEventListener("click", function() {
+        const query = document.getElementById("map-search").value;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
+            .then(r => r.json()).then(data => {
+                if (data.length > 0) map.setView([data[0].lat, data[0].lon], 15);
+            });
+    });
+</script>
+
+{% endblock %}
