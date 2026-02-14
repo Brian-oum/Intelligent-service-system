@@ -258,10 +258,6 @@ def delete_service(request, service_id):
 # PROVIDER DASHBOARD
 # =========================
 
-# =========================
-# PROVIDER DASHBOARD
-# =========================
-
 @login_required
 def provider_dashboard(request):
     if request.user.role != 'company':
@@ -286,4 +282,45 @@ def provider_dashboard(request):
         'services': services,
         'latest_requests': latest_requests,
         # documents removed since we are replacing it
+    })
+
+# =========================
+# SERVICE REQUEST
+# =========================
+def search_services(request):
+    query = request.GET.get('q')
+
+    # 🚫 If not logged in → redirect
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    services = Service.objects.all()
+
+    if query:
+        services = services.filter(title__icontains=query)
+
+    return render(request, 'Match/service_results.html', {
+        'services': services,
+        'query': query,
+    })
+
+@login_required
+def create_request(request, service_id):
+    service = Service.objects.get(id=service_id)
+
+    if request.method == "POST":
+        location = request.POST.get('location')
+        description = request.POST.get('description')
+
+        ServiceRequest.objects.create(
+            user=request.user,
+            service=service,
+            location=location,
+            description=description,
+        )
+
+        return redirect('landing_page')  # or wherever you want
+
+    return render(request, 'Match/request.html', {
+        'service': service
     })

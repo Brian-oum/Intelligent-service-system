@@ -1,0 +1,124 @@
+{% extends 'Match/user_base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --text-main: #374151;
+        --text-muted: #6b7280;
+        --border-color: #e5e7eb;
+    }
+
+    /* Minimalist Header from your Screenshot */
+    .services-header {
+        font-size: 1.8rem;
+        font-weight: 500;
+        color: var(--text-main);
+        border-bottom: 3px solid #000;
+        display: inline-block;
+        padding-bottom: 5px;
+        margin-bottom: 40px;
+    }
+
+    /* Grid Layout */
+    .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 25px;
+    }
+
+    /* Refined Service Card */
+    .service-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 25px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .service-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        border-color: #000;
+    }
+
+    .service-card h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #000;
+        margin-bottom: 12px;
+    }
+
+    .service-card p {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 20px;
+        /* Limits description to 3 lines for visual balance */
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Pill Button */
+    .btn-request {
+        background-color: #000;
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 10px 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        width: 90%;
+        transition: background-color 0.2s;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-request:hover {
+        background-color: #333;
+        color: #fff;
+    }
+
+    /* Empty State */
+    .no-services {
+        text-align: center;
+        padding: 60px;
+        background: #f9fafb;
+        border-radius: 20px;
+        color: var(--text-muted);
+    }
+</style>
+
+<div class="container my-5">
+    <h2 class="services-header">Available Services</h2>
+
+    {% if services %}
+        <div class="services-grid">
+            {% for service in services %}
+                <div class="service-card shadow-sm">
+                    <div>
+                        <h3>{{ service.title }}</h3>
+                        <p>{{ service.description }}</p>
+                    </div>
+
+                    <div class="mt-auto">
+                        <a href="{% url 'create_request' service.id %}" class="btn-request">
+                            Request Service
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-services">
+            <p class="mb-0">No services found in your area. Please check back later.</p>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

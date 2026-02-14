@@ -7,13 +7,14 @@
     <h1 class="hero-title">Home improvement.<br>made easy.</h1>
 
     <div class="search-wrapper">
-        <form action="{% url 'login' %}" method="GET" class="search-bar">
-            <input type="text" placeholder="Describe your project or problem — be as detailed as you'd like!" class="search-input">
+        <form action="{% url 'search_services' %}" method="GET" class="search-bar">
+            <input type="text" name="q" placeholder="Describe your project or problem — be as detailed as you'd like!" class="search-input">
             <div class="location-box">
                 <span class="location-icon">📍</span>
             </div>
             <button type="submit" class="search-button">Search</button>
         </form>
+
     </div>
 
     <div class="image-mask">
@@ -115,7 +116,7 @@
     .site-footer {
         background-color: white;
         /* The Blue Line separator */
-        border-top: 4px solid #0096d6; 
+        border-top: 4px solid #03141b; 
         padding: 40px 20px;
         text-align: center;
         color: #666;

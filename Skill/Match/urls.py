@@ -10,4 +10,6 @@ urlpatterns = [
     path('signup/step2/', views.provider_signup_step2, name='provider_signup_step2'),
     path('dashboard/', views.provider_dashboard, name='provider_dashboard'),
     path('logout/', views.logout_view, name='logout'),
+    path('search/', views.search_services, name='search_services'),
+    path('request/<int:service_id>/', views.create_request, name='create_request'),
 ]
