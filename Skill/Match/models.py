@@ -103,3 +103,32 @@ class CompanyDocument(models.Model):
 
     def __str__(self):
         return f"{self.document_name} - {self.service_provider.company_name}"
+
+# =========================
+# Service Requests
+# =========================
+
+class ServiceRequest(models.Model):
+    user = models.ForeignKey(
+        'User', 
+        on_delete=models.CASCADE, 
+        related_name='requests'
+    )
+    service = models.ForeignKey(
+        Service, 
+        on_delete=models.CASCADE, 
+        related_name='requests'
+    )
+    location = models.CharField(max_length=255)  # Where service is needed
+    description = models.TextField(blank=True)  # Optional extra details
+    status_choices = (
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    )
+    status = models.CharField(max_length=20, choices=status_choices, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.service.title} requested by {self.user.username}"

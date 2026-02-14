@@ -1,27 +1,145 @@
-{% extends 'Match/base.html' %}
+{% extends 'Match/user_base.html' %}
 
-{% block title %}Welcome | Intelligent Service Matching System{% endblock %}
+{% block title %}Welcome | Home Improvement Made Easy{% endblock %}
 
 {% block content %}
-<h1>Welcome to Intelligent Service Matching System</h1>
-<p>Connecting service seekers with verified service providers efficiently, transparently, and locally.</p>
-<a href="{% url 'get_started' %}" class="button">Get Started</a>
+<div class="hero-container">
+    <h1 class="hero-title">Home improvement.<br>made easy.</h1>
+
+    <div class="search-wrapper">
+        <form action="{% url 'login' %}" method="GET" class="search-bar">
+            <input type="text" placeholder="Describe your project or problem — be as detailed as you'd like!" class="search-input">
+            <div class="location-box">
+                <span class="location-icon">📍</span>
+            </div>
+            <button type="submit" class="search-button">Search</button>
+        </form>
+    </div>
+
+    <div class="image-mask">
+        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000" alt="Beautiful homes">
+    </div>
+</div>
+
+<footer class="site-footer">
+    <div class="footer-content">
+        <p>&copy; 2026 Intelligent Service Matching System. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact Us</a>
+        </div>
+    </div>
+</footer>
 
 <style>
-.button {
-    background-color: white;
-    color: #0078D7;
-    text-decoration: none;
-    padding: 18px 40px;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 1.1em;
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-.button:hover {
-    background-color: #f1f1f1;
-    transform: translateY(-2px);
-}
+    /* Main Layout */
+    .hero-container {
+        text-align: center;
+        padding: 60px 20px;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        min-height: calc(100vh - 200px); /* Keeps footer at bottom on short pages */
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: #2d2d2d;
+        line-height: 1.1;
+        margin-bottom: 40px;
+    }
+
+    /* Search Bar Styling */
+    .search-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 50px;
+    }
+
+    .search-bar {
+        display: flex;
+        width: 100%;
+        max-width: 800px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .search-input {
+        flex: 1;
+        padding: 18px 20px;
+        border: none;
+        outline: none;
+        font-size: 1rem;
+    }
+
+    .location-box {
+        width: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-left: 1px solid #eee;
+        background: #fff;
+    }
+
+    .search-button {
+        background-color: #0096d6;
+        color: white;
+        border: none;
+        padding: 0 35px;
+        font-weight: bold;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    /* Arched Image */
+    .image-mask {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto 60px auto; /* Added bottom margin */
+        height: 300px;
+        border-radius: 300px 300px 0 0;
+        overflow: hidden;
+    }
+
+    .image-mask img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Footer Styling */
+    .site-footer {
+        background-color: white;
+        /* The Blue Line separator */
+        border-top: 4px solid #0096d6; 
+        padding: 40px 20px;
+        text-align: center;
+        color: #666;
+        font-family: sans-serif;
+    }
+
+    .footer-content {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .footer-links {
+        margin-top: 15px;
+    }
+
+    .footer-links a {
+        color: #0096d6;
+        text-decoration: none;
+        margin: 0 15px;
+        font-size: 0.9rem;
+    }
+
+    .footer-links a:hover {
+        text-decoration: underline;
+    }
 </style>
 {% endblock %}

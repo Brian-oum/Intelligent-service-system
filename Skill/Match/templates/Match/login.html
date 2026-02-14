@@ -1,24 +1,143 @@
-{% extends 'Match/base.html' %}
-
-{% block title %}Welcome | Intelligent Service Matching System{% endblock %}
 
 {% block content %}
-<body>
-  <h2>Login</h2>
-  {% if messages %}
-    {% for msg in messages %}
-      <p style="color:red">{{ msg }}</p>
-    {% endfor %}
-  {% endif %}
 
-  <form method="POST">
-    {% csrf_token %}
-    <input type="text" name="username" placeholder="Username" required><br>
-    <input type="password" name="password" placeholder="Password" required><br>
-    <button type="submit">Login</button>
-  </form>
+<style>
+    :root {
+        --form-border-color: #d1d5db;
+        --text-main: #374151;
+    }
 
-  <p>New here? <a href="{% url 'register_user' %}">Register as User</a> |
-     <a href="{% url 'provider_signup_step1' %}">Register as Company</a></p>
+    /* Centering the login card on the page */
+    .login-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .login-card {
+        background: #fff;
+        padding: 40px;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 450px; /* Keeps the login form tight */
+    }
+
+    /* Minimalist Header matching your screenshot */
+    .login-header {
+        font-size: 1.8rem;
+        font-weight: 500;
+        color: var(--text-main);
+        border-bottom: 3px solid #000;
+        display: inline-block;
+        padding-bottom: 5px;
+        margin-bottom: 30px;
+    }
+
+    /* Pill-shaped inputs */
+    .form-control-pill {
+        width: 100%;
+        padding: 12px 25px;
+        border: 1px solid var(--form-border-color);
+        border-radius: 50px !important;
+        font-size: 15px;
+        margin-bottom: 20px;
+        transition: all 0.2s ease;
+        display: block;
+    }
+
+    .form-control-pill:focus {
+        border-color: #000;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+    }
+
+    /* Black pill button */
+    .btn-login {
+        background-color: #000;
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 12px;
+        width: 100%;
+        font-weight: 600;
+        font-size: 16px;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .btn-login:hover {
+        background-color: #333;
+        transform: translateY(-1px);
+        color: white;
+    }
+
+    /* Links styling */
+    .auth-links {
+        margin-top: 25px;
+        font-size: 0.9rem;
+        color: #6b7280;
+        text-align: center;
+    }
+
+    .auth-links a {
+        color: #000;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .auth-links a:hover {
+        text-decoration: underline;
+    }
+
+    /* Error messages */
+    .error-msg {
+        background-color: #fef2f2;
+        color: #b91c1c;
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        margin-bottom: 20px;
+        text-align: center;
+        border: 1px solid #fee2e2;
+    }
+</style>
+
+<div class="login-container">
+    <div class="login-card shadow-sm">
+        
+        <h2 class="login-header">Login</h2>
+
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="error-msg">
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="mb-2">
+                <label class="form-label ms-3 fw-bold small text-muted">Username</label>
+                <input type="text" name="username" class="form-control-pill" placeholder="Enter your username" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label ms-3 fw-bold small text-muted">Password</label>
+                <input type="password" name="password" class="form-control-pill" placeholder="Enter your password" required>
+            </div>
+
+            <button type="submit" class="btn-login">Login</button>
+        </form>
+
+        <div class="auth-links">
+            <p class="mb-1">New here? <a href="{% url 'register_user' %}">Register as User</a></p>
+            <p>Own a business? <a href="{% url 'provider_signup_step1' %}">Register as Company</a></p>
+        </div>
+
+    </div>
+</div>
+
 {% endblock %}
-
