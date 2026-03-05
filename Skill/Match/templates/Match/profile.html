@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<style>
+.profile-wrapper {
+    max-width: 800px;
+    margin: 50px auto;
+    background: #fff;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+.profile-wrapper h2 {
+    margin-bottom: 20px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    margin-bottom: 15px;
+}
+
+.btn-save {
+    background-color: #0096d6;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.section-title {
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #444;
+}
+</style>
+
+<div class="profile-wrapper">
+
+    <h2>My Profile</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="section-title">Personal Information</div>
+        {{ user_form.as_p }}
+
+        {% if provider_form %}
+            <div class="section-title">Company Information</div>
+            {{ provider_form.as_p }}
+        {% endif %}
+
+        <button type="submit" class="btn-save">Update Profile</button>
+    </form>
+
+    <hr>
+    <a href="{% url 'password_change' %}">Change Password</a>
+
+</div>
+{% endblock %}

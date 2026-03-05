@@ -93,7 +93,7 @@
                     {% if user.role == 'company' %}
                         <a href="{% url 'provider_dashboard' %}">Profile</a>
                     {% else %}
-                        <a href="{% url 'landing_page' %}">Profile</a>
+                        <a href="{% url 'profile' %}">Profile</a>
                     {% endif %}
                     <a href="{% url 'logout' %}">Logout</a>
                 </div>

@@ -9,10 +9,16 @@ from .forms import (
     UserRegistrationForm,
     ServiceProviderForm,
     CompanyDocumentForm,
-    ServiceForm
+    ServiceForm, 
+    UserUpdateForm,
+    ServiceProviderUpdateForm
 )
 from .models import User, ServiceProvider, Service, ServiceRequest
-
+from django.db.models import Count, Avg
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
+from datetime import timedelta
+import json
 
 # =========================
 # Landing Pages
@@ -257,7 +263,6 @@ def delete_service(request, service_id):
 # =========================
 # PROVIDER DASHBOARD
 # =========================
-
 @login_required
 def provider_dashboard(request):
     if request.user.role != 'company':
@@ -265,25 +270,87 @@ def provider_dashboard(request):
 
     provider = ServiceProvider.objects.filter(user=request.user).first()
 
-    # 🚫 HARD GATE: Ensure profile is completed
     if not provider or not provider.profile_completed:
         messages.info(request, "Complete your business profile to access the dashboard.")
         return redirect('provider_signup_step2')
 
-    services = provider.services.all()
-
-    # Get the latest 5 requests for this provider's services
-    latest_requests = ServiceRequest.objects.filter(
+    # Base queryset
+    requests_qs = ServiceRequest.objects.filter(
         service__provider=provider
-    ).order_by('-created_at')[:5]
+    )
 
-    return render(request, 'Match/dashboard.html', {
+    # =============================
+    # REQUEST STATS
+    # =============================
+
+    total_requests = requests_qs.count()
+    completed_requests = requests_qs.filter(status='completed').count()
+    pending_requests = requests_qs.filter(status='pending').count()
+    accepted_requests = requests_qs.filter(status='accepted').count()
+    rejected_requests = requests_qs.filter(status='rejected').count()
+
+    completion_rate = 0
+    if total_requests > 0:
+        completion_rate = round((completed_requests / total_requests) * 100, 1)
+
+    latest_requests = requests_qs.order_by('-created_at')[:5]
+
+    # =============================
+    # RATINGS
+    # =============================
+
+    avg_rating = provider.reviews.aggregate(
+        avg=Avg('rating')
+    )['avg'] or 0
+
+    avg_rating = round(avg_rating, 1)
+
+    recent_reviews = provider.reviews.order_by('-created_at')[:5]
+
+    # =============================
+    # MONTHLY TREND (Last 6 Months)
+    # =============================
+
+    six_months_ago = timezone.now() - timedelta(days=180)
+
+    monthly_data = (
+        requests_qs
+        .filter(created_at__gte=six_months_ago)
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(total=Count('id'))
+        .order_by('month')
+    )
+
+    months = []
+    monthly_requests = []
+
+    for entry in monthly_data:
+        months.append(entry['month'].strftime("%b %Y"))
+        monthly_requests.append(entry['total'])
+
+    context = {
         'provider': provider,
-        'services': services,
         'latest_requests': latest_requests,
-        # documents removed since we are replacing it
-    })
 
+        # Stats
+        'total_requests': total_requests,
+        'completed_requests': completed_requests,
+        'pending_requests': pending_requests,
+        'accepted_requests': accepted_requests,
+        'rejected_requests': rejected_requests,
+        'completion_rate': completion_rate,
+
+        # Ratings
+        'avg_rating': avg_rating,
+        'recent_reviews': recent_reviews,
+
+        # Chart
+        'months': json.dumps(months),
+        'monthly_requests': json.dumps(monthly_requests),
+    }
+
+    return render(request, 'Match/dashboard.html', context)
 # =========================
 # SERVICE REQUEST
 # =========================
@@ -324,3 +391,95 @@ def create_request(request, service_id):
     return render(request, 'Match/request.html', {
         'service': service
     })
+
+@login_required
+def profile_view(request):
+    user = request.user
+
+    # Try to get provider profile if exists
+    provider = None
+    if user.role == 'company':
+        provider, created = ServiceProvider.objects.get_or_create(user=user)
+
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=user)
+
+        if provider:
+            provider_form = ServiceProviderUpdateForm(request.POST, instance=provider)
+        else:
+            provider_form = None
+
+        if user_form.is_valid() and (not provider_form or provider_form.is_valid()):
+            user_form.save()
+            if provider_form:
+                provider_form.save()
+
+            messages.success(request, "Profile updated successfully!")
+            return redirect('profile')
+
+    else:
+        user_form = UserUpdateForm(instance=user)
+        provider_form = ServiceProviderUpdateForm(instance=provider) if provider else None
+
+    context = {
+        'user_form': user_form,
+        'provider_form': provider_form,
+    }
+
+    return render(request, 'profile.html', context)
+
+@login_required
+def provider_requests(request):
+    """
+    Dedicated page showing all requests made to the provider's services.
+    Allows filtering by status and viewing details including reviews.
+    """
+    if request.user.role != 'company':
+        return redirect('login')
+
+    provider = get_object_or_404(ServiceProvider, user=request.user)
+
+    # Base queryset: all requests for this provider
+    requests_qs = ServiceRequest.objects.filter(service__provider=provider).order_by('-created_at')
+
+    # Optional filter by status
+    status_filter = request.GET.get('status')
+    if status_filter in ['pending', 'accepted', 'completed', 'rejected']:
+        requests_qs = requests_qs.filter(status=status_filter)
+
+    context = {
+        'provider': provider,
+        'service_requests': requests_qs,
+        'status_filter': status_filter,
+    }
+
+    return render(request, 'Match/provider_requests.html', context)
+
+@login_required
+def accept_request(request, request_id):
+    if request.user.role != 'company':
+        return redirect('login')
+
+    service_request = get_object_or_404(ServiceRequest, id=request_id, service__provider__user=request.user)
+
+    if service_request.status == 'pending':
+        service_request.status = 'accepted'
+        service_request.save()
+        messages.success(request, f"Request for {service_request.service.title} has been accepted.")
+
+    return redirect('provider_requests')
+
+
+@login_required
+def reject_request(request, request_id):
+    if request.user.role != 'company':
+        return redirect('login')
+
+    service_request = get_object_or_404(ServiceRequest, id=request_id, service__provider__user=request.user)
+
+    if service_request.status == 'pending':
+        service_request.status = 'rejected'
+        service_request.save()
+        messages.warning(request, f"Request for {service_request.service.title} has been rejected.")
+
+    return redirect('provider_requests')

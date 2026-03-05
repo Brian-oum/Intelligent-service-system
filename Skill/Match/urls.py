@@ -12,4 +12,12 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('search/', views.search_services, name='search_services'),
     path('request/<int:service_id>/', views.create_request, name='create_request'),
+    path('profile/', views.profile_view, name='profile'),
+    # Services
+    path('service/add/', views.add_service, name='add_service'),
+    path('service/edit/<int:service_id>/', views.edit_service, name='edit_service'),
+    path('service/delete/<int:service_id>/', views.delete_service, name='delete_service'),
+    path('dashboard/requests/', views.provider_requests, name='provider_requests'),
+    path('dashboard/requests/accept/<int:request_id>/', views.accept_request, name='accept_request'),
+    path('dashboard/requests/reject/<int:request_id>/', views.reject_request, name='reject_request'),
 ]
