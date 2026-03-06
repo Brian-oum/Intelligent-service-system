@@ -139,3 +139,35 @@ class CompanyDocumentForm(forms.ModelForm):
             'document_name': forms.TextInput(attrs={'class': 'form-control'}),
             'document_file': forms.FileInput(attrs={'class': 'form-control'}),
         }
+
+
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username', 'email', 'phone', 'location']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+
+class ServiceProviderUpdateForm(forms.ModelForm):
+    class Meta:
+        model = ServiceProvider
+        fields = [
+            'company_name',
+            'contact_number',
+            'address',
+            'website',
+            'latitude',
+            'longitude'
+        ]
+        widgets = {
+            'company_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'website': forms.URLInput(attrs={'class': 'form-control'}),
+            'latitude': forms.NumberInput(attrs={'class': 'form-control'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
