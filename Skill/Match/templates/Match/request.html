@@ -1,206 +1,289 @@
-{% extends 'Match/user_base.html' %}
 
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
     :root {
+        --sidebar-bg: #0f172a;
+        --sidebar-accent: #1e293b;
+        --primary: #0ea5e9;
+        --bg-soft: #f8fafc;
+        --text-main: #111827;
+        --text-muted: #94a3b8;
+        --border-color: #e5e7eb;
         --form-border-color: #d1d5db;
-        --text-main: #374151;
     }
 
-    .request-container {
-        min-height: 80vh;
+    body { background: var(--bg-soft); font-family: 'Inter', sans-serif; overflow-x: hidden; }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+        width: 260px;
+        background: var(--sidebar-bg);
+        height: 100vh;
+        position: fixed;
+        top: 0; left: 0;
+        padding: 20px 0;
+        z-index: 1000;
+    }
+
+    .sidebar .nav-link {
+        color: #94a3b8;
+        padding: 12px 25px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        padding: 20px;
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        gap: 12px;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+        text-decoration: none;
     }
 
+    .sidebar .nav-link:hover { background: var(--sidebar-accent); color: #fff; }
+    .sidebar .nav-link.active {
+        background: rgba(14, 165, 233, 0.1);
+        color: var(--primary);
+        border-left-color: var(--primary);
+    }
+
+    /* --- MAIN CONTENT --- */
+    .main-content {
+        margin-left: 260px;
+        width: calc(100% - 260px);
+        padding: 40px;
+    }
+
+    /* --- REQUEST FORM STYLES --- */
     .request-card {
         background: #fff;
         padding: 40px;
         border-radius: 20px;
         width: 100%;
-        max-width: 550px;
+        max-width: 600px;
+        margin: 0 auto;
+        border: 1px solid var(--border-color);
     }
 
-    /* Minimalist Header from your Screenshot */
     .request-header {
         font-size: 1.6rem;
-        font-weight: 500;
+        font-weight: 800;
         color: var(--text-main);
-        border-bottom: 3px solid #000;
-        display: inline-block;
-        padding-bottom: 5px;
-        margin-bottom: 10px;
-    }
-
-    .service-subtitle {
-        display: block;
-        color: #6b7280;
-        font-size: 0.9rem;
         margin-bottom: 30px;
+        letter-spacing: -0.02em;
     }
 
-    /* Pill-shaped inputs */
     .form-control-pill {
-        width: 100%;
-        padding: 12px 25px;
+        width: 100%; padding: 12px 20px;
         border: 1px solid var(--form-border-color);
-        border-radius: 50px !important;
-        font-size: 15px;
-        transition: all 0.2s ease;
-        background-color: #fff;
-        margin-bottom: 20px;
+        border-radius: 12px !important;
+        background-color: #fff; margin-bottom: 20px;
     }
 
-    textarea.form-control-pill {
-        border-radius: 20px !important; /* Slightly less rounded for textareas */
-        resize: none;
-        height: 120px;
-    }
+    textarea.form-control-pill { height: 120px; border-radius: 12px !important; }
+    .form-label { font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-main); font-size: 0.9rem; }
+    
+    .map-trigger { cursor: pointer; background-color: #f9fafb !important; border: 1px dashed var(--primary); }
+    .btn-submit { background-color: var(--sidebar-bg); color: #fff; border: none; border-radius: 12px; padding: 14px; width: 100%; font-weight: 600; transition: all 0.3s; }
+    .btn-submit:hover { background-color: var(--primary); transform: translateY(-2px); }
 
-    .form-control-pill:focus {
-        border-color: #000;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
-    }
-
-    .form-label {
-        font-weight: 600;
-        margin-bottom: 8px;
-        display: block;
-        color: var(--text-main);
-        padding-left: 15px;
-        font-size: 0.9rem;
-    }
-
-    .map-trigger {
-        cursor: pointer;
-        background-color: #f9fafb !important;
-        border: 1px dashed var(--form-border-color);
-    }
-
-    .btn-submit {
-        background-color: #000;
-        color: #fff;
-        border: none;
-        border-radius: 50px;
-        padding: 14px;
-        width: 100%;
-        font-weight: 600;
-        font-size: 16px;
-        transition: all 0.3s;
-    }
-
-    .btn-submit:hover {
-        background-color: #333;
-        transform: translateY(-1px);
-    }
-
-    #map { height: 350px; width: 100%; border-radius: 15px; }
-
-    /* Custom Search bar inside modal */
-    .search-pill-container {
-        display: flex;
-        background: #fff;
-        border: 1px solid var(--form-border-color);
-        border-radius: 50px;
-        overflow: hidden;
-        padding: 4px;
-    }
-    .search-pill-container input { border: none !important; flex-grow: 1; padding-left: 15px; }
+    /* Map Styles */
+    #map { height: 400px !important; width: 100%; border-radius: 15px; margin-top: 15px; border: 1px solid #eee; }
+    .search-pill-container { display: flex; border: 1px solid var(--form-border-color); border-radius: 50px; overflow: hidden; padding: 4px; background: #fff; }
+    .search-pill-container input { border: none !important; flex-grow: 1; padding-left: 15px; box-shadow: none !important; }
+    .suggestion-box { position: absolute; width: 100%; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 2000; top: 55px; max-height: 200px; overflow-y: auto; display: none; }
+    .suggestion-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 0.9rem; }
 </style>
 
-<div class="request-container">
-    <div class="request-card shadow-sm">
-        
-        <h2 class="request-header">Request {{ service.title }}</h2>
-        <form method="POST">
-            {% csrf_token %}
+<div class="d-flex">
+    <div class="sidebar text-white d-flex flex-column">
+        <div class="text-center mb-5 px-3">
+            <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
+                 class="rounded-circle mb-2 border border-2 border-secondary" width="65">
+            <h6 class="fw-bold mb-0 mt-2 text-white">{{ user.username }}</h6>
+            <small style="color: var(--text-muted)">Service Seeker</small>
+        </div>
 
-            <div class="mb-3">
-                <label class="form-label">Service Location</label>
-                <input type="text" name="location" id="display_location" class="form-control-pill map-trigger" 
-                       placeholder="📍 Tap to pin exact location on map" readonly 
-                       data-bs-toggle="modal" data-bs-target="#mapModal" required>
-            </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'user_dashboard' %}">
+                    <i class="fa-solid fa-house"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'search_services' %}">
+                    <i class="fa-solid fa-magnifying-glass"></i> Request Service
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'my_requests' %}">
+                    <i class="fa-solid fa-rectangle-list"></i> My Requests
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' %}">
+                    <i class="fa-solid fa-user-gear"></i> Profile
+                </a>
+            </li>
+        </ul>
 
-            <div class="mb-4">
-                <label class="form-label">Describe your needs</label>
-                <textarea name="description" class="form-control-pill" placeholder="Example: I need the cleaning done by Friday afternoon..."></textarea>
-            </div>
+        <div class="mt-auto">
+            <a class="nav-link text-danger" href="{% url 'logout' %}">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
 
-            <input type="hidden" name="latitude" id="id_latitude">
-            <input type="hidden" name="longitude" id="id_longitude">
+    <div class="main-content">
+        <div class="request-card shadow-sm">
+            <h2 class="request-header">Request {{ service.title }}</h2>
+            <form method="POST">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Service Location</label>
+                    <input type="text" name="location" id="display_location" class="form-control-pill map-trigger" 
+                           placeholder="Tap to search or pin location..." readonly
+                           data-bs-toggle="modal" data-bs-target="#mapModal" required>
+                </div>
 
-            <button type="submit" class="btn-submit">Submit Request</button>
-        </form>
+                <div class="mb-4">
+                    <label class="form-label">Describe your needs</label>
+                    <textarea name="description" class="form-control-pill" placeholder="How can we help you?" required></textarea>
+                </div>
 
+                <input type="hidden" name="latitude" id="id_latitude">
+                <input type="hidden" name="longitude" id="id_longitude">
+
+                <button type="submit" class="btn-submit">Submit Request</button>
+            </form>
+        </div>
     </div>
 </div>
 
 <div class="modal fade" id="mapModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold m-0">Pin Service Location</h5>
+                <h5 class="fw-bold m-0">Find Location</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="search-pill-container mb-3">
-                    <input type="text" id="map-search" class="form-control" placeholder="Search neighborhood...">
-                    <button class="btn btn-dark btn-sm rounded-pill px-3" type="button" id="search-btn">Find</button>
+                <div class="search-group mb-3 position-relative">
+                    <div class="search-pill-container">
+                        <input type="text" id="map-search" class="form-control" placeholder="Search neighborhood, street, or city..." autocomplete="off">
+                        <button class="btn btn-dark btn-sm rounded-pill px-4" type="button">Find</button>
+                    </div>
+                    <div id="suggestions" class="suggestion-box"></div>
                 </div>
+
+                <div class="text-center mb-2">
+                    <button type="button" id="useCurrentLocation" class="btn btn-link text-primary btn-sm fw-bold text-decoration-none">
+                        Use My Current Location
+                    </button>
+                </div>
+
                 <div id="map"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-success px-5 text-white rounded-pill" id="confirmLocation">Set Location</button>
+                <button type="button" class="btn btn-dark px-5 py-2 rounded-pill w-100 fw-bold" id="confirmLocation">Confirm This Address</button>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let map, marker;
+    // [Keep your original Javascript logic here exactly as it was]
+    let map, marker, searchTimeout;
     const latInput = document.getElementById("id_latitude");
     const lngInput = document.getElementById("id_longitude");
     const displayInput = document.getElementById("display_location");
     const modalElement = document.getElementById('mapModal');
+    const searchInput = document.getElementById("map-search");
+    const suggestionBox = document.getElementById("suggestions");
+
+    async function fetchAddress(lat, lng) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+            const data = await response.json();
+            return data.display_name || "Selected Location";
+        } catch (e) { return "Selected Location"; }
+    }
+
+    function setMarker(lat, lng, address = null) {
+        const pos = [lat, lng];
+        if (!map) return;
+        if (!marker) {
+            marker = L.marker(pos, {draggable: true}).addTo(map);
+            marker.on('dragend', async function() {
+                const newPos = marker.getLatLng();
+                latInput.value = newPos.lat;
+                lngInput.value = newPos.lng;
+                searchInput.value = await fetchAddress(newPos.lat, newPos.lng);
+            });
+        } else { marker.setLatLng(pos); }
+        map.setView(pos, 16);
+        latInput.value = lat; lngInput.value = lng;
+        if (address) searchInput.value = address;
+    }
 
     modalElement.addEventListener('shown.bs.modal', function () {
         setTimeout(() => {
             if (!map) {
                 map = L.map("map").setView([-1.286389, 36.817223], 13);
                 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-                map.on("click", function (e) {
-                    if (marker) map.removeLayer(marker);
-                    marker = L.marker(e.latlng).addTo(map);
-                    latInput.value = e.latlng.lat;
-                    lngInput.value = e.latlng.lng;
+                map.on("click", async function (e) {
+                    setMarker(e.latlng.lat, e.latlng.lng);
+                    searchInput.value = await fetchAddress(e.latlng.lat, e.latlng.lng);
                 });
-            } else { map.invalidateSize(); }
-        }, 200);
+            }
+            map.invalidateSize();
+            if (latInput.value && lngInput.value) setMarker(latInput.value, lngInput.value);
+        }, 300);
+    });
+
+    searchInput.addEventListener("input", function() {
+        clearTimeout(searchTimeout);
+        const query = this.value;
+        if (query.length < 3) { suggestionBox.style.display = "none"; return; }
+        searchTimeout = setTimeout(() => {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+                .then(r => r.json())
+                .then(data => {
+                    suggestionBox.innerHTML = "";
+                    if (data.length > 0) {
+                        suggestionBox.style.display = "block";
+                        data.forEach(item => {
+                            const div = document.createElement("div");
+                            div.className = "suggestion-item";
+                            div.innerText = item.display_name;
+                            div.onclick = () => {
+                                setMarker(item.lat, item.lon, item.display_name);
+                                suggestionBox.style.display = "none";
+                            };
+                            suggestionBox.appendChild(div);
+                        });
+                    }
+                });
+        }, 400);
+    });
+
+    document.getElementById("useCurrentLocation").addEventListener("click", function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async position => {
+                const { latitude, longitude } = position.coords;
+                const address = await fetchAddress(latitude, longitude);
+                setMarker(latitude, longitude, address);
+            });
+        }
     });
 
     document.getElementById("confirmLocation").addEventListener("click", function() {
-        if (latInput.value) {
-            displayInput.value = "Location pinned ✅";
+        if (latInput.value && lngInput.value) {
+            displayInput.value = searchInput.value || "Location Selected";
             bootstrap.Modal.getInstance(modalElement).hide();
-        } else { alert("Please pin a location on the map."); }
-    });
-
-    document.getElementById("search-btn").addEventListener("click", function() {
-        const query = document.getElementById("map-search").value;
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`)
-            .then(r => r.json()).then(data => {
-                if (data.length > 0) map.setView([data[0].lat, data[0].lon], 15);
-            });
+        }
     });
 </script>
-
 {% endblock %}

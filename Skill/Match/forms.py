@@ -168,6 +168,6 @@ class ServiceProviderUpdateForm(forms.ModelForm):
             'contact_number': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'website': forms.URLInput(attrs={'class': 'form-control'}),
-            'latitude': forms.NumberInput(attrs={'class': 'form-control'}),
-            'longitude': forms.NumberInput(attrs={'class': 'form-control'}),
+            'latitude': forms.HiddenInput,
+            'longitude': forms.HiddenInput,
         }

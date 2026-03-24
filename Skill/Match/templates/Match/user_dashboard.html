@@ -1,0 +1,258 @@
+{% load static %}
+{% block content %}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+    --sidebar-bg: #0f172a;
+    --sidebar-accent: #1e293b;
+    --primary: #0ea5e9;
+    --bg-soft: #f8fafc;
+    --text-muted: #94a3b8;
+}
+
+body { background: var(--bg-soft); font-family: 'Inter', sans-serif; }
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 20px 0;
+    z-index: 1000;
+}
+
+.sidebar .nav-link {
+    color: #94a3b8;
+    padding: 12px 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar .nav-link i {
+    width: 20px;
+    font-size: 1.1rem;
+}
+
+.sidebar .nav-link:hover {
+    background: var(--sidebar-accent);
+    color: #fff;
+}
+
+.sidebar .nav-link.active {
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--primary);
+    border-left-color: var(--primary);
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 260px;
+    padding: 2.5rem;
+    width: calc(100% - 260px);
+}
+
+/* Stat Cards */
+.stat-card {
+    border: none;
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: transform 0.2s;
+}
+
+.icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.bg-pending { background: #fef3c7; color: #d97706; }
+.bg-accepted { background: #e0f2fe; color: #0284c7; }
+.bg-completed { background: #dcfce7; color: #16a34a; }
+.bg-total { background: #f1f5f9; color: #475569; }
+
+</style>
+
+<div class="d-flex">
+
+    <div class="sidebar text-white d-flex flex-column">
+        <div class="text-center mb-5 px-3">
+            <div class="position-relative d-inline-block">
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
+                     class="rounded-circle mb-2 border border-2 border-secondary" width="65">
+            </div>
+            <h6 class="fw-bold mb-0 mt-2">{{ user.username }}</h6>
+            <small style="color: var(--text-muted)">Service Seeker</small>
+        </div>
+
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'user_dashboard' %}">
+                    <i class="fa-solid fa-house"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'search_services' %}">
+                    <i class="fa-solid fa-magnifying-glass"></i> Request Service
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'my_requests' %}">
+                    <i class="fa-solid fa-rectangle-list"></i> My Requests
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' %}">
+                    <i class="fa-solid fa-user-gear"></i> Profile
+                </a>
+            </li>
+        </ul>
+
+        <div class="mt-auto">
+            <a class="nav-link text-danger" href="{% url 'logout' %}">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold m-0">
+                Welcome back, {{ user.first_name|default:user.username }} 
+                <span class="ms-2 small fw-normal text-muted">| Dashboard Overview</span>
+            </h3>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="icon-box bg-total"><i class="fa-solid fa-layer-group"></i></div>
+                    <small class="text-muted fw-semibold">Total Requests</small>
+                    <h3 class="fw-bold mb-0">{{ total_requests }}</h3>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="icon-box bg-pending"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <small class="text-muted fw-semibold">Pending</small>
+                    <h3 class="fw-bold mb-0 text-warning">{{ pending_requests }}</h3>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="icon-box bg-accepted"><i class="fa-solid fa-handshake-angle"></i></div>
+                    <small class="text-muted fw-semibold">Accepted</small>
+                    <h3 class="fw-bold mb-0 text-info">{{ accepted_requests }}</h3>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card stat-card shadow-sm">
+                    <div class="icon-box bg-completed"><i class="fa-solid fa-circle-check"></i></div>
+                    <small class="text-muted fw-semibold">Completed</small>
+                    <h3 class="fw-bold mb-0 text-success">{{ completed_requests }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h5 class="fw-bold">Request Activity</h5>
+                            <i class="fa-solid fa-chart-line text-muted"></i>
+                        </div>
+                        <canvas id="chart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-4">Recent Activity</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr class="small text-uppercase text-muted">
+                                        <th>Service</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in recent_requests %}
+                                    <tr>
+                                        <td class="fw-semibold">{{ r.service.title }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill bg-{% if r.status == 'completed' %}success{% elif r.status == 'pending' %}warning{% elif r.status == 'accepted' %}info{% else %}danger{% endif %}">
+                                                {{ r.status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="text-center py-4 text-muted">No requests yet</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<canvas id="chart" style="height: 250px; width: 100%;"></canvas>
+
+<script>
+new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+        labels: JSON.parse('{{ months|escapejs }}'),
+        datasets: [{
+            label: 'Requests',
+            data: JSON.parse('{{ monthly_requests|escapejs }}'),
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14,165,233,0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#0ea5e9'
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: {
+            y: {
+                min: 0,
+                max: 20,
+                ticks: { stepSize: 2 },
+                grid: { borderDash: [5, 5] }
+            },
+            x: { grid: { display: false } }
+        },
+        maintainAspectRatio: true // keeps chart size fixed to canvas dimensions
+    }
+});
+</script>
+
+{% endblock %}

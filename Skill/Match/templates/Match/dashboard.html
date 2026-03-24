@@ -1,4 +1,4 @@
-{% extends "Match/base.html" %}
+
 {% load static %}
 {% block content %}
 
@@ -108,7 +108,7 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#services-section">
+                <a class="nav-link" href="{% url 'manage_services' %}">
                     <i class="fas fa-concierge-bell"></i> My Services
                 </a>
             </li>
@@ -194,51 +194,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div id="services-section" class="card shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="card-title fw-bold mb-0">Your Services</h5>
-                            <a href="{% url 'add_service' %}" class="btn btn-sm btn-primary">+ Add New</a>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Service</th>
-                                        <th>Price Range</th>
-                                        <th>Status</th>
-                                        <th class="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for service in provider.services.all %}
-                                    <tr>
-                                        <td>
-                                            <div class="fw-bold">{{ service.title }}</div>
-                                            <div class="small text-muted">{{ service.category.name }}</div>
-                                        </td>
-                                        <td>Ksh {{ service.min_price }} - {{ service.max_price }}</td>
-                                        <td>
-                                            {% if service.is_active %}
-                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">Active</span>
-                                            {% else %}
-                                            <span class="badge bg-secondary-subtle text-secondary px-2 py-1">Inactive</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-end">
-                                            <a href="{% url 'edit_service' service.id %}" class="btn btn-sm btn-light text-primary me-1"><i class="fas fa-edit"></i></a>
-                                            <a href="{% url 'delete_service' service.id %}" class="btn btn-sm btn-light text-danger"><i class="fas fa-trash"></i></a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr><td colspan="4" class="text-center py-4 text-muted">No services added yet.</td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="col-lg-4">
@@ -261,22 +216,26 @@
                                                 <small class="text-muted">{{ request.created_at|timesince }} ago</small>
                                             </div>
                                             
-                                            <div class="my-2 p-2 bg-light rounded d-flex justify-content-between align-items-center">
-    <span class="small text-muted text-truncate me-2" style="max-width: 150px;">
-        <i class="fas fa-map-marker-alt me-1 text-danger"></i> 
-        {% if request.latitude %}
-            Pin: {{ request.latitude|floatformat:4 }}, {{ request.longitude|floatformat:4 }}
-        {% else %}
-            {{ request.location }}
-        {% endif %}
-    </span>
-    
-    <a href="https://www.google.com/maps/search/?api=1&query={{ request.latitude }},{{ request.longitude }}" 
-       target="_blank" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.65rem;">
-        <i class="fas fa-location-arrow"></i> Precise Location
-    </a>
-</div>
+                                        <div class="my-2 p-2 bg-light rounded d-flex justify-content-between align-items-center">
+                                            <span class="small text-muted text-truncate me-2" style="max-width: 180px;" 
+                                                    title="{% if request.latitude %}{{ request.latitude|floatformat:6 }}, {{ request.longitude|floatformat:6 }}{% else %}{{ request.location }}{% endif %}">
+                                                <i class="fas fa-map-marker-alt me-1 text-danger"></i>
+                                                {% if request.latitude and request.longitude %}
+                                                    Pin: {{ request.latitude|floatformat:4 }}, {{ request.longitude|floatformat:4 }}
+                                                {% else %}
+                                                   {{ request.location }}
+                                                {% endif %}
+                                            </span>
 
+                                            {% if request.latitude and request.longitude %}
+                                                <a href="https://www.google.com/maps/search/?api=1&query={{ request.latitude }},{{ request.longitude }}" 
+                                                    target="_blank" class="btn btn-sm btn-primary py-0 px-2 d-flex align-items-center" style="font-size: 0.65rem;">
+                                                        <i class="fas fa-location-arrow me-1"></i> View
+                                                </a>
+                                           {% else %}
+                                                <span class="text-muted small" style="font-size: 0.65rem;">Location not available</span>
+                                            {% endif %}
+                                        </div>
                                             <div class="d-flex gap-2 mt-2">
                                                 <form action="{% url 'provider_requests' %}" method="POST" class="flex-grow-1">
                                                     {% csrf_token %}
