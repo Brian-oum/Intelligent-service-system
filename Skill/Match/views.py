@@ -1,5 +1,4 @@
 # service_provider/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -13,13 +12,14 @@ from .forms import (
     UserUpdateForm,
     ServiceProviderUpdateForm
 )
-from .models import User, ServiceProvider, Service, ServiceRequest
+from .models import User, ServiceProvider, Service, ServiceRequest, ServiceCategory
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from datetime import timedelta
 import json
-
+from .utils import haversine_distance
+from decimal import Decimal
 # =========================
 # Landing Pages
 # =========================
@@ -65,15 +65,23 @@ def register_user(request):
 # =========================
 
 def login_view(request):
+    # If user is already logged in, redirect them immediately
+    if request.user.is_authenticated:
+        if request.user.role == 'company':
+            return redirect('provider_dashboard')
+        else:
+            return redirect('user_dashboard')
+
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
+        username = request.POST.get('username')
+        password = request.POST.get('password')
 
         user = authenticate(request, username=username, password=password)
 
-        if user:
+        if user is not None:
             login(request, user)
 
+            #  SERVICE PROVIDER
             if user.role == 'company':
                 provider = ServiceProvider.objects.filter(user=user).first()
 
@@ -82,12 +90,17 @@ def login_view(request):
                 else:
                     return redirect('provider_signup_step2')
 
+            #  SERVICE SEEKER (NEW FIX)
+            elif user.role == 'user':
+                return redirect('user_dashboard')
+
+            #  FALLBACK (just in case)
             return redirect('landing_page')
 
-        messages.error(request, "Invalid username or password.")
+        else:
+            messages.error(request, "Invalid username or password.")
 
     return render(request, 'Match/login.html')
-
 
 def logout_view(request):
     logout(request)
@@ -206,6 +219,8 @@ def add_service(request):
         return redirect('login')
 
     provider = get_object_or_404(ServiceProvider, user=request.user)
+    # Get categories so they show up in your datalist/dropdown
+    categories = ServiceCategory.objects.all() 
 
     if request.method == 'POST':
         form = ServiceForm(request.POST)
@@ -221,7 +236,12 @@ def add_service(request):
     else:
         form = ServiceForm()
 
-    return render(request, 'Match/add_service.html', {'form': form})
+    # ADD 'provider' AND 'categories' HERE
+    return render(request, 'Match/add_service.html', {
+        'form': form,
+        'provider': provider,
+        'categories': categories
+    })
 
 
 @login_required
@@ -245,6 +265,18 @@ def edit_service(request, service_id):
 
     return render(request, 'Match/edit_service.html', {'form': form})
 
+@login_required
+def manage_services(request):
+
+    provider = ServiceProvider.objects.get(user=request.user)
+
+    services = Service.objects.filter(provider=provider)
+
+    return render(request, "Match/manage_services.html", {
+        "provider": provider,
+        "services": services
+    })
+
 
 @login_required
 def delete_service(request, service_id):
@@ -261,8 +293,69 @@ def delete_service(request, service_id):
 
 
 # =========================
-# PROVIDER DASHBOARD
+# PROVIDER  AND SEEKER DASHBOARD
 # =========================
+@login_required
+def user_dashboard(request):
+
+    # If a provider somehow lands here → send them to their dashboard
+    if request.user.role == 'company':
+        return redirect('provider_dashboard')
+
+    # All requests made by this user
+    requests_qs = ServiceRequest.objects.filter(user=request.user)
+
+    # =============================
+    # REQUEST STATS
+    # =============================
+    total_requests = requests_qs.count()
+    pending_requests = requests_qs.filter(status='pending').count()
+    accepted_requests = requests_qs.filter(status='accepted').count()
+    completed_requests = requests_qs.filter(status='completed').count()
+    rejected_requests = requests_qs.filter(status='rejected').count()
+
+    # =============================
+    # RECENT REQUESTS
+    # =============================
+    recent_requests = requests_qs.order_by('-created_at')[:5]
+
+    # =============================
+    # MONTHLY REQUEST TREND
+    # =============================
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
+    import json
+
+    today = date.today()
+    months = []
+    monthly_requests = []
+
+    for i in range(5, -1, -1):
+        month_start = today.replace(day=1) - relativedelta(months=i)
+        month_end = month_start + relativedelta(months=1)
+
+        months.append(month_start.strftime("%b %Y"))
+
+        count = requests_qs.filter(
+            created_at__gte=month_start,
+            created_at__lt=month_end
+        ).count()
+
+        monthly_requests.append(count)
+
+    context = {
+        'total_requests': total_requests,
+        'pending_requests': pending_requests,
+        'accepted_requests': accepted_requests,
+        'completed_requests': completed_requests,
+        'rejected_requests': rejected_requests,
+        'recent_requests': recent_requests,
+        'months': json.dumps(months),
+        'monthly_requests': json.dumps(monthly_requests),
+    }
+
+    return render(request, 'Match/user_dashboard.html', context)
+
 @login_required
 def provider_dashboard(request):
     if request.user.role != 'company':
@@ -275,34 +368,25 @@ def provider_dashboard(request):
         return redirect('provider_signup_step2')
 
     # Base queryset
-    requests_qs = ServiceRequest.objects.filter(
-        service__provider=provider
-    )
+    requests_qs = ServiceRequest.objects.filter(service__provider=provider)
 
     # =============================
     # REQUEST STATS
     # =============================
-
     total_requests = requests_qs.count()
     completed_requests = requests_qs.filter(status='completed').count()
     pending_requests = requests_qs.filter(status='pending').count()
     accepted_requests = requests_qs.filter(status='accepted').count()
     rejected_requests = requests_qs.filter(status='rejected').count()
 
-    completion_rate = 0
-    if total_requests > 0:
-        completion_rate = round((completed_requests / total_requests) * 100, 1)
+    completion_rate = round((completed_requests / total_requests) * 100, 1) if total_requests else 0
 
-    latest_requests = requests_qs.order_by('-created_at')[:5]
+    latest_requests = requests_qs.order_by('-created_at')[:4]  # 4 latest for dashboard
 
     # =============================
     # RATINGS
     # =============================
-
-    avg_rating = provider.reviews.aggregate(
-        avg=Avg('rating')
-    )['avg'] or 0
-
+    avg_rating = provider.reviews.aggregate(avg=Avg('rating'))['avg'] or 5.0
     avg_rating = round(avg_rating, 1)
 
     recent_reviews = provider.reviews.order_by('-created_at')[:5]
@@ -310,24 +394,23 @@ def provider_dashboard(request):
     # =============================
     # MONTHLY TREND (Last 6 Months)
     # =============================
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
 
-    six_months_ago = timezone.now() - timedelta(days=180)
-
-    monthly_data = (
-        requests_qs
-        .filter(created_at__gte=six_months_ago)
-        .annotate(month=TruncMonth('created_at'))
-        .values('month')
-        .annotate(total=Count('id'))
-        .order_by('month')
-    )
-
+    today = date.today()
     months = []
     monthly_requests = []
 
-    for entry in monthly_data:
-        months.append(entry['month'].strftime("%b %Y"))
-        monthly_requests.append(entry['total'])
+    for i in range(5, -1, -1):  # last 6 months
+        month_start = today.replace(day=1) - relativedelta(months=i)
+        month_end = month_start + relativedelta(months=1)
+        month_label = month_start.strftime("%b %Y")
+        months.append(month_label)
+        count = requests_qs.filter(
+            created_at__gte=month_start,
+            created_at__lt=month_end
+        ).count()
+        monthly_requests.append(count)
 
     context = {
         'provider': provider,
@@ -354,79 +437,128 @@ def provider_dashboard(request):
 # =========================
 # SERVICE REQUEST
 # =========================
+@login_required
 def search_services(request):
+
     query = request.GET.get('q')
+    user_lat = request.GET.get("lat")
+    user_lon = request.GET.get("lon")
 
-    # 🚫 If not logged in → redirect
-    if not request.user.is_authenticated:
-        return redirect('login')
-
-    services = Service.objects.all()
+    services = Service.objects.select_related("provider")
 
     if query:
         services = services.filter(title__icontains=query)
 
-    return render(request, 'Match/service_results.html', {
-        'services': services,
-        'query': query,
-    })
+    results = []
+
+    for service in services:
+
+        provider = service.provider
+        distance = None
+
+        try:
+            if user_lat and user_lon and provider.latitude and provider.longitude:
+                # Convert to float safely
+                distance = haversine_distance(
+                    float(user_lat),
+                    float(user_lon),
+                    float(provider.latitude),
+                    float(provider.longitude)
+                )
+        except ValueError:
+            # Ignore invalid coordinates
+            distance = None
+
+        results.append({
+            "service": service,
+            "distance": round(distance, 2) if distance is not None else None
+        })
+
+    # Sort by distance if available
+    results = sorted(
+        results,
+        key=lambda x: x["distance"] if x["distance"] is not None else 9999
+    )
+
+    context = {
+        "services": results,
+        "query": query
+    }
+
+    return render(request, "Match/service_results.html", context)
 
 @login_required
 def create_request(request, service_id):
-    service = Service.objects.get(id=service_id)
+    service = get_object_or_404(Service, id=service_id)
 
     if request.method == "POST":
         location = request.POST.get('location')
         description = request.POST.get('description')
+        latitude = request.POST.get('latitude')
+        longitude = request.POST.get('longitude')
 
         ServiceRequest.objects.create(
             user=request.user,
             service=service,
             location=location,
             description=description,
+            latitude=Decimal(latitude) if latitude else None,
+            longitude=Decimal(longitude) if longitude else None
         )
 
-        return redirect('landing_page')  # or wherever you want
+        return redirect('user_dashboard')
 
     return render(request, 'Match/request.html', {
         'service': service
     })
-
 @login_required
 def profile_view(request):
     user = request.user
 
-    # Try to get provider profile if exists
     provider = None
-    if user.role == 'company':
+    user_form = None
+    provider_form = None
+
+    # =========================
+    # SERVICE PROVIDER
+    # =========================
+    if user.role == "company":
+
         provider, created = ServiceProvider.objects.get_or_create(user=user)
 
-    if request.method == 'POST':
-        user_form = UserUpdateForm(request.POST, instance=user)
-
-        if provider:
+        if request.method == "POST":
             provider_form = ServiceProviderUpdateForm(request.POST, instance=provider)
-        else:
-            provider_form = None
 
-        if user_form.is_valid() and (not provider_form or provider_form.is_valid()):
-            user_form.save()
-            if provider_form:
+            if provider_form.is_valid():
                 provider_form.save()
+                messages.success(request, "Company profile updated successfully!")
+                return redirect("profile")
 
-            messages.success(request, "Profile updated successfully!")
-            return redirect('profile')
+        else:
+            provider_form = ServiceProviderUpdateForm(instance=provider)
 
+    # =========================
+    # SERVICE SEEKER
+    # =========================
     else:
-        user_form = UserUpdateForm(instance=user)
-        provider_form = ServiceProviderUpdateForm(instance=provider) if provider else None
+
+        if request.method == "POST":
+            user_form = UserUpdateForm(request.POST, instance=user)
+
+            if user_form.is_valid():
+                user_form.save()
+                messages.success(request, "Profile updated successfully!")
+                return redirect("profile")
+
+        else:
+            user_form = UserUpdateForm(instance=user)
 
     context = {
-        'user_form': user_form,
-        'provider_form': provider_form,
+        "user_form": user_form,
+        "provider_form": provider_form,
     }
 
-    return render(request, 'profile.html', context)
+    return render(request, "Match/profile.html", context)
 
 @login_required
 def provider_requests(request):
@@ -454,6 +586,19 @@ def provider_requests(request):
     }
 
     return render(request, 'Match/provider_requests.html', context)
+
+@login_required
+def my_requests(request):
+    if request.user.role == 'company':
+        return redirect('provider_dashboard')
+
+    requests_qs = ServiceRequest.objects.select_related(
+        'service', 'service__provider'
+    ).filter(user=request.user).order_by('-created_at')
+
+    return render(request, 'Match/my_requests.html', {
+        'requests': requests_qs
+    })
 
 @login_required
 def accept_request(request, request_id):

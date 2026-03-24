@@ -1,83 +1,219 @@
-{% extends "Match/base.html" %}
+
+{% load static %}
 {% block content %}
+
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-<div class="container-fluid mt-4">
-  <h3 class="mb-4">{{ provider.company_name }} - Service Requests</h3>
+<style>
+    :root {
+        --sidebar-bg: #1e293b;
+        --sidebar-hover: #334155;
+        --main-bg: #f8fafc;
+        --accent-color: #0ea5e9;
+    }
 
-  <!-- FILTER -->
-  <div class="mb-3 d-flex align-items-center gap-2">
-    <form method="get" class="d-flex gap-2 flex-wrap">
-      <label for="status">Filter by Status:</label>
-      <select name="status" id="status" class="form-select w-auto">
-        <option value="">All</option>
-        <option value="pending" {% if status_filter|default:'' == 'pending' %}selected{% endif %}>Pending</option>
-        <option value="accepted" {% if status_filter|default:'' == 'accepted' %}selected{% endif %}>Accepted</option>
-        <option value="completed" {% if status_filter|default:'' == 'completed' %}selected{% endif %}>Completed</option>
-        <option value="rejected" {% if status_filter|default:'' == 'rejected' %}selected{% endif %}>Rejected</option>
-      </select>
-      <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-      <a href="{% url 'provider_requests' %}" class="btn btn-secondary btn-sm">Reset</a>
-    </form>
-  </div>
+    body { background-color: var(--main-bg); font-family: 'Inter', sans-serif; }
 
-  {% if service_requests %}
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Service</th>
-            <th>Requested By</th>
-            <th>Location</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Date Requested</th>
-            <th>Review</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for req in service_requests %}
-            <tr>
-              <td>{{ req.service.title }}</td>
-              <td>{{ req.user.username }}</td>
-              <td>{{ req.location }}</td>
-              <td>{{ req.description|default:"-" }}</td>
-              <td>
-                <span class="badge
-                  {% if req.status == 'pending' %}bg-warning
-                  {% elif req.status == 'accepted' %}bg-info
-                  {% elif req.status == 'completed' %}bg-success
-                  {% elif req.status == 'rejected' %}bg-danger
-                  {% endif %}
-                ">
-                  {{ req.get_status_display }}
-                </span>
-              </td>
-              <td>{{ req.created_at|date:"M d, Y H:i" }}</td>
-              <td>
-                {% if req.review %}
-                  <span class="text-success">⭐ {{ req.review.rating }}</span>
-                {% else %}
-                  <span class="text-muted">No Review</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if req.status == 'pending' %}
-                  <a href="{% url 'accept_request' req.id %}" class="btn btn-success btn-sm mb-1">Accept</a>
-                  <a href="{% url 'reject_request' req.id %}" class="btn btn-danger btn-sm mb-1">Reject</a>
-                {% else %}
-                  <span class="text-muted">No Actions</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p class="text-muted">No service requests have been made to your services yet.</p>
-  {% endif %}
+    /* Sidebar Styles (Matching Dashboard) */
+    .sidebar {
+        min-width: 240px;
+        max-width: 240px;
+        background-color: var(--sidebar-bg);
+        height: 100vh;
+        position: fixed;
+        transition: all 0.3s;
+        z-index: 1000;
+        top: 0;
+        left: 0;
+    }
 
+    .sidebar .nav-link {
+        color: #94a3b8;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+    }
+
+    .sidebar .nav-link:hover { background-color: var(--sidebar-hover); color: #fff; }
+
+    .sidebar .nav-link.active {
+        background-color: var(--accent-color);
+        color: #fff;
+        border-radius: 8px;
+        margin: 0 10px;
+    }
+
+    /* Content Area */
+    .main-content {
+        margin-left: 240px;
+        padding: 30px;
+        width: calc(100% - 240px);
+    }
+
+    .card { border: none; border-radius: 12px; }
+
+    @media (max-width: 768px) {
+        .sidebar { margin-left: -240px; }
+        .main-content { margin-left: 0; width: 100%; }
+    }
+</style>
+
+<div class="d-flex">
+    <nav class="sidebar d-flex flex-column p-3 text-white">
+        <div class="px-3 mb-4 mt-2">
+            <h5 class="fw-bold text-info">{{ provider.company_name }}</h5>
+        </div>
+        
+        <ul class="nav flex-column gap-1">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'provider_dashboard' %}">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'add_service' %}">
+                    <i class="fas fa-plus-circle"></i> Add Service
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'manage_services' %}">
+                    <i class="fas fa-concierge-bell"></i> My Services
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'provider_requests' %}">
+                    <i class="fas fa-envelope-open-text"></i> Requests
+                </a>
+            </li>
+            <hr class="text-secondary opacity-25">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' %}">
+                    <i class="fas fa-user-cog"></i> Profile
+                </a>
+            </li>
+            <li class="nav-item mt-auto">
+                <a class="nav-link text-danger" href="{% url 'logout' %}">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="fw-bold">Service Requests</h3>
+                <p class="text-muted">Manage your incoming work orders and client pins.</p>
+            </div>
+            
+            <div class="bg-white p-2 rounded shadow-sm border">
+                <form method="get" class="d-flex gap-2 align-items-center">
+                    <label class="small fw-bold text-muted">Status:</label>
+                    <select name="status" class="form-select form-select-sm w-auto border-0">
+                        <option value="">All Requests</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="accepted" {% if status_filter == 'accepted' %}selected{% endif %}>Accepted</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary px-3">Filter</button>
+                    {% if status_filter %}
+                        <a href="{% url 'provider_requests' %}" class="btn btn-sm btn-light border"><i class="fas fa-redo"></i></a>
+                    {% endif %}
+                </form>
+            </div>
+        </header>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="bg-light text-muted">
+                            <tr style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">
+                                <th class="ps-4">Service & Client</th>
+                                <th>Pinned Location</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Review</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in service_requests %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ req.service.title }}</div>
+                                    <div class="small text-muted"><i class="fas fa-user me-1"></i>{{ req.user.username }}</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="small text-muted text-truncate d-inline-block me-2" style="max-width: 150px;">
+                                            <i class="fas fa-map-marker-alt text-danger me-1"></i> {{ req.location }}
+                                        </span>
+                                        {% if req.latitude and req.longitude %}
+                                            <a href="https://www.google.com/maps/search/?api=1&query={{ req.latitude }},{{ req.longitude }}" target="_blank" class="btn btn-xs btn-outline-info py-0 px-2" style="font-size: 0.7rem;">
+                                                <i class="fas fa-location-arrow"></i> Pin
+                                            </a>
+                                        {% else %}
+                                            <a href="https://www.google.com/maps/search/?api=1&query={{ req.location|urlencode }}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2" style="font-size: 0.7rem;">
+                                                <i class="fas fa-search-location"></i> Map
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill 
+                                        {% if req.status == 'pending' %}bg-warning-subtle text-warning border border-warning
+                                        {% elif req.status == 'accepted' %}bg-info-subtle text-info border border-info
+                                        {% elif req.status == 'completed' %}bg-success-subtle text-success border border-success
+                                        {% elif req.status == 'rejected' %}bg-danger-subtle text-danger border border-danger
+                                        {% endif %} px-3">
+                                        {{ req.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="small text-muted">
+                                    {{ req.created_at|date:"M d, Y" }}<br>
+                                    <span style="font-size: 0.75rem;">{{ req.created_at|date:"H:i" }}</span>
+                                </td>
+                                <td>
+                                    {% if req.review %}
+                                        <div class="text-warning small">
+                                            {% for i in "12345" %}
+                                                <i class="{% if forloop.counter <= req.review.rating %}fas{% else %}far{% endif %} fa-star"></i>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted small">---</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    {% if req.status == 'pending' %}
+                                        <div class="btn-group">
+                                            <a href="{% url 'accept_request' req.id %}" class="btn btn-sm btn-success">Accept</a>
+                                            <a href="{% url 'reject_request' req.id %}" class="btn btn-sm btn-outline-danger">Reject</a>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-light text-muted border">Locked</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-inbox fa-3x text-light mb-3 d-block"></i>
+                                    <p class="text-muted">No requests found matching your filter.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
 </div>
+
 {% endblock %}

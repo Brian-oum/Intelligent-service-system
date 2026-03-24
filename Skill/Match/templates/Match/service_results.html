@@ -1,124 +1,353 @@
-{% extends 'Match/user_base.html' %}
 
 {% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
     :root {
-        --text-main: #374151;
-        --text-muted: #6b7280;
+        --sidebar-bg: #0f172a;
+        --sidebar-accent: #1e293b;
+        --primary: #0ea5e9;
+        --bg-soft: #f8fafc;
+        --text-main: #111827;
+        --text-muted: #94a3b8;
         --border-color: #e5e7eb;
     }
 
-    /* Minimalist Header from your Screenshot */
-    .services-header {
-        font-size: 1.8rem;
-        font-weight: 500;
-        color: var(--text-main);
-        border-bottom: 3px solid #000;
-        display: inline-block;
-        padding-bottom: 5px;
-        margin-bottom: 40px;
+    body { background: var(--bg-soft); font-family: 'Inter', sans-serif; }
+
+    /* --- SIDEBAR (Consistent with Dashboard) --- */
+    .sidebar {
+        width: 260px;
+        background: var(--sidebar-bg);
+        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        padding: 20px 0;
+        z-index: 1000;
     }
 
-    /* Grid Layout */
+    .sidebar .nav-link {
+        color: #94a3b8;
+        padding: 12px 25px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+        text-decoration: none;
+    }
+
+    .sidebar .nav-link i { width: 20px; font-size: 1.1rem; }
+
+    .sidebar .nav-link:hover {
+        background: var(--sidebar-accent);
+        color: #fff;
+    }
+
+    .sidebar .nav-link.active {
+        background: rgba(14, 165, 233, 0.1);
+        color: var(--primary);
+        border-left-color: var(--primary);
+    }
+
+    /* --- MAIN CONTENT AREA --- */
+    .main-content {
+        margin-left: 260px;
+        padding: 2.5rem;
+        width: calc(100% - 260px);
+    }
+
+    /* --- EXPLORE PAGE STYLES --- */
+    .services-header {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-main);
+        margin-bottom: 24px;
+        letter-spacing: -0.02em;
+    }
+
+    .search-wrapper {
+        position: relative;
+        max-width: 800px;
+        margin-bottom: 40px;
+        border-radius: 25px;
+    }
+
+    .search-bar input {
+        width: 100%;
+        padding: 14px 20px 14px 45px;
+        border-radius: 25px;
+        border: 1px solid var(--border-color);
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .search-bar input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+    }
+
     .services-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 25px;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
     }
 
-    /* Refined Service Card */
     .service-card {
         background: #fff;
         border: 1px solid var(--border-color);
-        border-radius: 20px;
-        padding: 25px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 16px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .service-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        border-color: #000;
+        box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
+        border-color: var(--primary);
     }
 
-    .service-card h3 {
-        font-size: 1.3rem;
+    .category-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
         font-weight: 700;
-        color: #000;
-        margin-bottom: 12px;
+        color: var(--primary);
+        background: #eff6ff;
+        padding: 5px 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
     }
 
-    .service-card p {
-        color: var(--text-muted);
+    .service-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 4px;
+    }
+
+    .provider-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #64748b;
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+    }
+
+    .service-desc {
+        color: #4b5563;
         font-size: 0.95rem;
-        line-height: 1.5;
+        line-height: 1.6;
         margin-bottom: 20px;
-        /* Limits description to 3 lines for visual balance */
         display: -webkit-box;
-        -webkit-line-clamp: 3;
+        -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
 
-    /* Pill Button */
+    .meta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-color);
+        margin-top: auto;
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 16px;
+    }
+
+    .rating-star { color: #f59e0b; }
+
     .btn-request {
-        background-color: #000;
+        background: var(--sidebar-bg);
         color: #fff;
-        border: none;
-        border-radius: 50px;
-        padding: 10px 20px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        width: 90%;
-        transition: background-color 0.2s;
         text-align: center;
+        padding: 12px;
+        border-radius: 10px;
         text-decoration: none;
-        display: inline-block;
+        font-weight: 600;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
     }
 
-    .btn-request:hover {
-        background-color: #333;
-        color: #fff;
-    }
+    .btn-request:hover { background: var(--primary); color: #fff; }
 
-    /* Empty State */
     .no-services {
         text-align: center;
-        padding: 60px;
-        background: #f9fafb;
+        padding: 100px 20px;
+        background: #fff;
         border-radius: 20px;
-        color: var(--text-muted);
+        border: 2px dashed var(--border-color);
     }
 </style>
 
-<div class="container my-5">
-    <h2 class="services-header">Available Services</h2>
+<div class="d-flex">
+    <div class="sidebar text-white d-flex flex-column">
+        <div class="text-center mb-5 px-3">
+            <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
+                 class="rounded-circle mb-2 border border-2 border-secondary" width="65">
+            <h6 class="fw-bold mb-0 mt-2 text-white">{{ user.username }}</h6>
+            <small style="color: var(--text-muted)">Service Seeker</small>
+        </div>
 
-    {% if services %}
-        <div class="services-grid">
-            {% for service in services %}
-                <div class="service-card shadow-sm">
-                    <div>
-                        <h3>{{ service.title }}</h3>
-                        <p>{{ service.description }}</p>
-                    </div>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'user_dashboard' %}">
+                    <i class="fa-solid fa-house"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'search_services' %}">
+                    <i class="fa-solid fa-magnifying-glass"></i> Request Service
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'my_requests' %}">
+                    <i class="fa-solid fa-rectangle-list"></i> My Requests
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' %}">
+                    <i class="fa-solid fa-user-gear"></i> Profile
+                </a>
+            </li>
+        </ul>
 
-                    <div class="mt-auto">
-                        <a href="{% url 'create_request' service.id %}" class="btn-request">
+        <div class="mt-auto">
+            <a class="nav-link text-danger" href="{% url 'logout' %}">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h2 class="services-header">Explore Services</h2>
+
+        <div class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <form method="GET" class="search-bar" onsubmit="getUserLocation()">
+                <input type="text" name="q" placeholder="Search services or providers..." value="{{ query }}">
+
+                <!-- hidden GPS coordinates -->
+                <input type="hidden" name="lat" id="lat">
+                <input type="hidden" name="lon" id="lon">
+            </form>
+        </div>
+
+        {% if services %}
+            <div class="services-grid">
+                {% for item in services %}
+                    <div class="service-card shadow-sm">
+                        <div>
+                            {% if item.service.category %}
+                                <span class="category-badge">
+                                    <i class="fa-solid fa-tag"></i>
+                                    {{ item.service.category.name }}
+                                </span>
+                            {% endif %}
+                            
+                            <div class="service-title">{{ item.service.title }}</div>
+                            
+                            <div class="provider-info">
+                                <i class="fa-solid fa-circle-check" style="color: #0ea5e9;"></i>
+                                <span>by {{ item.service.provider.company_name }}</span>
+                            </div>
+
+                            <p class="service-desc">{{ item.service.description }}</p>
+                        </div>
+
+                        <div class="meta-row">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-location-dot"></i>
+                                {{ item.service.provider.address }}
+                            </div>
+                            {% if item.distance %}
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-location-arrow"></i>
+                                {{ item.distance }} km away
+                            </div>
+                            {% else %}
+                            <div class="d-flex align-items-center gap-2 text-muted">
+                                <i class="fa-solid fa-location-arrow"></i>
+                                Distance unavailable
+                            </div>
+                            {% endif %}
+
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-star rating-star"></i>
+                                <strong>{{ item.service.provider.reviews.all|length }}</strong> reviews
+                            </div>
+                        </div>
+
+                        <a href="{% url 'create_request' item.service.id %}" class="btn-request">
                             Request Service
+                            <i class="fa-solid fa-arrow-right-long"></i>
                         </a>
                     </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="no-services">
-            <p class="mb-0">No services found in your area. Please check back later.</p>
-        </div>
-    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-services">
+                <i class="fa-solid fa-box-open fa-3x mb-3" style="color: var(--text-muted);"></i>
+                <h4 class="fw-bold">No services found</h4>
+                <p class="text-muted">Try adjusting your keywords or filters.</p>
+            </div>
+        {% endif %}
+    </div>
 </div>
+<script>
 
+function getUserLocation(){
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // If coordinates already exist, do nothing
+    if(urlParams.get("lat") && urlParams.get("lon")){
+        return;
+    }
+
+    if(navigator.geolocation){
+
+        navigator.geolocation.getCurrentPosition(function(position){
+
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            const url = new URL(window.location.href);
+
+            url.searchParams.set("lat", lat);
+            url.searchParams.set("lon", lon);
+
+            window.location.href = url.toString();
+
+        });
+
+    }
+}
+
+getUserLocation();
+
+</script>
 {% endblock %}
