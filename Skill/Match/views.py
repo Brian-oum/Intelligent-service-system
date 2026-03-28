@@ -3,6 +3,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
+from django.core.mail import send_mail
 from django.middleware.csrf import rotate_token
 from .forms import (
     UserRegistrationForm,
@@ -10,7 +13,8 @@ from .forms import (
     CompanyDocumentForm,
     ServiceForm, 
     UserUpdateForm,
-    ServiceProviderUpdateForm
+    ServiceProviderUpdateForm, 
+    ReviewForm
 )
 from .models import User, ServiceProvider, Service, ServiceRequest, ServiceCategory
 from django.db.models import Count, Avg
@@ -219,30 +223,63 @@ def add_service(request):
         return redirect('login')
 
     provider = get_object_or_404(ServiceProvider, user=request.user)
-    # Get categories so they show up in your datalist/dropdown
-    categories = ServiceCategory.objects.all() 
+    categories = ServiceCategory.objects.all()
 
     if request.method == 'POST':
         form = ServiceForm(request.POST)
+
         if form.is_valid():
             service = form.save(commit=False)
             service.provider = provider
+            service.is_active = True
+            service.is_verified = False
             service.save()
 
-            provider.profile_completed = True
-            provider.save()
+            if not provider.profile_completed:
+                provider.profile_completed = True
+                provider.save()
 
-            return redirect('provider_dashboard')
+            # ===== GET ADMIN EMAIL =====
+            admins = User.objects.filter(is_superuser=True)
+            admin_emails = [admin.email for admin in admins if admin.email]
+
+            # ===== SEND EMAIL =====
+            if admin_emails:
+                try:
+                    send_mail(
+                        "New Service Needs Verification",
+                        f"""
+Hello Admin,
+
+A new service has been added and requires verification.
+
+Service: {service.title}
+Provider: {provider.company_name}
+
+Please log in to the admin panel to verify it.
+
+""",
+                        settings.DEFAULT_FROM_EMAIL,
+                        admin_emails,
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    print("Email error:", e)
+
+            messages.success(request, f"{service.title} has been added successfully and is awaiting admin verification.")
+            return redirect('manage_services')
+
+        else:
+            messages.error(request, "Please fix the errors below.")
+
     else:
         form = ServiceForm()
 
-    # ADD 'provider' AND 'categories' HERE
     return render(request, 'Match/add_service.html', {
         'form': form,
         'provider': provider,
         'categories': categories
     })
-
 
 @login_required
 def edit_service(request, service_id):
@@ -386,8 +423,8 @@ def provider_dashboard(request):
     # =============================
     # RATINGS
     # =============================
-    avg_rating = provider.reviews.aggregate(avg=Avg('rating'))['avg'] or 5.0
-    avg_rating = round(avg_rating, 1)
+    avg_rating = provider.reviews.aggregate(avg=Avg('rating'))['avg']
+    avg_rating = round(avg_rating, 1) if avg_rating is not None else None
 
     recent_reviews = provider.reviews.order_by('-created_at')[:5]
 
@@ -439,26 +476,28 @@ def provider_dashboard(request):
 # =========================
 @login_required
 def search_services(request):
-
     query = request.GET.get('q')
     user_lat = request.GET.get("lat")
     user_lon = request.GET.get("lon")
 
-    services = Service.objects.select_related("provider")
+    # Only fetch active services
+    services = Service.objects.filter(is_active=True, is_verified=True)
 
+    # Optional: filter only providers with completed profiles
+    # services = services.filter(provider__profile_completed=True)
+
+    # Search filter
     if query:
         services = services.filter(title__icontains=query)
 
     results = []
 
     for service in services:
-
         provider = service.provider
         distance = None
 
         try:
             if user_lat and user_lon and provider.latitude and provider.longitude:
-                # Convert to float safely
                 distance = haversine_distance(
                     float(user_lat),
                     float(user_lon),
@@ -466,12 +505,11 @@ def search_services(request):
                     float(provider.longitude)
                 )
         except ValueError:
-            # Ignore invalid coordinates
             distance = None
 
         results.append({
             "service": service,
-            "distance": round(distance, 2) if distance is not None else None
+            "distance": round(distance, 2) if distance else None
         })
 
     # Sort by distance if available
@@ -487,6 +525,8 @@ def search_services(request):
 
     return render(request, "Match/service_results.html", context)
 
+from .utils import send_notification_email
+
 @login_required
 def create_request(request, service_id):
     service = get_object_or_404(Service, id=service_id)
@@ -497,7 +537,7 @@ def create_request(request, service_id):
         latitude = request.POST.get('latitude')
         longitude = request.POST.get('longitude')
 
-        ServiceRequest.objects.create(
+        service_request = ServiceRequest.objects.create(
             user=request.user,
             service=service,
             location=location,
@@ -506,11 +546,28 @@ def create_request(request, service_id):
             longitude=Decimal(longitude) if longitude else None
         )
 
+        # Send email to service provider
+        provider_email = service.provider.user.email
+        subject = f"New Service Request for {service.title}"
+        message = f"""
+Hi {service.provider.user.username},
+
+You have received a new request for your service "{service.title}" from {request.user.username}.
+
+Location: {location}
+Description: {description}
+
+Please log in to your dashboard to accept or reject this request.
+
+Thanks,
+Your Service Platform
+"""
+        send_notification_email(subject, message, provider_email)
+
+        messages.success(request, "Request created successfully!")
         return redirect('user_dashboard')
 
-    return render(request, 'Match/request.html', {
-        'service': service
-    })
+    return render(request, 'Match/request.html', {'service': service})
 @login_required
 def profile_view(request):
     user = request.user
@@ -612,8 +669,60 @@ def accept_request(request, request_id):
         service_request.save()
         messages.success(request, f"Request for {service_request.service.title} has been accepted.")
 
+        # ===== EMAIL TO CUSTOMER =====
+        customer_email = service_request.user.email
+        subject = f"Your service request for {service_request.service.title} has been accepted"
+        message = f"""
+Hi {service_request.user.username},
+
+Your request for {service_request.service.title} has been accepted by {service_request.service.provider.company_name}.
+
+Please log in to your dashboard for details.
+
+Thanks,
+Your Service Platform
+"""
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL, 
+            [customer_email],
+            fail_silently=False
+        )
+
     return redirect('provider_requests')
 
+from django.core.mail import send_mail, BadHeaderError
+import logging
+
+@login_required
+def complete_request(request, request_id):
+    if request.user.role != 'company':
+        return redirect('login')
+
+    service_request = get_object_or_404(ServiceRequest, id=request_id, service__provider__user=request.user)
+
+    if service_request.status != 'completed':
+        service_request.status = 'completed'
+        service_request.save()
+        messages.success(request, f"Service '{service_request.service.title}' marked as completed.")
+
+        # Email notification
+        try:
+            send_mail(
+                f"Your service '{service_request.service.title}' is completed",
+                f"Hi {service_request.user.username},\n\n"
+                f"The service you requested from {service_request.service.provider.company_name} has been marked as completed.\n"
+                "Please log in to provide a review.\n\nThanks,\nYour Service Platform",
+                settings.DEFAULT_FROM_EMAIL,
+                [service_request.user.email],
+                fail_silently=False
+            )
+        except Exception as e:
+            logging.error(f"Failed to send email: {e}")
+            messages.warning(request, "Service marked as complete, but email notification failed.")
+
+    return redirect('provider_requests')
 
 @login_required
 def reject_request(request, request_id):
@@ -628,3 +737,34 @@ def reject_request(request, request_id):
         messages.warning(request, f"Request for {service_request.service.title} has been rejected.")
 
     return redirect('provider_requests')
+
+# =========================
+# SERVICE RATING
+# =========================
+@login_required
+def submit_review(request, request_id):
+    service_request = get_object_or_404(ServiceRequest, id=request_id, user=request.user)
+
+    if service_request.status != 'completed':
+        messages.error(request, "You can only review completed services.")
+        return redirect('user_dashboard')
+
+    # Prevent multiple reviews
+    if hasattr(service_request, 'review'):
+        messages.info(request, "You have already submitted a review for this service.")
+        return redirect('user_dashboard')
+
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.service_request = service_request
+            review.provider = service_request.service.provider
+            review.user = request.user
+            review.save()
+            messages.success(request, "Thank you for your review!")
+            return redirect('user_dashboard')
+    else:
+        form = ReviewForm()
+
+    return render(request, 'Match/rating.html', {'form': form, 'service_request': service_request})

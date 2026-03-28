@@ -187,8 +187,8 @@
                             {% elif req.status == 'accepted' %}status-accepted
                             {% elif req.status == 'completed' %}status-completed
                             {% elif req.status == 'rejected' %}status-rejected
-                            {% endif %}
-                        ">{{ req.status }}</span>
+                            {% endif %}"
+                        >{{ req.status }}</span>
                     </div>
 
                     <p class="request-desc">
@@ -201,6 +201,19 @@
                         </div>
                         <div class="footer-item">
                             <i class="fa-solid fa-calendar"></i> {{ req.created_at|date:"M d, Y" }}
+                        </div>
+                        <div class="footer-item ms-auto">
+                            {% if req.status == 'completed' %}
+                                {% if not req.review %}
+                                    <a href="{% url 'submit_review' req.id %}" class="btn btn-sm btn-warning">
+                                        <i class="fa-solid fa-star"></i> Rate & Review
+                                    </a>
+                                {% else %}
+                                    <span class="badge bg-success text-white">
+                                        <i class="fa-solid fa-star"></i> Reviewed
+                                    </span>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 </div>

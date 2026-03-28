@@ -1,0 +1,174 @@
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --sidebar-bg: #0f172a;
+        --sidebar-accent: #1e293b;
+        --primary: #0ea5e9;
+        --bg-soft: #f8fafc;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --star-color: #f59e0b;
+    }
+
+    body { background: var(--bg-soft); font-family: 'Inter', sans-serif; color: var(--text-main); }
+
+    /* Sidebar (Kept from your original) */
+    .sidebar { width: 260px; background: var(--sidebar-bg); height: 100vh; position: fixed; top: 0; left: 0; padding: 24px 0; z-index: 1000; border-right: 1px solid rgba(255,255,255,0.05); }
+    .sidebar .nav-link { color: #94a3b8; padding: 12px 24px; display: flex; align-items: center; gap: 12px; transition: all 0.2s ease; text-decoration: none; font-weight: 500; }
+    .sidebar .nav-link:hover { background: var(--sidebar-accent); color: #fff; }
+    .sidebar .nav-link.active { background: rgba(14, 165, 233, 0.1); color: var(--primary); border-right: 3px solid var(--primary); }
+
+    /* Main Content Layout */
+    .main-content { margin-left: 260px; padding: 3rem; width: calc(100% - 260px); }
+    .page-header { margin-bottom: 2rem; }
+
+    /* Modern Form Card */
+    .request-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Star Rating Logic */
+    .star-rating-container {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .star-rating-container input { display: none; }
+    .star-rating-container label {
+        font-size: 2rem;
+        color: #e2e8f0;
+        cursor: pointer;
+        transition: transform 0.2s, color 0.2s;
+    }
+    .star-rating-container label:hover,
+    .star-rating-container label:hover ~ label,
+    .star-rating-container input:checked ~ label {
+        color: var(--star-color);
+    }
+    .star-rating-container label:active { transform: scale(0.9); }
+
+    /* Form Element Styling */
+    .modern-form label { font-weight: 600; font-size: 0.95rem; color: var(--text-main); display: block; margin-bottom: 8px; }
+    .modern-form input[type="text"], 
+    .modern-form textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background-color: #ffffff;
+        transition: all 0.2s;
+    }
+    .modern-form input:focus, .modern-form textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    }
+    
+    .provider-badge {
+        background: var(--bg-soft);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px dashed var(--border-color);
+    }
+</style>
+
+<div class="d-flex">
+    <div class="sidebar d-flex flex-column">
+        <div class="text-center mb-5 px-3">
+            <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
+                 class="rounded-circle mb-2 border border-3 border-dark" width="70">
+            <h6 class="fw-bold mb-0 mt-2 text-white">{{ user.username }}</h6>
+            <small style="color: #64748b">Service Seeker</small>
+        </div>
+
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{% url 'user_dashboard' %}"><i class="fa-solid fa-house"></i> Dashboard</a>
+            <a class="nav-link" href="{% url 'search_services' %}"><i class="fa-solid fa-plus-circle"></i> Request Service</a>
+            <a class="nav-link active" href="{% url 'my_requests' %}"><i class="fa-solid fa-rectangle-list"></i> My Requests</a>
+            <a class="nav-link" href="{% url 'profile' %}"><i class="fa-solid fa-user-gear"></i> Profile Settings</a>
+        </nav>
+
+        <div class="mt-auto border-top border-secondary">
+            <a class="nav-link text-danger" href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="container-fluid">
+            <div class="page-header">
+                <h2 class="fw-bold">Submit Review</h2>
+                <p class="text-muted">Share your feedback to help the community.</p>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-7">
+                    <div class="request-card">
+                        <div class="provider-badge mb-4 d-flex align-items-center">
+                            <i class="fa-solid fa-circle-check text-success fs-4 me-3"></i>
+                            <div>
+                                <div class="fw-bold text-dark">{{ service_request.service.title }}</div>
+                                <div class="small text-muted">Provided by: {{ service_request.service.provider.company_name }}</div>
+                            </div>
+                        </div>
+
+                        <form method="post" class="modern-form">
+                            {% csrf_token %}
+                            
+                            {% for field in form %}
+                            <div class="mb-4">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                
+                                {% if "rating" in field.name|lower %}
+                                    <div class="star-rating-container">
+                                        {% for i in "54321" %}
+                                        <input type="radio" id="star{{ i }}" name="{{ field.name }}" value="{{ i }}" 
+                                               {% if field.value|slugify == i %}checked{% endif %}>
+                                        <label for="star{{ i }}"><i class="fa-solid fa-star"></i></label>
+                                        {% endfor %}
+                                    </div>
+                                    <small class="text-muted mt-1 d-block">Click a star to rate</small>
+                                
+                                {% else %}
+                                    {# This renders standard inputs/textareas with the styles defined above #}
+                                    {{ field }}
+                                {% endif %}
+
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+
+                            <div class="pt-3 border-top d-flex gap-3">
+                                <button type="submit" class="btn btn-primary px-5 py-2 fw-bold">
+                                    Post Review
+                                </button>
+                                <a href="{% url 'my_requests' %}" class="btn btn-light px-4 py-2 border">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 ms-lg-4 mt-4 mt-lg-0">
+                    <div class="alert alert-info border-0 shadow-sm rounded-4 p-4">
+                        <h6 class="fw-bold"><i class="fa-solid fa-circle-info me-2"></i>Why review?</h6>
+                        <p class="small mb-0 opacity-75">Your reviews help high-quality providers grow and ensure other users get the best possible service experience.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

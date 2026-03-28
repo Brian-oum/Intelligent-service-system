@@ -195,8 +195,15 @@
                                             <a href="{% url 'accept_request' req.id %}" class="btn btn-sm btn-success">Accept</a>
                                             <a href="{% url 'reject_request' req.id %}" class="btn btn-sm btn-outline-danger">Reject</a>
                                         </div>
-                                    {% else %}
-                                        <span class="badge bg-light text-muted border">Locked</span>
+                                    {% elif req.status == 'accepted' %}
+                                        <!-- Button to mark as completed -->
+                                        <a href="{% url 'complete_request' req.id %}" class="btn btn-sm btn-primary">
+                                            Mark as Completed
+                                        </a>
+                                    {% elif req.status == 'completed' %}
+                                        <span class="badge bg-success text-white">Completed</span>
+                                    {% elif req.status == 'rejected' %}
+                                        <span class="badge bg-danger text-white">Rejected</span>
                                     {% endif %}
                                 </td>
                             </tr>

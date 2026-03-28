@@ -76,10 +76,7 @@ class Service(models.Model):
 
     title = models.CharField(max_length=150)
     description = models.TextField()
-
-    min_price = models.DecimalField(max_digits=10, decimal_places=2)
-    max_price = models.DecimalField(max_digits=10, decimal_places=2)
-
+    is_verified = models.BooleanField(default=False)  # Admin verification
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
