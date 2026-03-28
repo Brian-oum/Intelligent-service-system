@@ -29,7 +29,9 @@ urlpatterns = [
     path('provider/requests/', views.provider_requests, name='provider_requests'),
     path('provider/requests/accept/<int:request_id>/', views.accept_request, name='accept_request'),
     path('provider/requests/reject/<int:request_id>/', views.reject_request, name='reject_request'),
+    path('provider/requests/complete/<int:request_id>/', views.complete_request, name='complete_request'),
     path('user/requests/', views.my_requests, name='my_requests'),
+    path('review/<int:request_id>/', views.submit_review, name='submit_review'),
 
     path('provider/services/', views.manage_services, name='manage_services'),
 ]

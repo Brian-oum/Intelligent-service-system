@@ -128,3 +128,16 @@ LOGOUT_REDIRECT_URL = 'login'
 LOGIN_URL = 'login'
 
 TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
+# Auto logout after 30 minutes of inactivity
+SESSION_COOKIE_AGE = 1800   # 30 minutes in seconds
+
+# Reset session timer every time the user makes a request
+SESSION_SAVE_EVERY_REQUEST = True
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'desbrian09@gmail.com'
+EMAIL_HOST_PASSWORD = 'tlfrpnkhdznjzfxz'
+DEFAULT_FROM_EMAIL = 'eFundi <noreply@yourdomain.com>'

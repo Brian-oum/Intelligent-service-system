@@ -41,3 +41,16 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     return R * c
+
+# utils.py
+from django.core.mail import send_mail
+from django.conf import settings
+
+def send_notification_email(subject, message, recipient_email):
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,  # e.g., "noreply@yourdomain.com"
+        [recipient_email],
+        fail_silently=False
+    )

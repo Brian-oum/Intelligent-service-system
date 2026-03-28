@@ -2,7 +2,7 @@
 
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import ServiceProvider, CompanyDocument, Service, ServiceCategory
+from .models import ServiceProvider, CompanyDocument, Service, ServiceCategory, Review
 
 User = get_user_model()
 
@@ -105,14 +105,10 @@ class ServiceForm(forms.ModelForm):
             'category',
             'title',
             'description',
-            'min_price',
-            'max_price',
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'min_price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'max_price': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
     def clean_category(self):
@@ -170,4 +166,14 @@ class ServiceProviderUpdateForm(forms.ModelForm):
             'website': forms.URLInput(attrs={'class': 'form-control'}),
             'latitude': forms.HiddenInput,
             'longitude': forms.HiddenInput,
+        }
+
+class ReviewForm(forms.ModelForm):
+    rating = forms.IntegerField(min_value=1, max_value=5, widget=forms.NumberInput(attrs={'type':'number'}))
+
+    class Meta:
+        model = Review
+        fields = ['rating', 'comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={'rows':3, 'placeholder': 'Write your review...'})
         }

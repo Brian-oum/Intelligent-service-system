@@ -84,9 +84,15 @@ class ServiceProviderAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('title', 'provider', 'category', 'min_price', 'max_price', 'is_active')
-    list_filter = ('category', 'is_active')
-    search_fields = ('title', 'provider__company_name')
+    list_display = ('title', 'provider', 'category', 'is_active', 'is_verified', 'created_at')
+    list_filter = ('is_verified', 'is_active', 'category', 'provider')
+    search_fields = ('title', 'provider__company_name', 'category__name')
+    actions = ['mark_as_verified']
+
+    def mark_as_verified(self, request, queryset):
+        queryset.update(is_verified=True)
+        self.message_user(request, f"{queryset.count()} service(s) marked as verified.")
+    mark_as_verified.short_description = "Mark selected services as verified"
 
 
 # =========================
