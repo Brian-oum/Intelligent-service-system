@@ -194,96 +194,276 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // [Keep your original Javascript logic here exactly as it was]
+const providers = [
+{% for provider in providers %}
+{
+    id: {{ provider.id }},
+    name: "{{ provider.company_name|escapejs }}",
+    lat: {{ provider.latitude }},
+    lng: {{ provider.longitude }},
+    address: "{{ provider.address|escapejs }}"
+},
+{% endfor %}
+];
+
+// Optional: If you want to center map on user location
+const userLat = {{ user_profile.latitude|default:"-1.286389" }};
+const userLng = {{ user_profile.longitude|default:"36.817223" }};
+</script>
+<script>
     let map, marker, searchTimeout;
-    const latInput = document.getElementById("id_latitude");
-    const lngInput = document.getElementById("id_longitude");
-    const displayInput = document.getElementById("display_location");
-    const modalElement = document.getElementById('mapModal');
-    const searchInput = document.getElementById("map-search");
-    const suggestionBox = document.getElementById("suggestions");
 
-    async function fetchAddress(lat, lng) {
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
-            const data = await response.json();
-            return data.display_name || "Selected Location";
-        } catch (e) { return "Selected Location"; }
+/* Inputs */
+const latInput = document.getElementById("id_latitude");
+const lngInput = document.getElementById("id_longitude");
+const displayInput = document.getElementById("display_location");
+
+const modalElement = document.getElementById('mapModal');
+
+const searchInput = document.getElementById("map-search");
+const suggestionBox = document.getElementById("suggestions");
+
+
+/* Fetch readable address from coordinates */
+async function fetchAddress(lat, lng) {
+
+    try {
+
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
+        );
+
+        const data = await response.json();
+
+        return data.display_name || "Selected Location";
+
+    } catch (e) {
+
+        return "Selected Location";
+
     }
 
-    function setMarker(lat, lng, address = null) {
-        const pos = [lat, lng];
-        if (!map) return;
-        if (!marker) {
-            marker = L.marker(pos, {draggable: true}).addTo(map);
-            marker.on('dragend', async function() {
-                const newPos = marker.getLatLng();
-                latInput.value = newPos.lat;
-                lngInput.value = newPos.lng;
-                searchInput.value = await fetchAddress(newPos.lat, newPos.lng);
+}
+
+
+/* Set user marker */
+function setMarker(lat, lng, address=null) {
+
+    const pos = [lat, lng];
+
+    if(!map) return;
+
+    if(!marker){
+
+        marker = L.marker(pos, {draggable:true}).addTo(map);
+
+        marker.on("dragend", async function(){
+
+            const newPos = marker.getLatLng();
+
+            latInput.value = newPos.lat;
+            lngInput.value = newPos.lng;
+
+            searchInput.value = await fetchAddress(newPos.lat, newPos.lng);
+
+        });
+
+    }
+    else{
+
+        marker.setLatLng(pos);
+
+    }
+
+    map.setView(pos, 15);
+
+    latInput.value = lat;
+    lngInput.value = lng;
+
+    if(address){
+
+        searchInput.value = address;
+
+    }
+
+}
+
+
+function loadProviders(){
+
+    providers.forEach(provider => {
+
+        const icon = L.icon({
+            iconUrl:"https://cdn-icons-png.flaticon.com/512/684/684908.png",
+            iconSize:[32,32]
+        });
+
+        const providerMarker = L.marker(
+            [provider.lat, provider.lng],
+            {icon:icon}
+        ).addTo(map);
+
+        providerMarker.bindPopup(`
+            <div style="text-align:center">
+                <strong>${provider.name}</strong><br>
+                ${provider.address}<br><br>
+
+                <button 
+                    class="btn btn-sm btn-primary"
+                    onclick="selectProvider(${provider.id}, '${provider.name}')"
+                >
+                    Request Service
+                </button>
+            </div>
+        `);
+
+    });
+
+}
+
+/* Initialize map when modal opens */
+modalElement.addEventListener('shown.bs.modal', function(){
+
+    setTimeout(()=>{
+
+        if(!map){
+
+            map = L.map("map").setView([-1.286389,36.817223],13);
+
+            // OpenStreetMap France (no referrer block)
+            L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+                maxZoom: 20
+            }).addTo(map);
+
+            loadProviders();
+
+            map.on("click", async function(e){
+
+                setMarker(e.latlng.lat, e.latlng.lng);
+
+                searchInput.value = await fetchAddress(
+                    e.latlng.lat,
+                    e.latlng.lng
+                );
+
             });
-        } else { marker.setLatLng(pos); }
-        map.setView(pos, 16);
-        latInput.value = lat; lngInput.value = lng;
-        if (address) searchInput.value = address;
+
+        }
+
+        map.invalidateSize();
+
+        if(latInput.value && lngInput.value){
+
+            setMarker(latInput.value, lngInput.value);
+
+        }
+
+    },300);
+
+});
+
+
+/* Location search autocomplete */
+searchInput.addEventListener("input", function(){
+
+    clearTimeout(searchTimeout);
+
+    const query = this.value;
+
+    if(query.length < 3){
+
+        suggestionBox.style.display = "none";
+
+        return;
+
     }
 
-    modalElement.addEventListener('shown.bs.modal', function () {
-        setTimeout(() => {
-            if (!map) {
-                map = L.map("map").setView([-1.286389, 36.817223], 13);
-                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-                map.on("click", async function (e) {
-                    setMarker(e.latlng.lat, e.latlng.lng);
-                    searchInput.value = await fetchAddress(e.latlng.lat, e.latlng.lng);
+    searchTimeout = setTimeout(()=>{
+
+        fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+        )
+        .then(res=>res.json())
+        .then(data=>{
+
+            suggestionBox.innerHTML = "";
+
+            if(data.length > 0){
+
+                suggestionBox.style.display = "block";
+
+                data.forEach(item=>{
+
+                    const div = document.createElement("div");
+
+                    div.className = "suggestion-item";
+
+                    div.innerText = item.display_name;
+
+                    div.onclick = ()=>{
+
+                        setMarker(item.lat,item.lon,item.display_name);
+
+                        suggestionBox.style.display="none";
+
+                    };
+
+                    suggestionBox.appendChild(div);
+
                 });
+
             }
-            map.invalidateSize();
-            if (latInput.value && lngInput.value) setMarker(latInput.value, lngInput.value);
-        }, 300);
-    });
 
-    searchInput.addEventListener("input", function() {
-        clearTimeout(searchTimeout);
-        const query = this.value;
-        if (query.length < 3) { suggestionBox.style.display = "none"; return; }
-        searchTimeout = setTimeout(() => {
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
-                .then(r => r.json())
-                .then(data => {
-                    suggestionBox.innerHTML = "";
-                    if (data.length > 0) {
-                        suggestionBox.style.display = "block";
-                        data.forEach(item => {
-                            const div = document.createElement("div");
-                            div.className = "suggestion-item";
-                            div.innerText = item.display_name;
-                            div.onclick = () => {
-                                setMarker(item.lat, item.lon, item.display_name);
-                                suggestionBox.style.display = "none";
-                            };
-                            suggestionBox.appendChild(div);
-                        });
-                    }
-                });
-        }, 400);
-    });
+        });
 
-    document.getElementById("useCurrentLocation").addEventListener("click", function() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async position => {
-                const { latitude, longitude } = position.coords;
-                const address = await fetchAddress(latitude, longitude);
-                setMarker(latitude, longitude, address);
-            });
-        }
-    });
+    },400);
 
-    document.getElementById("confirmLocation").addEventListener("click", function() {
-        if (latInput.value && lngInput.value) {
-            displayInput.value = searchInput.value || "Location Selected";
-            bootstrap.Modal.getInstance(modalElement).hide();
-        }
-    });
+});
+
+
+/* Use current location */
+document.getElementById("useCurrentLocation")
+.addEventListener("click", function(){
+
+    if(navigator.geolocation){
+
+        navigator.geolocation.getCurrentPosition(
+            async position=>{
+
+                const lat = position.coords.latitude;
+
+                const lng = position.coords.longitude;
+
+                const address = await fetchAddress(lat,lng);
+
+                setMarker(lat,lng,address);
+
+            },
+            ()=>{
+
+                alert("Unable to retrieve your location");
+
+            }
+        );
+
+    }
+
+});
+
+
+/* Confirm selected location */
+document.getElementById("confirmLocation")
+.addEventListener("click", function(){
+
+    if(latInput.value && lngInput.value){
+
+        displayInput.value = searchInput.value || "Location Selected";
+
+        bootstrap.Modal.getInstance(modalElement).hide();
+
+    }
+
+});
 </script>
 {% endblock %}

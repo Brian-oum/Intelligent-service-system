@@ -34,4 +34,5 @@ urlpatterns = [
     path('review/<int:request_id>/', views.submit_review, name='submit_review'),
 
     path('provider/services/', views.manage_services, name='manage_services'),
+    path('document/view/<int:doc_id>/', views.view_document, name='view_document'),
 ]
