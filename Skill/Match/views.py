@@ -3,7 +3,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.mail import send_mail
+from .utils import send_notification_email
+from .models import ServiceProvider
+from decimal import Decimal
+from decimal import Decimal
 from django.conf import settings
 from django.core.mail import send_mail
 from django.middleware.csrf import rotate_token
@@ -24,6 +27,14 @@ from datetime import timedelta
 import json
 from .utils import haversine_distance
 from decimal import Decimal
+# views.py
+from django.shortcuts import get_object_or_404
+from django.http import FileResponse
+from .models import CompanyDocument
+
+def view_document(request, doc_id):
+    doc = get_object_or_404(CompanyDocument, id=doc_id)
+    return FileResponse(open(doc.document_file.path, 'rb'), content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 # =========================
 # Landing Pages
 # =========================
@@ -525,19 +536,56 @@ def search_services(request):
 
     return render(request, "Match/service_results.html", context)
 
-from .utils import send_notification_email
 
 @login_required
 def create_request(request, service_id):
+
     service = get_object_or_404(Service, id=service_id)
 
+    # Get all providers offering the same category
+    providers = ServiceProvider.objects.filter(
+        services__category=service.category,
+        services__is_active=True,
+        is_active=True,
+        latitude__isnull=False,
+        longitude__isnull=False
+    ).distinct()
+
+    nearby_providers = []
+
+    user_lat = request.GET.get("lat")
+    user_lng = request.GET.get("lng")
+
+    # Filter providers within 20km
+    if user_lat and user_lng:
+
+        user_lat = float(user_lat)
+        user_lng = float(user_lng)
+
+        for provider in providers:
+
+            distance = haversine_distance(
+                user_lat,
+                user_lng,
+                provider.latitude,
+                provider.longitude
+            )
+
+            if distance <= 20:
+                nearby_providers.append(provider)
+
+    else:
+        nearby_providers = providers
+
+
     if request.method == "POST":
+
         location = request.POST.get('location')
         description = request.POST.get('description')
         latitude = request.POST.get('latitude')
         longitude = request.POST.get('longitude')
 
-        service_request = ServiceRequest.objects.create(
+        ServiceRequest.objects.create(
             user=request.user,
             service=service,
             location=location,
@@ -546,9 +594,10 @@ def create_request(request, service_id):
             longitude=Decimal(longitude) if longitude else None
         )
 
-        # Send email to service provider
         provider_email = service.provider.user.email
+
         subject = f"New Service Request for {service.title}"
+
         message = f"""
 Hi {service.provider.user.username},
 
@@ -562,12 +611,18 @@ Please log in to your dashboard to accept or reject this request.
 Thanks,
 Your Service Platform
 """
+
         send_notification_email(subject, message, provider_email)
 
         messages.success(request, "Request created successfully!")
+
         return redirect('user_dashboard')
 
-    return render(request, 'Match/request.html', {'service': service})
+    return render(request, "Match/request.html", {
+        "service": service,
+        "providers": nearby_providers
+    })
+    
 @login_required
 def profile_view(request):
     user = request.user

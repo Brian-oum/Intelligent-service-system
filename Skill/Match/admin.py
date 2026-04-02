@@ -9,7 +9,8 @@ from .models import (
     Review,
     CompanyDocument
 )
-
+from django.utils.html import format_html
+from django.urls import reverse
 # =========================
 # USER ADMIN
 # =========================
@@ -34,9 +35,24 @@ class ServiceCategoryAdmin(admin.ModelAdmin):
 
 
 # =========================
-# SERVICE PROVIDERS
+# Company Documents Inline
 # =========================
+class CompanyDocumentInline(admin.TabularInline):
+    model = CompanyDocument
+    extra = 1
+    fields = ('document_name', 'view_document', 'uploaded_at')
+    readonly_fields = ('view_document', 'uploaded_at')
 
+    def view_document(self, obj):
+        if obj.document_file:
+            url = reverse('view_document', args=[obj.id])
+            return format_html('<a href="{}" target="_blank">Open Document</a>', url)
+        return "No document uploaded"
+    view_document.short_description = "Document"
+
+# =========================
+# Service Provider Admin
+# =========================
 @admin.register(ServiceProvider)
 class ServiceProviderAdmin(admin.ModelAdmin):
     list_display = (
@@ -48,10 +64,8 @@ class ServiceProviderAdmin(admin.ModelAdmin):
         'latitude',
         'longitude'
     )
-
     list_filter = ('is_verified', 'is_active')
     search_fields = ('company_name', 'user__username')
-
     fieldsets = (
         ("Company Info", {
             "fields": (
@@ -76,7 +90,7 @@ class ServiceProviderAdmin(admin.ModelAdmin):
             )
         }),
     )
-
+    inlines = [CompanyDocumentInline]  # <-- Add documents inline
 
 # =========================
 # SERVICES
