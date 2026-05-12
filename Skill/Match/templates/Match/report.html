@@ -1,0 +1,1243 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports · {{ provider.company_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* ── Tokens ─────────────────────────────────────────────────────────── */
+    :root {
+      --sidebar-bg:   #1e293b;
+      --sidebar-w:    240px;
+      --accent:       #0ea5e9;
+      --accent-dim:   rgba(0,212,170,.12);
+      --accent2:      #7c6aff;
+      --danger:       #ff4d6d;
+      --warning:      #ffb703;
+      --success:      #06d6a0;
+      --info:         #4cc9f0;
+      --bg:           #f0f4f9;
+      --card:         #ffffff;
+      --navy:         #000000;
+      --text:         #1c2740;
+      --muted:        #6b7a99;
+      --border:       #e2e8f5;
+      --font:         'Outfit', sans-serif;
+      --mono:         'Space Mono', monospace;
+      --radius:       14px;
+      --shadow:       0 4px 24px rgba(17,24,39,.07);
+      --shadow-lg:    0 12px 40px rgba(17,24,39,.13);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 0;
+      z-index: 200;
+      transition: transform .3s;
+    }
+
+    .sidebar-brand {
+      padding: 0 1.5rem 1.8rem;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .sidebar-brand h5 {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--accent);
+      letter-spacing: -.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sidebar-brand small {
+      font-size: .7rem;
+      color: rgba(255,255,255,.3);
+      font-weight: 400;
+    }
+
+    .nav { display: flex; flex-direction: column; gap: 2px; padding: 1.2rem .75rem 0; flex: 1; }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: .65rem .9rem;
+      border-radius: 9px;
+      color: rgba(255,255,255,.45);
+      font-size: .85rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background .18s, color .18s;
+    }
+    .nav-link i { width: 18px; text-align: center; font-size: .9rem; }
+    .nav-link:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+    .nav-link.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-left: 3px solid var(--accent);
+      padding-left: calc(.9rem - 3px);
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: rgba(255,255,255,.06);
+      margin: .6rem 0;
+    }
+
+    .nav-logout { margin-top: auto !important; padding: 0 .75rem 0; }
+    .nav-logout .nav-link { color: rgba(255,100,100,.55); }
+    .nav-logout .nav-link:hover { background: rgba(255,77,109,.1); color: var(--danger); }
+
+    /* ── Main Wrapper ────────────────────────────────────────────────────── */
+    .main-wrap {
+      flex: 1;
+      overflow-x: hidden;
+      min-width: 0;
+    }
+
+    /* ── Topbar ──────────────────────────────────────────────────────────── */
+    .topbar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-left h4 {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+    }
+    .topbar-left p { font-size: .78rem; color: var(--muted); margin-top: 1px; }
+
+    .topbar-actions { display: flex; gap: .6rem; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .48rem 1.1rem;
+      border-radius: 8px;
+      font-size: .8rem;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all .18s;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: #00bfa0; }
+    .btn-danger-soft { background: rgba(255,77,109,.08); color: var(--danger); border: 1.5px solid rgba(255,77,109,.2); }
+    .btn-danger-soft:hover { background: rgba(255,77,109,.15); }
+
+    /* ── Page Content ────────────────────────────────────────────────────── */
+    .page { padding: 2rem 2rem 4rem; max-width: 1300px; }
+
+    /* ── Hero Banner ─────────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, #1c2d5e 55%, #162742 100%);
+      border-radius: 18px;
+      padding: 2.2rem 2.5rem;
+      margin-bottom: 1.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 340px; height: 340px;
+      background: radial-gradient(circle, rgba(0,212,170,.15) 0%, transparent 70%);
+      top: -100px; right: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(124,106,255,.12) 0%, transparent 70%);
+      bottom: -60px; left: 200px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero-info { position: relative; z-index: 1; }
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .7rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      background: rgba(0,212,170,.15);
+      color: var(--accent);
+      border: 1px solid rgba(0,212,170,.25);
+      padding: .2rem .7rem;
+      border-radius: 999px;
+      margin-bottom: .7rem;
+    }
+    .hero-name {
+      font-weight: 800;
+      font-size: 2.1rem;
+      color: #fff;
+      line-height: 1.15;
+      letter-spacing: -.03em;
+    }
+    .hero-name span { color: var(--accent); }
+    .hero-meta { font-size: .78rem; color: rgba(255,255,255,.4); margin-top: .5rem; display: flex; gap: 1.2rem; flex-wrap: wrap; }
+    .hero-meta i { margin-right: .3rem; }
+
+    .hero-stats { display: flex; gap: 1rem; position: relative; z-index: 1; }
+    .hero-stat-box {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      padding: 1rem 1.4rem;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      min-width: 100px;
+    }
+    .hero-stat-box .val {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      font-family: var(--mono);
+    }
+    .hero-stat-box .lbl { font-size: .7rem; color: rgba(255,255,255,.4); margin-top: .3rem; font-weight: 500; }
+
+    /* ── KPI Grid ────────────────────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.8rem;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.2rem;
+      transition: all .22s;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--kpi-color, var(--accent));
+      border-radius: 0 0 var(--radius) var(--radius);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .kpi-card:hover::before { opacity: 1; }
+
+    .kpi-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      margin-bottom: .9rem;
+      transition: transform .2s;
+    }
+    .kpi-card:hover .kpi-icon { transform: scale(1.1) rotate(-5deg); }
+
+    .kpi-val { font-size: 1.9rem; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-family: var(--mono); }
+    .kpi-lbl { font-size: .72rem; color: var(--muted); font-weight: 500; margin-top: .25rem; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-trend { font-size: .72rem; margin-top: .5rem; display: flex; align-items: center; gap: .3rem; }
+    .kpi-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.kpi-link:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.kpi-card {
+  cursor: pointer;
+}
+
+    /* ── Section Title ───────────────────────────────────────────────────── */
+    .sec-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Grid Layouts ────────────────────────────────────────────────────── */
+    .grid-3-2 {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 1.2rem;
+      margin-bottom: 1.8rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 1.8rem;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 1.8rem;
+    }
+
+    /* ── Card ────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.3rem;
+    }
+    .card-head h5 {
+      font-weight: 700;
+      font-size: .92rem;
+      color: var(--text);
+    }
+
+    /* ── Chart containers ────────────────────────────────────────────────── */
+    .chart-wrap { position: relative; }
+    .chart-h-280 { height: 280px; }
+    .chart-h-220 { height: 220px; }
+    .chart-h-200 { height: 200px; }
+
+    /* ── Status bars ─────────────────────────────────────────────────────── */
+    .status-list { display: flex; flex-direction: column; gap: .85rem; }
+    .status-row { display: flex; flex-direction: column; gap: .3rem; }
+    .status-meta { display: flex; align-items: center; justify-content: space-between; }
+    .status-label-wrap { display: flex; align-items: center; gap: .5rem; font-size: .83rem; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .status-pct { font-size: .75rem; font-family: var(--mono); color: var(--muted); }
+    .status-count-val { font-weight: 700; font-size: .9rem; }
+    .bar-track { height: 6px; background: var(--bg); border-radius: 99px; overflow: hidden; width: 100%; }
+    .bar-fill { height: 100%; border-radius: 99px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+
+    /* ── Rating ──────────────────────────────────────────────────────────── */
+    .rating-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem 0 .5rem;
+    }
+    .rating-big-num {
+      font-family: var(--mono);
+      font-size: 4rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stars { font-size: 1.5rem; color: var(--warning); letter-spacing: 3px; margin: .4rem 0; }
+    .rating-sub { font-size: .75rem; color: var(--muted); }
+
+    .rating-bars { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; width: 100%; }
+    .rating-bar-row { display: flex; align-items: center; gap: .6rem; font-size: .75rem; }
+    .rating-bar-row .lbl { width: 30px; color: var(--muted); font-family: var(--mono); text-align: right; }
+    .rating-bar-row .bar-track { flex: 1; }
+    .rating-bar-row .cnt { width: 20px; text-align: right; font-family: var(--mono); color: var(--muted); }
+
+    /* ── Tables ──────────────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.8rem; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: .83rem; background: var(--card); }
+    .data-table thead th {
+      background: var(--navy);
+      color: rgba(255,255,255,.7);
+      font-weight: 600;
+      padding: .85rem 1.1rem;
+      text-align: left;
+      font-size: .72rem;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .data-table thead th:first-child { border-radius: var(--radius) 0 0 0; }
+    .data-table thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
+    .data-table tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table tbody tr:nth-child(even) { background: #fafbff; }
+    .data-table tbody tr:hover { background: var(--accent-dim); }
+    .data-table tbody td { padding: .8rem 1.1rem; color: var(--text); vertical-align: middle; }
+    .data-table .muted { color: var(--muted); }
+    .data-table .mono { font-family: var(--mono); font-size: .78rem; }
+
+    .badge {
+      display: inline-block;
+      padding: .22rem .75rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .badge-pending   { background: #fff8e1; color: #b45309; border: 1px solid #fde68a; }
+    .badge-accepted  { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-completed { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .badge-rejected  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* ── Mini progress (service table) ─────────────────────────────────── */
+    .mini-prog { display: flex; align-items: center; gap: .5rem; }
+    .mini-prog .bar-track { flex: 1; }
+
+    /* ── Insight Cards ───────────────────────────────────────────────────── */
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.8rem;
+    }
+    .insight-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.3rem;
+      display: flex;
+      gap: .9rem;
+      align-items: flex-start;
+      transition: all .2s;
+    }
+    .insight-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+    .insight-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem; flex-shrink: 0;
+    }
+    .insight-card h6 { font-size: .8rem; font-weight: 700; margin-bottom: .25rem; }
+    .insight-card p  { font-size: .75rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Sparkline summary row ───────────────────────────────────────────── */
+    .summary-row {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.8rem;
+    }
+    .summary-pill {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: .4rem 1rem;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .summary-pill .dot { width: 7px; height: 7px; }
+
+    /* ── Review list ─────────────────────────────────────────────────────── */
+    .review-list { display: flex; flex-direction: column; gap: .85rem; }
+    .review-item {
+      padding: .85rem 1rem;
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .review-item-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: .3rem; }
+    .review-name { font-weight: 700; font-size: .82rem; }
+    .review-date { font-size: .72rem; color: var(--muted); }
+    .review-stars { font-size: .8rem; color: var(--warning); letter-spacing: 1px; }
+    .review-service { font-size: .72rem; color: var(--muted); margin-bottom: .35rem; }
+    .review-comment { font-size: .8rem; color: var(--text); line-height: 1.5; font-style: italic; }
+
+    /* ── Heatmap-style month grid ────────────────────────────────────────── */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 5px;
+      margin-top: .5rem;
+    }
+    .heatmap-cell {
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: .6rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.8);
+      position: relative;
+      transition: transform .15s;
+      cursor: default;
+    }
+    .heatmap-cell:hover { transform: scale(1.15); z-index: 2; }
+    .heatmap-cell .month-lbl { font-size: .6rem; color: inherit; font-weight: 500; }
+    .heatmap-cell .month-val { font-family: var(--mono); font-size: .75rem; font-weight: 700; }
+
+    /* ── Completion funnel ───────────────────────────────────────────────── */
+    .funnel { display: flex; flex-direction: column; gap: .5rem; margin-top: .5rem; }
+    .funnel-step {
+      display: flex;
+      align-items: center;
+      gap: .8rem;
+      position: relative;
+    }
+    .funnel-bar-outer {
+      flex: 1;
+      background: var(--bg);
+      border-radius: 6px;
+      height: 34px;
+      overflow: hidden;
+      position: relative;
+    }
+    .funnel-bar-inner {
+      height: 100%;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding: 0 .8rem;
+      font-size: .78rem;
+      font-weight: 700;
+      color: #fff;
+      transition: width .9s cubic-bezier(.4,0,.2,1);
+    }
+    .funnel-count { font-family: var(--mono); font-size: .8rem; font-weight: 700; width: 32px; text-align: right; }
+    .funnel-label { font-size: .78rem; width: 80px; }
+
+    /* ── Empty state ─────────────────────────────────────────────────────── */
+    .empty { text-align: center; color: var(--muted); padding: 2.5rem 1rem; font-size: .85rem; }
+    .empty i { font-size: 2rem; opacity: .3; margin-bottom: .5rem; display: block; }
+
+    /* ── Print ───────────────────────────────────────────────────────────── */
+    @media print {
+      .sidebar, .topbar { display: none !important; }
+      .main-wrap { width: 100%; }
+      .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { padding: 0; }
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .insight-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .grid-3-2 { grid-template-columns: 1fr; }
+      .grid-2   { grid-template-columns: 1fr; }
+      .grid-3   { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        transform: translateX(-100%);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main-wrap { width: 100%; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-3   { grid-template-columns: 1fr; }
+      .insight-grid { grid-template-columns: 1fr; }
+      .hero { flex-direction: column; align-items: flex-start; }
+      .hero-stats { flex-wrap: wrap; }
+      .heatmap-grid { grid-template-columns: repeat(6, 1fr); }
+      .page { padding: 1rem 1rem 3rem; }
+      .topbar { padding: 0 1rem; }
+    }
+
+    /* ── Animations ──────────────────────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp .45s ease both; }
+    .delay-1 { animation-delay: .05s; }
+    .delay-2 { animation-delay: .1s; }
+    .delay-3 { animation-delay: .15s; }
+    .delay-4 { animation-delay: .2s; }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #c4cede; }
+
+    /* ── Mobile toggle ───────────────────────────────────────────────────── */
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.2rem;
+      padding: .3rem;
+    }
+    @media (max-width: 768px) { .menu-toggle { display: block; } }
+
+    /* ── Overlay ─────────────────────────────────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 190;
+    }
+    .overlay.show { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <h5>{{ provider.company_name }}</h5>
+  </div>
+
+  <ul class="nav">
+    <li>
+      <a class="nav-link" href="{% url 'provider_dashboard' %}">
+        <i class="fas fa-chart-pie"></i> Dashboard
+      </a>
+    </li>
+    <li>
+      <a class="nav-link" href="{% url 'add_service' %}">
+        <i class="fas fa-plus-circle"></i> Add Service
+      </a>
+    </li>
+    <li>
+      <a class="nav-link" href="{% url 'manage_services' %}">
+        <i class="fas fa-concierge-bell"></i> My Services
+      </a>
+    </li>
+    <li>
+      <a class="nav-link" href="{% url 'provider_requests' %}">
+        <i class="fas fa-envelope-open-text"></i> Requests
+      </a>
+    </li>
+    <li>
+      <a class="nav-link active" href="{% url 'report_page' provider.id %}">
+        <i class="fas fa-chart-line"></i> Reports
+      </a>
+    </li>
+    <div class="nav-divider"></div>
+    <li>
+      <a class="nav-link" href="{% url 'profile' %}">
+        <i class="fas fa-user-cog"></i> Profile
+      </a>
+    </li>
+  </ul>
+
+  <ul class="nav nav-logout" style="flex:0; padding-bottom:.5rem;">
+    <li>
+      <a class="nav-link" href="{% url 'logout' %}">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </a>
+    </li>
+  </ul>
+</nav>
+
+<!-- ── Main ─────────────────────────────────────────────────────────────── -->
+<div class="main-wrap">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:.8rem;">
+      <button class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="topbar-left">
+        <h4>Performance Report</h4>
+        <p>{{ provider.company_name }} &nbsp;·&nbsp; Generated {{ generated_at|date:"d M Y, H:i" }}</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <a href="{% url 'export_csv' provider.pk %}" class="btn btn-outline">
+        <i class="fas fa-download"></i> CSV
+      </a>
+      <a href="{% url 'export_pdf' provider.pk %}" class="btn btn-accent">
+        <i class="fas fa-file-pdf"></i> PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Page -->
+  <div class="page">
+
+    <!-- KPI Row -->
+    <div class="kpi-grid fade-up delay-1">
+
+  <!-- Total Requests -->
+  <a href="{% url 'provider_requests' %}" class="kpi-link">
+    <div class="kpi-card" style="--kpi-color:var(--info)">
+      <div class="kpi-icon" style="background:rgba(76,201,240,.1); color:var(--info)">
+        <i class="fas fa-layer-group"></i>
+      </div>
+      <div class="kpi-val" style="color:var(--navy)">{{ total_requests }}</div>
+      <div class="kpi-lbl">Total Requests</div>
+      <div class="kpi-trend" style="color:var(--muted)">
+        <i class="fas fa-infinity" style="font-size:.65rem"></i> Lifetime volume
+      </div>
+    </div>
+  </a>
+
+  <!-- Completed -->
+  <a href="{% url 'provider_requests' %}?status=completed" class="kpi-link">
+    <div class="kpi-card" style="--kpi-color:var(--success)">
+      <div class="kpi-icon" style="background:rgba(6,214,160,.1); color:var(--success)">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="kpi-val" style="color:var(--navy)">{{ completed_requests }}</div>
+      <div class="kpi-lbl">Completed</div>
+      <div class="kpi-trend" style="color:var(--success)">
+        {% if total_requests %}
+          {% widthratio completed_requests total_requests 100 as comp_pct %}
+          <i class="fas fa-arrow-up"></i> {{ comp_pct }}% completion rate
+        {% else %}—{% endif %}
+      </div>
+    </div>
+  </a>
+
+  <!-- Pending -->
+  <a href="{% url 'provider_requests' %}?status=pending" class="kpi-link">
+    <div class="kpi-card" style="--kpi-color:var(--warning)">
+      <div class="kpi-icon" style="background:rgba(255,183,3,.1); color:var(--warning)">
+        <i class="fas fa-hourglass-half"></i>
+      </div>
+      <div class="kpi-val" style="color:var(--navy)">{{ pending_requests }}</div>
+      <div class="kpi-lbl">Pending</div>
+      <div class="kpi-trend" style="color:var(--warning)">
+        <i class="fas fa-exclamation-circle"></i> Needs attention
+      </div>
+    </div>
+  </a>
+
+  <!-- Rejected -->
+  <a href="{% url 'provider_requests' %}?status=rejected" class="kpi-link">
+    <div class="kpi-card" style="--kpi-color:var(--danger)">
+      <div class="kpi-icon" style="background:rgba(255,77,109,.1); color:var(--danger)">
+        <i class="fas fa-times-circle"></i>
+      </div>
+      <div class="kpi-val" style="color:var(--navy)">{{ rejected_requests }}</div>
+      <div class="kpi-lbl">Rejected</div>
+      <div class="kpi-trend" style="color:var(--muted)">
+        {% if total_requests %}
+          {% widthratio rejected_requests total_requests 100 as rej_pct %}
+          <i class="fas fa-percent" style="font-size:.65rem"></i> {{ rej_pct }}% of total
+        {% else %}—{% endif %}
+      </div>
+    </div>
+  </a>
+
+  <!-- Rating -->
+  <a href="#reviews-section" class="kpi-link">
+    <div class="kpi-card" style="--kpi-color:#a855f7">
+      <div class="kpi-icon" style="background:rgba(168,85,247,.1); color:#a855f7">
+        <i class="fas fa-star"></i>
+      </div>
+      <div class="kpi-val" style="color:#000000">
+        {% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}—{% endif %}
+      </div>
+      <div class="kpi-lbl">Avg Rating</div>
+      <div class="kpi-trend" style="color:var(--muted)">
+        <i class="fas fa-comments" style="font-size:.65rem"></i>
+        {{ total_reviews }} review{{ total_reviews|pluralize }}
+      </div>
+    </div>
+  </a>
+
+</div>
+    <!-- Monthly Trend + Funnel -->
+    <div class="grid-3-2 fade-up delay-2">
+
+      <!-- Monthly chart -->
+      <div class="card">
+        <div class="card-head">
+          <h5><i class="fas fa-chart-area" style="color:var(--accent); margin-right:.4rem"></i> Monthly Request Volume</h5>
+          <span style="font-size:.72rem; color:var(--muted); background:var(--bg); padding:.2rem .7rem; border-radius:999px; border:1px solid var(--border)">Last 12 months</span>
+        </div>
+        <div class="chart-wrap chart-h-280">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Funnel -->
+      <div class="card">
+        <div class="card-head">
+          <h5><i class="fas fa-filter" style="color:var(--accent2); margin-right:.4rem"></i> Request Funnel</h5>
+        </div>
+        <div class="funnel">
+          <div class="funnel-step">
+            <div class="funnel-label" style="color:var(--info); font-weight:700; font-size:.78rem">Received</div>
+            <div class="funnel-bar-outer">
+              <div class="funnel-bar-inner" style="width:100%; background:var(--info)">Total</div>
+            </div>
+            <div class="funnel-count" style="color:var(--info)">{{ total_requests }}</div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-label" style="color:var(--warning); font-weight:700; font-size:.78rem">Pending</div>
+            <div class="funnel-bar-outer">
+              <div class="funnel-bar-inner" id="fPending" style="background:var(--warning)">Pending</div>
+            </div>
+            <div class="funnel-count" style="color:var(--warning)">{{ pending_requests }}</div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-label" style="color:var(--accent); font-weight:700; font-size:.78rem">Accepted</div>
+            <div class="funnel-bar-outer">
+              <div class="funnel-bar-inner" id="fAccepted" style="background:var(--accent)">Accepted</div>
+            </div>
+            <div class="funnel-count" style="color:var(--accent)">{{ accepted_requests }}</div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-label" style="color:var(--success); font-weight:700; font-size:.78rem">Completed</div>
+            <div class="funnel-bar-outer">
+              <div class="funnel-bar-inner" id="fCompleted" style="background:var(--success)">Completed</div>
+            </div>
+            <div class="funnel-count" style="color:var(--success)">{{ completed_requests }}</div>
+          </div>
+          <div class="funnel-step">
+            <div class="funnel-label" style="color:var(--danger); font-weight:700; font-size:.78rem">Rejected</div>
+            <div class="funnel-bar-outer">
+              <div class="funnel-bar-inner" id="fRejected" style="background:var(--danger)">Rejected</div>
+            </div>
+            <div class="funnel-count" style="color:var(--danger)">{{ rejected_requests }}</div>
+          </div>
+        </div>
+        <p style="font-size:.7rem; color:var(--muted); margin-top:1rem; text-align:center;">
+          Conversion: {{ completed_requests }}/{{ total_requests }} requests completed
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Status breakdown + Rating -->
+    <div class="grid-2 fade-up delay-2">
+
+      <!-- Status pie + bars -->
+      <div class="card">
+        <div class="card-head">
+          <h5><i class="fas fa-th-large" style="color:var(--accent2); margin-right:.4rem"></i> Status Breakdown</h5>
+        </div>
+        <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+          <div class="chart-wrap" style="height:180px; width:180px; flex-shrink:0;">
+            <canvas id="statusDoughnut"></canvas>
+          </div>
+          <div class="status-list" style="flex:1; min-width:160px;">
+            {% with total=total_requests %}
+
+            <div class="status-row">
+              <div class="status-meta">
+                <div class="status-label-wrap">
+                  <div class="dot" style="background:var(--warning)"></div>
+                  <span>Pending</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:.6rem;">
+                  <div class="status-count-val" style="color:var(--warning)">{{ pending_requests }}</div>
+                  <div class="status-pct">{% if total %}{% widthratio pending_requests total 100 %}%{% else %}0%{% endif %}</div>
+                </div>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:{% if total %}{% widthratio pending_requests total 100 %}%{% else %}0%{% endif %}; background:var(--warning)"></div>
+              </div>
+            </div>
+
+            <div class="status-row">
+              <div class="status-meta">
+                <div class="status-label-wrap">
+                  <div class="dot" style="background:var(--info)"></div>
+                  <span>Accepted</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:.6rem;">
+                  <div class="status-count-val" style="color:var(--info)">{{ accepted_requests }}</div>
+                  <div class="status-pct">{% if total %}{% widthratio accepted_requests total 100 %}%{% else %}0%{% endif %}</div>
+                </div>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:{% if total %}{% widthratio accepted_requests total 100 %}%{% else %}0%{% endif %}; background:var(--info)"></div>
+              </div>
+            </div>
+
+            <div class="status-row">
+              <div class="status-meta">
+                <div class="status-label-wrap">
+                  <div class="dot" style="background:var(--success)"></div>
+                  <span>Completed</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:.6rem;">
+                  <div class="status-count-val" style="color:var(--success)">{{ completed_requests }}</div>
+                  <div class="status-pct">{% if total %}{% widthratio completed_requests total 100 %}%{% else %}0%{% endif %}</div>
+                </div>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:{% if total %}{% widthratio completed_requests total 100 %}%{% else %}0%{% endif %}; background:var(--success)"></div>
+              </div>
+            </div>
+
+            <div class="status-row">
+              <div class="status-meta">
+                <div class="status-label-wrap">
+                  <div class="dot" style="background:var(--danger)"></div>
+                  <span>Rejected</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:.6rem;">
+                  <div class="status-count-val" style="color:var(--danger)">{{ rejected_requests }}</div>
+                  <div class="status-pct">{% if total %}{% widthratio rejected_requests total 100 %}%{% else %}0%{% endif %}</div>
+                </div>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:{% if total %}{% widthratio rejected_requests total 100 %}%{% else %}0%{% endif %}; background:var(--danger)"></div>
+              </div>
+            </div>
+            {% endwith %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Rating overview -->
+      <div class="card">
+        <div class="card-head">
+          <h5><i class="fas fa-star" style="color:var(--warning); margin-right:.4rem"></i> Rating Overview</h5>
+        </div>
+        <div class="rating-display">
+          <div class="rating-big-num">{% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}—{% endif %}</div>
+          <div class="stars">
+            {% if avg_rating %}
+              {% for i in "12345" %}
+                {% if forloop.counter <= avg_rating %}★{% else %}☆{% endif %}
+              {% endfor %}
+            {% else %}☆☆☆☆☆{% endif %}
+          </div>
+          <div class="rating-sub">Based on {{ total_reviews }} review{{ total_reviews|pluralize }}</div>
+        </div>
+
+        <!-- Rating distribution bars -->
+        <div class="rating-bars">
+          {% for dist in rating_distribution %}
+          <div class="rating-bar-row">
+            <div class="lbl">{{ dist.star }}★</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:{% if total_reviews %}{% widthratio dist.count total_reviews 100 %}%{% else %}0%{% endif %}; background:var(--warning); opacity:{% widthratio forloop.counter 5 1 %};"></div>
+            </div>
+            <div class="cnt">{{ dist.count }}</div>
+          </div>
+          {% empty %}
+          <!-- Placeholder bars if no rating_distribution context var supplied -->
+          {% for star in "54321" %}
+          <div class="rating-bar-row">
+            <div class="lbl">{{ star }}★</div>
+            <div class="bar-track"><div class="bar-fill" style="width:0%; background:var(--warning)"></div></div>
+            <div class="cnt">0</div>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Service Performance Table -->
+    {% if service_breakdown %}
+    <div class="sec-title fade-up delay-3">Service Performance</div>
+    <div class="table-wrap fade-up delay-3">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Category</th>
+            <th>Total</th>
+            <th>Completed</th>
+            <th>Pending</th>
+            <th>Rejected</th>
+            <th>Avg Rating</th>
+            <th>Completion %</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in service_breakdown %}
+          <tr>
+            <td><strong>{{ s.title }}</strong></td>
+            <td class="muted">{{ s.category }}</td>
+            <td class="mono">{{ s.total }}</td>
+            <td>
+              <span style="font-weight:700; color:var(--success)">{{ s.completed }}</span>
+            </td>
+            <td>
+              <span style="font-weight:700; color:var(--warning)">{{ s.pending }}</span>
+            </td>
+            <td>
+              <span style="font-weight:700; color:var(--danger)">{{ s.rejected }}</span>
+            </td>
+            <td>
+              {% if s.avg_rating %}
+                <span style="color:var(--warning); font-weight:700;">{{ s.avg_rating|floatformat:1 }} ★</span>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if s.total %}
+                <div class="mini-prog">
+                  {% widthratio s.completed s.total 100 as sp %}
+                  <div class="bar-track" style="height:8px;">
+                    <div class="bar-fill" style="width:{{ sp }}%; background:{% if sp >= 70 %}var(--success){% elif sp >= 40 %}var(--warning){% else %}var(--danger){% endif %}"></div>
+                  </div>
+                  <span class="mono" style="font-size:.72rem; width:32px; flex-shrink:0;">{{ sp }}%</span>
+                </div>
+              {% else %}
+                <span class="muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8"><div class="empty"><i class="fas fa-inbox"></i>No services found.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <!-- Recent requests table -->
+    {% if recent_detail %}
+    <div class="sec-title fade-up delay-3">Recent Requests</div>
+    <div class="table-wrap fade-up delay-3">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Service</th>
+            <th>Customer</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent_detail %}
+          <tr>
+            <td class="muted mono" style="white-space:nowrap">{{ r.created_at|date:"d M Y" }}</td>
+            <td><strong>{{ r.service.title }}</strong></td>
+            <td>{{ r.user.get_full_name|default:r.user.username }}</td>
+            <td class="muted" style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">
+              {% if r.latitude and r.longitude %}
+                <i class="fas fa-map-marker-alt" style="color:var(--danger); margin-right:.2rem"></i>
+                {{ r.latitude|floatformat:3 }}, {{ r.longitude|floatformat:3 }}
+              {% else %}
+                {{ r.location|truncatechars:28 }}
+              {% endif %}
+            </td>
+            <td><span class="badge badge-{{ r.status }}">{{ r.status|title }}</span></td>
+            <td>
+              {% if r.latitude and r.longitude %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ r.latitude }},{{ r.longitude }}"
+                   target="_blank" style="font-size:.75rem; color:var(--accent); text-decoration:none; font-weight:600;">
+                  <i class="fas fa-location-arrow"></i> Map
+                </a>
+              {% else %}
+                <span class="muted" style="font-size:.75rem;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6"><div class="empty"><i class="fas fa-inbox"></i>No requests yet.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+  </div><!-- /page -->
+</div><!-- /main-wrap -->
+
+<!-- ── Scripts ───────────────────────────────────────────────────────────── -->
+<script>
+  /* ── Data from Django ─────────────────────────────────────────────────── */
+  const months         = JSON.parse('{{ months|escapejs }}');
+  const monthlyReqs    = JSON.parse('{{ monthly_requests|escapejs }}');
+  const totalRequests  = {{ total_requests|default:0 }};
+  const pendingReqs    = {{ pending_requests|default:0 }};
+  const acceptedReqs   = {{ accepted_requests|default:0 }};
+  const completedReqs  = {{ completed_requests|default:0 }};
+  const rejectedReqs   = {{ rejected_requests|default:0 }};
+
+  /* ── Monthly Line Chart ──────────────────────────────────────────────── */
+  const ctxLine = document.getElementById('monthlyChart').getContext('2d');
+
+  const gradient = ctxLine.createLinearGradient(0, 0, 0, 280);
+  gradient.addColorStop(0, 'rgba(0,212,170,0.25)');
+  gradient.addColorStop(1, 'rgba(0,212,170,0.0)');
+
+  new Chart(ctxLine, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [{
+        label: 'Requests',
+        data: monthlyReqs,
+        borderColor: '#00d4aa',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.45,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        pointBackgroundColor: '#00d4aa',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        borderWidth: 2.5
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111827',
+          titleColor: '#fff',
+          bodyColor: 'rgba(255,255,255,.7)',
+          borderColor: 'rgba(255,255,255,.08)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y} request${ctx.parsed.y !== 1 ? 's' : ''}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+          ticks: { color: '#6b7a99', font: { size: 11 }, maxTicksLimit: 6 },
+          border: { display: false }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#6b7a99', font: { size: 11 } },
+          border: { display: false }
+        }
+      }
+    }
+  });
+
+  /* ── Status Doughnut ─────────────────────────────────────────────────── */
+  const ctxDonut = document.getElementById('statusDoughnut').getContext('2d');
+  new Chart(ctxDonut, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pending', 'Accepted', 'Completed', 'Rejected'],
+      datasets: [{
+        data: [pendingReqs, acceptedReqs, completedReqs, rejectedReqs],
+        backgroundColor: ['#ffb703','#4cc9f0','#06d6a0','#ff4d6d'],
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111827',
+          titleColor: '#fff',
+          bodyColor: 'rgba(255,255,255,.7)',
+          borderColor: 'rgba(255,255,255,.08)',
+          borderWidth: 1,
+          padding: 10
+        }
+      }
+    }
+  });
+
+  /* ── Funnel widths ───────────────────────────────────────────────────── */
+  function setFunnel(id, count) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const pct = totalRequests > 0 ? Math.round((count / totalRequests) * 100) : 0;
+    el.style.width = Math.max(pct, 8) + '%';
+    el.textContent = pct + '%';
+  }
+  setFunnel('fPending',   pendingReqs);
+  setFunnel('fAccepted',  acceptedReqs);
+  setFunnel('fCompleted', completedReqs);
+  setFunnel('fRejected',  rejectedReqs);
+
+  /* ── Activity Heatmap ────────────────────────────────────────────────── */
+  (function buildHeatmap() {
+    const grid = document.getElementById('heatmapGrid');
+    if (!grid || !months.length) return;
+    const maxVal = Math.max(...monthlyReqs, 1);
+    months.forEach((m, i) => {
+      const val   = monthlyReqs[i] || 0;
+      const ratio = val / maxVal;
+      const alpha = 0.1 + ratio * 0.85;
+      const cell  = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      cell.style.background = `rgba(0,212,170,${alpha.toFixed(2)})`;
+      cell.title = `${m}: ${val} request${val !== 1 ? 's' : ''}`;
+      cell.innerHTML = `<div class="month-lbl">${m.substring(0,3)}</div><div class="month-val">${val}</div>`;
+      grid.appendChild(cell);
+    });
+  })();
+
+  /* ── Mobile Sidebar ──────────────────────────────────────────────────── */
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('show');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+  }
+</script>
+</body>
+</html>

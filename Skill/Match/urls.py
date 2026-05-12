@@ -35,4 +35,7 @@ urlpatterns = [
 
     path('provider/services/', views.manage_services, name='manage_services'),
     path('document/view/<int:doc_id>/', views.view_document, name='view_document'),
+    path('provider/<int:provider_id>/',         views.provider_report_page, name='report_page'),
+    path('provider/<int:provider_id>/pdf/',     views.export_pdf,           name='export_pdf'),
+    path('provider/<int:provider_id>/csv/',     views.export_csv,           name='export_csv'),
 ]

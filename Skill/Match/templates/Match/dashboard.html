@@ -142,6 +142,26 @@
     top: -20px;
     right: -20px;
 }
+.stat-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.stat-card-link:hover {
+    text-decoration: none;
+    color: inherit;
+}
+
+.stat-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
 </style>
 
 <div class="d-flex">
@@ -171,6 +191,11 @@
                     <i class="fas fa-envelope-open-text"></i> Requests
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'report_page' provider.id %}">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+            </li>
             <hr class="text-secondary opacity-25">
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'profile' %}">
@@ -192,91 +217,122 @@
         </header>
 
         <div class="row g-4 mb-5">
+
+    <!-- Total Requests -->
     <div class="col-md-3">
-        <div class="card stat-card h-100">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="stat-icon-box bg-primary bg-opacity-10 text-primary">
-                        <i class="fas fa-layer-group"></i>
+        <a href="{% url 'provider_requests' %}" class="stat-card-link">
+            <div class="card stat-card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon-box bg-primary bg-opacity-10 text-primary">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <span class="badge bg-soft-primary text-primary small">Total</span>
                     </div>
-                    <span class="badge bg-soft-primary text-primary small">Total</span>
-                </div>
-                <div>
-                    <p class="stat-label text-uppercase fw-bold mb-1">Service Requests</p>
-                    <h2 class="stat-value fw-bold mb-0 text-dark">{{ total_requests }}</h2>
-                    <div class="mt-2 small text-muted">
-                        <i class="fas fa-arrow-up text-success me-1"></i> Lifetime volume
+
+                    <div>
+                        <p class="stat-label text-uppercase fw-bold mb-1">Service Requests</p>
+                        <h2 class="stat-value fw-bold mb-0 text-dark">{{ total_requests }}</h2>
+
+                        <div class="mt-2 small text-muted">
+                            <i class="fas fa-arrow-up text-success me-1"></i>
+                            Lifetime volume
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
+    <!-- Completed -->
     <div class="col-md-3">
-        <div class="card stat-card h-100">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="stat-icon-box bg-success bg-opacity-10 text-success">
-                        <i class="fas fa-check-circle"></i>
+        <a href="{% url 'provider_requests' %}?status=completed" class="stat-card-link">
+            <div class="card stat-card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon-box bg-success bg-opacity-10 text-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success small">Success</span>
                     </div>
-                    <span class="badge bg-success bg-opacity-10 text-success small">Success</span>
-                </div>
-                <div>
-                    <p class="stat-label text-uppercase fw-bold mb-1">Completed</p>
-                    <h2 class="stat-value fw-bold mb-0 text-dark">{{ completed_requests }}</h2>
-                    <div class="mt-2 small text-muted">
-                        <span class="fw-bold text-success">Done</span> and delivered
+
+                    <div>
+                        <p class="stat-label text-uppercase fw-bold mb-1">Completed</p>
+                        <h2 class="stat-value fw-bold mb-0 text-dark">{{ completed_requests }}</h2>
+
+                        <div class="mt-2 small text-muted">
+                            <span class="fw-bold text-success">Done</span> and delivered
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
+    <!-- Pending -->
     <div class="col-md-3">
-        <div class="card stat-card h-100">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="stat-icon-box bg-warning bg-opacity-10 text-warning">
-                        <i class="fas fa-hourglass-half"></i>
+        <a href="{% url 'provider_requests' %}?status=pending" class="stat-card-link">
+            <div class="card stat-card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon-box bg-warning bg-opacity-10 text-warning">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="status-pulse"></div>
                     </div>
-                    <div class="status-pulse"></div>
-                </div>
-                <div>
-                    <p class="stat-label text-uppercase fw-bold mb-1">Waiting Action</p>
-                    <h2 class="stat-value fw-bold mb-0 text-dark">{{ pending_requests }}</h2>
-                    <div class="mt-2 small text-muted">
-                        Needs response <span class="text-warning fw-bold">Soon</span>
+
+                    <div>
+                        <p class="stat-label text-uppercase fw-bold mb-1">Waiting Action</p>
+                        <h2 class="stat-value fw-bold mb-0 text-dark">{{ pending_requests }}</h2>
+
+                        <div class="mt-2 small text-muted">
+                            Needs response
+                            <span class="text-warning fw-bold">Soon</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
+    <!-- Average Rating -->
     <div class="col-md-3">
-        <div class="card stat-card h-100  ">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="stat-icon-box bg-info bg-opacity-10 text-info">
-                        <i class="fas fa-trophy"></i>
+        <a href="{% url 'report_page' provider.id %}#reviews-section" class="stat-card-link">
+            <div class="card stat-card h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="stat-icon-box bg-info bg-opacity-10 text-info">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+
+                        <div class="text-warning small">
+                            {% for i in "12345" %}
+                                <i class="{% if forloop.counter <= avg_rating %}fas{% else %}far{% endif %} fa-star"></i>
+                            {% endfor %}
+                        </div>
                     </div>
-                    <div class="text-warning small">
-                        {% for i in "12345" %}
-                            <i class="{% if forloop.counter <= review.rating %}fas{% else %}far{% endif %} fa-star"></i>
-                        {% endfor %}
-                    </div>
-                </div>
-                <div>
-                    <p class="stat-label text-uppercase fw-bold mb-1">Avg. Rating</p>
-                    <h2 class="stat-value fw-bold mb-0 text-dark">
-                        {% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}0.0{% endif %}<span class="fs-6 text-muted">/5.0</span>
-                    </h2>
-                    <div class="mt-2 small text-muted">
-                        Based on latest reviews
+
+                    <div>
+                        <p class="stat-label text-uppercase fw-bold mb-1">Avg. Rating</p>
+
+                        <h2 class="stat-value fw-bold mb-0 text-dark">
+                            {% if avg_rating %}
+                                {{ avg_rating|floatformat:1 }}
+                            {% else %}
+                                0.0
+                            {% endif %}
+                            <span class="fs-6 text-muted">/5.0</span>
+                        </h2>
+
+                        <div class="mt-2 small text-muted">
+                            Based on latest reviews
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
+
 </div>
         <div class="row g-4">
             <div class="col-lg-8">
@@ -300,7 +356,6 @@
 
                         <div class="list-group list-group-flush">
                             {% for request in latest_requests %}
-                                {% if request.status == 'pending' %}
                                 <div class="list-group-item px-0 py-3 border-bottom">
                                     <div class="d-flex align-items-start">
                                         <div class="me-3 mt-1"><span class="status-pulse"></span></div>
@@ -345,7 +400,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                {% endif %}
                             {% empty %}
                                 <p class="text-muted small text-center py-3">No requests found.</p>
                             {% endfor %}

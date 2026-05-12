@@ -4,8 +4,6 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .utils import send_notification_email
-from .models import ServiceProvider
-from decimal import Decimal
 from decimal import Decimal
 from django.conf import settings
 from django.core.mail import send_mail
@@ -19,7 +17,7 @@ from .forms import (
     ServiceProviderUpdateForm, 
     ReviewForm
 )
-from .models import User, ServiceProvider, Service, ServiceRequest, ServiceCategory
+from .models import User, ServiceProvider, Service, ServiceRequest, ServiceCategory, Review
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
@@ -31,6 +29,23 @@ from decimal import Decimal
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse
 from .models import CompanyDocument
+import csv
+import io
+from datetime import datetime, timedelta
+from django.http import HttpResponse
+from django.db.models import Count, Avg, Q
+from django.utils import timezone
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    HRFlowable, KeepTogether
+)
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+
 
 def view_document(request, doc_id):
     doc = get_object_or_404(CompanyDocument, id=doc_id)
@@ -412,56 +427,107 @@ def provider_dashboard(request):
     provider = ServiceProvider.objects.filter(user=request.user).first()
 
     if not provider or not provider.profile_completed:
-        messages.info(request, "Complete your business profile to access the dashboard.")
+        messages.info(
+            request,
+            "Complete your business profile to access the dashboard."
+        )
         return redirect('provider_signup_step2')
 
-    # Base queryset
-    requests_qs = ServiceRequest.objects.filter(service__provider=provider)
+    # =========================================
+    # BASE QUERYSET
+    # =========================================
+    requests_qs = ServiceRequest.objects.filter(
+        service__provider=provider
+    )
 
-    # =============================
+    # =========================================
     # REQUEST STATS
-    # =============================
+    # =========================================
     total_requests = requests_qs.count()
-    completed_requests = requests_qs.filter(status='completed').count()
-    pending_requests = requests_qs.filter(status='pending').count()
-    accepted_requests = requests_qs.filter(status='accepted').count()
-    rejected_requests = requests_qs.filter(status='rejected').count()
 
-    completion_rate = round((completed_requests / total_requests) * 100, 1) if total_requests else 0
+    completed_requests = requests_qs.filter(
+        status='completed'
+    ).count()
 
-    latest_requests = requests_qs.order_by('-created_at')[:4]  # 4 latest for dashboard
+    pending_requests = requests_qs.filter(
+        status='pending'
+    ).count()
 
-    # =============================
+    accepted_requests = requests_qs.filter(
+        status='accepted'
+    ).count()
+
+    rejected_requests = requests_qs.filter(
+        status='rejected'
+    ).count()
+
+    completion_rate = (
+        round((completed_requests / total_requests) * 100, 1)
+        if total_requests else 0
+    )
+
+    # =========================================
+    # ONLY PENDING REQUESTS FOR DASHBOARD
+    # =========================================
+    latest_requests = requests_qs.filter(
+        status='pending'
+    ).select_related(
+        'service',
+        'user'
+    ).order_by('-created_at')[:5]
+
+    # =========================================
     # RATINGS
-    # =============================
-    avg_rating = provider.reviews.aggregate(avg=Avg('rating'))['avg']
-    avg_rating = round(avg_rating, 1) if avg_rating is not None else None
+    # =========================================
+    avg_rating = provider.reviews.aggregate(
+        avg=Avg('rating')
+    )['avg']
 
-    recent_reviews = provider.reviews.order_by('-created_at')[:5]
+    avg_rating = round(avg_rating, 1) if avg_rating else 0
 
-    # =============================
-    # MONTHLY TREND (Last 6 Months)
-    # =============================
+    recent_reviews = provider.reviews.order_by(
+        '-created_at'
+    )[:5]
+
+    # =========================================
+    # MONTHLY TREND (LAST 6 MONTHS)
+    # =========================================
     from datetime import date
     from dateutil.relativedelta import relativedelta
 
     today = date.today()
+
     months = []
     monthly_requests = []
 
-    for i in range(5, -1, -1):  # last 6 months
-        month_start = today.replace(day=1) - relativedelta(months=i)
+    for i in range(5, -1, -1):
+
+        month_start = (
+            today.replace(day=1) -
+            relativedelta(months=i)
+        )
+
         month_end = month_start + relativedelta(months=1)
+
         month_label = month_start.strftime("%b %Y")
+
         months.append(month_label)
+
         count = requests_qs.filter(
             created_at__gte=month_start,
             created_at__lt=month_end
         ).count()
+
         monthly_requests.append(count)
 
+    # =========================================
+    # CONTEXT
+    # =========================================
     context = {
+
         'provider': provider,
+
+        # Dashboard Requests
         'latest_requests': latest_requests,
 
         # Stats
@@ -476,12 +542,16 @@ def provider_dashboard(request):
         'avg_rating': avg_rating,
         'recent_reviews': recent_reviews,
 
-        # Chart
+        # Charts
         'months': json.dumps(months),
         'monthly_requests': json.dumps(monthly_requests),
     }
 
-    return render(request, 'Match/dashboard.html', context)
+    return render(
+        request,
+        'Match/dashboard.html',
+        context
+    )
 # =========================
 # SERVICE REQUEST
 # =========================
@@ -823,3 +893,478 @@ def submit_review(request, request_id):
         form = ReviewForm()
 
     return render(request, 'Match/rating.html', {'form': form, 'service_request': service_request})
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+ 
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Avg, Count
+from django.db.models.functions import TruncMonth
+import json
+
+
+def get_report_data(provider):
+    """Aggregate all stats needed for the report."""
+
+    now = timezone.now()
+    thirty_days_ago = now - timedelta(days=30)
+
+    services = provider.services.filter(is_active=True)
+
+    from .models import ServiceRequest, Review
+
+    requests_qs = ServiceRequest.objects.filter(service__provider=provider)
+    reviews_qs = Review.objects.filter(provider=provider)
+
+    # ─────────────────────────────────────────────────────
+    # Main statistics
+    # ─────────────────────────────────────────────────────
+    total_requests = requests_qs.count()
+
+    pending_requests = requests_qs.filter(
+        status='pending'
+    ).count()
+
+    accepted_requests = requests_qs.filter(
+        status='accepted'
+    ).count()
+
+    completed_requests = requests_qs.filter(
+        status='completed'
+    ).count()
+
+    rejected_requests = requests_qs.filter(
+        status='rejected'
+    ).count()
+
+    recent_requests = requests_qs.filter(
+        created_at__gte=thirty_days_ago
+    ).count()
+
+    avg_rating = reviews_qs.aggregate(
+        avg=Avg('rating')
+    )['avg'] or 0
+
+    total_reviews = reviews_qs.count()
+
+    # ─────────────────────────────────────────────────────
+    # Monthly chart data
+    # ─────────────────────────────────────────────────────
+    monthly_data = (
+        requests_qs
+        .annotate(month=TruncMonth('created_at'))
+        .values('month')
+        .annotate(total=Count('id'))
+        .order_by('month')
+    )
+
+    months = []
+    monthly_requests = []
+
+    for item in monthly_data:
+        if item['month']:
+            months.append(item['month'].strftime('%b'))
+            monthly_requests.append(item['total'])
+
+    # ─────────────────────────────────────────────────────
+    # Rating distribution
+    # ─────────────────────────────────────────────────────
+    rating_distribution = []
+
+    for star in range(5, 0, -1):
+        rating_distribution.append({
+            'star': star,
+            'count': reviews_qs.filter(rating=star).count()
+        })
+
+    # ─────────────────────────────────────────────────────
+    # Service breakdown
+    # ─────────────────────────────────────────────────────
+    service_breakdown = []
+
+    for svc in services.select_related('category'):
+
+        svc_requests = requests_qs.filter(service=svc)
+
+        svc_reviews = reviews_qs.filter(
+            service_request__service=svc
+        )
+
+        service_breakdown.append({
+            'title': svc.title,
+            'category': svc.category.name,
+            'total': svc_requests.count(),
+
+            'completed': svc_requests.filter(
+                status='completed'
+            ).count(),
+
+            'pending': svc_requests.filter(
+                status='pending'
+            ).count(),
+
+            'rejected': svc_requests.filter(
+                status='rejected'
+            ).count(),
+
+            'avg_rating': svc_reviews.aggregate(
+                avg=Avg('rating')
+            )['avg'] or 0,
+        })
+
+    # ─────────────────────────────────────────────────────
+    # Recent requests
+    # ─────────────────────────────────────────────────────
+    recent_detail = (
+        requests_qs
+        .select_related('user', 'service')
+        .order_by('-created_at')[:20]
+    )
+
+    # ─────────────────────────────────────────────────────
+    # Recent reviews
+    # ─────────────────────────────────────────────────────
+    recent_reviews = (
+        reviews_qs
+        .select_related('user')
+        .order_by('-created_at')[:6]
+    )
+
+    # ─────────────────────────────────────────────────────
+    # Return context
+    # ─────────────────────────────────────────────────────
+    return {
+        'provider': provider,
+        'generated_at': now,
+        'period': '30 days',
+
+        'total_requests': total_requests,
+        'pending_requests': pending_requests,
+        'accepted_requests': accepted_requests,
+        'completed_requests': completed_requests,
+        'rejected_requests': rejected_requests,
+
+        'recent_requests': recent_requests,
+
+        'avg_rating': round(avg_rating, 1),
+        'total_reviews': total_reviews,
+
+        'total_services': services.count(),
+
+        'service_breakdown': service_breakdown,
+        'recent_detail': recent_detail,
+        'recent_reviews': recent_reviews,
+
+        'rating_distribution': rating_distribution,
+
+        # IMPORTANT FOR CHART
+        'months': json.dumps(months),
+        'monthly_requests': json.dumps(monthly_requests),
+    }
+
+ 
+# ─── HTML Report Page ──────────────────────────────────────────────────────────
+ 
+def provider_report_page(request, provider_id):
+    """Renders the visual report page in the browser."""
+    from .models import ServiceProvider
+    from django.shortcuts import get_object_or_404, render
+ 
+    provider = get_object_or_404(ServiceProvider, pk=provider_id)
+    data = get_report_data(provider)
+    return render(request, 'Match/report.html', data)
+ 
+ 
+# ─── CSV Export ───────────────────────────────────────────────────────────────
+ 
+def export_csv(request, provider_id):
+    from .models import ServiceProvider
+    from django.shortcuts import get_object_or_404
+ 
+    provider = get_object_or_404(ServiceProvider, pk=provider_id)
+    data     = get_report_data(provider)
+ 
+    response = HttpResponse(content_type='text/csv')
+    filename = f"report_{provider.company_name.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+ 
+    writer = csv.writer(response)
+ 
+    # ── Summary block ──
+    writer.writerow(['SERVICE PROVIDER REPORT'])
+    writer.writerow(['Company', provider.company_name])
+    writer.writerow(['Generated At', data['generated_at'].strftime('%d %b %Y %H:%M')])
+    writer.writerow([])
+ 
+    writer.writerow(['SUMMARY'])
+    writer.writerow(['Metric', 'Value'])
+    writer.writerow(['Total Services',          data['total_services']])
+    writer.writerow(['Total Requests',          data['total_requests']])
+    writer.writerow(['Pending',                 data['pending_requests']])
+    writer.writerow(['Accepted',                data['accepted_requests']])
+    writer.writerow(['Completed',               data['completed_requests']])
+    writer.writerow(['Rejected',                data['rejected_requests']])
+    writer.writerow(['Requests (Last 30 days)', data['recent_requests']])
+    writer.writerow(['Average Rating',          data['avg_rating']])
+    writer.writerow(['Total Reviews',           data['total_reviews']])
+    writer.writerow([])
+ 
+    # ── Service breakdown ──
+    writer.writerow(['SERVICE BREAKDOWN'])
+    writer.writerow(['Service', 'Category', 'Total Requests', 'Completed', 'Pending', 'Avg Rating'])
+    for s in data['service_breakdown']:
+        writer.writerow([
+            s['title'], s['category'], s['total'],
+            s['completed'], s['pending'],
+            f"{s['avg_rating']:.1f}" if s['avg_rating'] else 'N/A'
+        ])
+    writer.writerow([])
+ 
+    # ── Recent requests ──
+    writer.writerow(['RECENT REQUESTS (Last 20)'])
+    writer.writerow(['Date', 'Service', 'Customer', 'Location', 'Status'])
+    for r in data['recent_detail']:
+        writer.writerow([
+            r.created_at.strftime('%d %b %Y'),
+            r.service.title,
+            r.user.get_full_name() or r.user.username,
+            r.location,
+            r.status.title(),
+        ])
+ 
+    return response
+ 
+ 
+# ─── PDF Export ───────────────────────────────────────────────────────────────
+ 
+def export_pdf(request, provider_id):
+    from .models import ServiceProvider
+    from django.shortcuts import get_object_or_404
+ 
+    provider = get_object_or_404(ServiceProvider, pk=provider_id)
+    data     = get_report_data(provider)
+ 
+    buffer   = io.BytesIO()
+    doc      = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=2*cm, rightMargin=2*cm,
+        topMargin=2*cm,  bottomMargin=2*cm,
+    )
+ 
+    # ── Colour palette ──
+    NAVY   = colors.HexColor('#0F1B35')
+    TEAL   = colors.HexColor('#0FA3B1')
+    LIGHT  = colors.HexColor('#F4F7FB')
+    MUTED  = colors.HexColor('#6B7A99')
+    GREEN  = colors.HexColor('#22C55E')
+    AMBER  = colors.HexColor('#F59E0B')
+    RED    = colors.HexColor('#EF4444')
+    WHITE  = colors.white
+ 
+    styles = getSampleStyleSheet()
+ 
+    def style(name, **kw):
+        return ParagraphStyle(name, parent=styles['Normal'], **kw)
+ 
+    H1      = style('H1', fontSize=24, textColor=WHITE,    leading=30, alignment=TA_LEFT, fontName='Helvetica-Bold')
+    H2      = style('H2', fontSize=13, textColor=NAVY,     leading=18, spaceBefore=14, fontName='Helvetica-Bold')
+    LABEL   = style('LBL', fontSize=8, textColor=MUTED,    leading=10, fontName='Helvetica')
+    NORMAL  = style('NRM', fontSize=9, textColor=NAVY,     leading=13, fontName='Helvetica')
+    SMALL   = style('SML', fontSize=8, textColor=MUTED,    leading=11, fontName='Helvetica')
+    CAPTION = style('CAP', fontSize=7, textColor=WHITE,    leading=10, fontName='Helvetica-Bold', alignment=TA_CENTER)
+ 
+    story = []
+ 
+    # ── Header banner ──
+    header_data = [[
+        Paragraph(f"<b>{provider.company_name}</b>", H1),
+        Paragraph(
+            f"<font color='#0FA3B1'>Service Provider Report</font><br/>"
+            f"<font size='8' color='#A0AAC0'>Generated {data['generated_at'].strftime('%d %B %Y, %H:%M')}</font>",
+            H1
+        ),
+    ]]
+    header_table = Table(header_data, colWidths=['55%', '45%'])
+    header_table.setStyle(TableStyle([
+        ('BACKGROUND',  (0,0), (-1,-1), NAVY),
+        ('PADDING',     (0,0), (-1,-1), 18),
+        ('VALIGN',      (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN',       (1,0), (1,0),   'RIGHT'),
+        ('ROUNDEDCORNERS', [8]),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 20))
+ 
+    # ── KPI cards row ──
+    def kpi_cell(value, label, bg=LIGHT, txt=NAVY):
+        return [
+            Paragraph(f"<b>{value}</b>", ParagraphStyle('KV', fontSize=22, textColor=txt,
+                       leading=26, alignment=TA_CENTER, fontName='Helvetica-Bold')),
+            Paragraph(label, ParagraphStyle('KL', fontSize=8, textColor=MUTED,
+                       leading=11, alignment=TA_CENTER, fontName='Helvetica')),
+        ]
+ 
+    completion_rate = (
+        round(data['completed_requests'] / data['total_requests'] * 100)
+        if data['total_requests'] else 0
+    )
+    stars = '★' * int(data['avg_rating']) + '☆' * (5 - int(data['avg_rating']))
+ 
+    kpi_data = [
+        [kpi_cell(data['total_requests'],    'Total Requests'),
+         kpi_cell(data['completed_requests'], 'Completed',   bg=colors.HexColor('#ECFDF5'), txt=GREEN),
+         kpi_cell(data['pending_requests'],  'Pending',      bg=colors.HexColor('#FFFBEB'), txt=AMBER),
+         kpi_cell(f"{completion_rate}%",     'Completion Rate'),
+         kpi_cell(f"{data['avg_rating']}",   f"Avg Rating  {stars}"),
+        ]
+    ]
+ 
+    # Flatten: each kpi_cell returns a list of 2 paragraphs
+    flat_kpi = [[cell for group in row for cell in group] for row in kpi_data]
+    # Re-structure as 2-row table: value row + label row
+    val_row   = [kpi_cell(data['total_requests'], '')[0],
+                 kpi_cell(data['completed_requests'], '')[0],
+                 kpi_cell(data['pending_requests'], '')[0],
+                 kpi_cell(f"{completion_rate}%", '')[0],
+                 kpi_cell(f"{data['avg_rating']}", '')[0]]
+    label_row = [Paragraph('Total Requests', SMALL),
+                 Paragraph('Completed',      SMALL),
+                 Paragraph('Pending',        SMALL),
+                 Paragraph('Completion Rate',SMALL),
+                 Paragraph(f"Avg Rating",    SMALL)]
+ 
+    kpi_table = Table([val_row, label_row], colWidths=['20%']*5)
+    kpi_table.setStyle(TableStyle([
+        ('BACKGROUND',  (0,0), (-1,-1), LIGHT),
+        ('ALIGN',       (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN',      (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING',     (0,0), (-1,-1), 10),
+        ('TOPPADDING',  (0,0), (-1,0),  16),
+        ('BOTTOMPADDING',(0,1),(-1,1),  16),
+        ('TEXTCOLOR',   (1,0), (1,1),   GREEN),
+        ('TEXTCOLOR',   (2,0), (2,1),   AMBER),
+        ('LINEBELOW',   (0,0), (-1,0),  0.5, colors.HexColor('#DDE3EF')),
+        ('GRID',        (0,0), (-1,-1), 0.5, colors.HexColor('#DDE3EF')),
+    ]))
+    story.append(kpi_table)
+    story.append(Spacer(1, 22))
+ 
+    # ── Request status breakdown ──
+    story.append(Paragraph("Request Status Breakdown", H2))
+    story.append(HRFlowable(width='100%', thickness=1, color=TEAL, spaceAfter=8))
+ 
+    status_headers = [
+        Paragraph('<b>Status</b>',  style('TH', fontSize=9, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph('<b>Count</b>',   style('TH', fontSize=9, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        Paragraph('<b>Share</b>',   style('TH', fontSize=9, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+    ]
+    statuses = [
+        ('Pending',   data['pending_requests'],   AMBER),
+        ('Accepted',  data['accepted_requests'],   TEAL),
+        ('Completed', data['completed_requests'],  GREEN),
+        ('Rejected',  data['rejected_requests'],   RED),
+    ]
+    status_rows = [status_headers]
+    for idx, (lbl, cnt, clr) in enumerate(statuses):
+        pct = round(cnt / data['total_requests'] * 100) if data['total_requests'] else 0
+        status_rows.append([
+            Paragraph(lbl,      NORMAL),
+            Paragraph(str(cnt), style('CTR', fontSize=9, textColor=NAVY, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+            Paragraph(f"{pct}%",style('CTR', fontSize=9, textColor=clr,  fontName='Helvetica-Bold', alignment=TA_CENTER)),
+        ])
+ 
+    status_table = Table(status_rows, colWidths=['50%', '25%', '25%'])
+    status_style = [
+        ('BACKGROUND',  (0,0), (-1,0),  NAVY),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [WHITE, LIGHT]),
+        ('ALIGN',       (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN',      (0,0), (-1,-1), 'MIDDLE'),
+        ('PADDING',     (0,0), (-1,-1), 8),
+        ('ALIGN',       (0,1), (0,-1),  'LEFT'),
+        ('GRID',        (0,0), (-1,-1), 0.4, colors.HexColor('#DDE3EF')),
+    ]
+    status_table.setStyle(TableStyle(status_style))
+    story.append(status_table)
+    story.append(Spacer(1, 22))
+ 
+    # ── Service breakdown ──
+    if data['service_breakdown']:
+        story.append(Paragraph("Service Performance", H2))
+        story.append(HRFlowable(width='100%', thickness=1, color=TEAL, spaceAfter=8))
+ 
+        th = lambda t: Paragraph(f'<b>{t}</b>', style('TH2', fontSize=8, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER))
+        svc_headers = [th('Service'), th('Category'), th('Requests'), th('Completed'), th('Pending'), th('Avg Rating')]
+        svc_rows = [svc_headers]
+        for s in data['service_breakdown']:
+            rating_txt = f"{s['avg_rating']:.1f} ★" if s['avg_rating'] else 'N/A'
+            svc_rows.append([
+                Paragraph(s['title'],    NORMAL),
+                Paragraph(s['category'], SMALL),
+                Paragraph(str(s['total']),     style('C', fontSize=9, alignment=TA_CENTER, fontName='Helvetica')),
+                Paragraph(str(s['completed']), style('C', fontSize=9, alignment=TA_CENTER, textColor=GREEN, fontName='Helvetica-Bold')),
+                Paragraph(str(s['pending']),   style('C', fontSize=9, alignment=TA_CENTER, textColor=AMBER, fontName='Helvetica-Bold')),
+                Paragraph(rating_txt,          style('C', fontSize=9, alignment=TA_CENTER, textColor=TEAL,  fontName='Helvetica-Bold')),
+            ])
+ 
+        svc_table = Table(svc_rows, colWidths=['28%','20%','13%','13%','13%','13%'])
+        svc_table.setStyle(TableStyle([
+            ('BACKGROUND',    (0,0), (-1,0),  NAVY),
+            ('ROWBACKGROUNDS',(0,1), (-1,-1), [WHITE, LIGHT]),
+            ('ALIGN',         (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+            ('PADDING',       (0,0), (-1,-1), 7),
+            ('ALIGN',         (0,1), (1,-1),  'LEFT'),
+            ('GRID',          (0,0), (-1,-1), 0.4, colors.HexColor('#DDE3EF')),
+        ]))
+        story.append(svc_table)
+        story.append(Spacer(1, 22))
+ 
+    # ── Recent requests ──
+    if data['recent_detail']:
+        story.append(Paragraph("Recent Requests (Last 20)", H2))
+        story.append(HRFlowable(width='100%', thickness=1, color=TEAL, spaceAfter=8))
+ 
+        STATUS_COLORS = {'pending': AMBER, 'accepted': TEAL, 'completed': GREEN, 'rejected': RED}
+ 
+        th2 = lambda t: Paragraph(f'<b>{t}</b>', style('TH3', fontSize=8, textColor=WHITE, fontName='Helvetica-Bold'))
+        req_headers = [th2('Date'), th2('Service'), th2('Customer'), th2('Location'), th2('Status')]
+        req_rows = [req_headers]
+        for r in data['recent_detail']:
+            sc = STATUS_COLORS.get(r.status, MUTED)
+            req_rows.append([
+                Paragraph(r.created_at.strftime('%d %b %Y'), SMALL),
+                Paragraph(r.service.title,                   NORMAL),
+                Paragraph(r.user.get_full_name() or r.user.username, NORMAL),
+                Paragraph(r.location[:30],                   SMALL),
+                Paragraph(r.status.title(), style('ST', fontSize=8, textColor=sc, fontName='Helvetica-Bold')),
+            ])
+ 
+        req_table = Table(req_rows, colWidths=['15%','25%','20%','25%','15%'])
+        req_table.setStyle(TableStyle([
+            ('BACKGROUND',    (0,0), (-1,0),  NAVY),
+            ('ROWBACKGROUNDS',(0,1), (-1,-1), [WHITE, LIGHT]),
+            ('ALIGN',         (0,0), (-1,-1), 'LEFT'),
+            ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+            ('PADDING',       (0,0), (-1,-1), 6),
+            ('GRID',          (0,0), (-1,-1), 0.4, colors.HexColor('#DDE3EF')),
+        ]))
+        story.append(req_table)
+ 
+    # ── Footer ──
+    story.append(Spacer(1, 30))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=colors.HexColor('#DDE3EF')))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        f"This report was auto-generated on {data['generated_at'].strftime('%d %B %Y')} · Confidential",
+        style('FTR', fontSize=7, textColor=MUTED, alignment=TA_CENTER, fontName='Helvetica')
+    ))
+ 
+    doc.build(story)
+    buffer.seek(0)
+ 
+    filename = f"report_{provider.company_name.replace(' ','_')}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+ 
