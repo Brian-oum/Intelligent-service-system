@@ -312,6 +312,8 @@ def edit_service(request, service_id):
     if request.user.role != 'company':
         return redirect('login')
 
+    provider = ServiceProvider.objects.filter(user=request.user).first()
+
     service = get_object_or_404(
         Service,
         id=service_id,
@@ -326,7 +328,10 @@ def edit_service(request, service_id):
     else:
         form = ServiceForm(instance=service)
 
-    return render(request, 'Match/edit_service.html', {'form': form})
+    return render(request, 'Match/edit_service.html', {
+        'form': form,
+        'provider': provider
+    })
 
 @login_required
 def manage_services(request):
@@ -701,11 +706,7 @@ def profile_view(request):
     user_form = None
     provider_form = None
 
-    # =========================
-    # SERVICE PROVIDER
-    # =========================
     if user.role == "company":
-
         provider, created = ServiceProvider.objects.get_or_create(user=user)
 
         if request.method == "POST":
@@ -715,15 +716,10 @@ def profile_view(request):
                 provider_form.save()
                 messages.success(request, "Company profile updated successfully!")
                 return redirect("profile")
-
         else:
             provider_form = ServiceProviderUpdateForm(instance=provider)
 
-    # =========================
-    # SERVICE SEEKER
-    # =========================
     else:
-
         if request.method == "POST":
             user_form = UserUpdateForm(request.POST, instance=user)
 
@@ -731,13 +727,13 @@ def profile_view(request):
                 user_form.save()
                 messages.success(request, "Profile updated successfully!")
                 return redirect("profile")
-
         else:
             user_form = UserUpdateForm(instance=user)
 
     context = {
         "user_form": user_form,
         "provider_form": provider_form,
+        "provider": provider,   # ✅ ADD THIS
     }
 
     return render(request, "Match/profile.html", context)

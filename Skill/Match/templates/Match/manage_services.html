@@ -14,32 +14,43 @@
 
     body { background-color: var(--main-bg); font-family: 'Inter', sans-serif; }
 
-    .sidebar {
-        min-width: 240px;
-        max-width: 240px;
-        background-color: var(--sidebar-bg);
-        height: 100vh;
-        position: fixed;
-        top: 0; left: 0;
-        z-index: 1000;
-    }
+    /* Sidebar */
+.sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 20px 0;
+    z-index: 1000;
+}
 
-    .sidebar .nav-link {
-        color: #94a3b8;
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-weight: 500;
-    }
+.sidebar .nav-link {
+    color: #94a3b8;
+    padding: 12px 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
 
-    .sidebar .nav-link:hover { background-color: var(--sidebar-hover); color: #fff; }
-    .sidebar .nav-link.active {
-        background-color: var(--accent-color);
-        color: #fff;
-        border-radius: 8px;
-        margin: 0 10px;
-    }
+.sidebar .nav-link i {
+    width: 20px;
+    font-size: 1.1rem;
+}
+
+.sidebar .nav-link:hover {
+    background: var(--sidebar-accent);
+    color: #fff;
+}
+
+.sidebar .nav-link.active {
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--primary);
+    border-left-color: var(--primary);
+}
 
     .main-content { margin-left: 240px; padding: 30px; width: calc(100% - 240px); }
     .card { border: none; border-radius: 12px; overflow: hidden; }
@@ -74,20 +85,55 @@
 </style>
 
 <div class="d-flex">
-    <nav class="sidebar d-flex flex-column p-3 text-white">
-        <div class="px-3 mb-4 mt-2">
-            <h5 class="fw-bold text-info">{{ provider.company_name }}</h5>
+    <div class="sidebar text-white d-flex flex-column">
+        <div class="text-center mb-5 px-3">
+            <div class="position-relative d-inline-block">
+                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
+                     class="rounded-circle mb-2 border border-2 border-secondary" width="65">
+            </div>
+            <h6 class="fw-bold mb-0 mt-2">{{ provider.companyname }}</h6>
+            <small style="color: var(--text-muted)">Service Provider</small>
         </div>
+        
         <ul class="nav flex-column gap-1">
-            <li class="nav-item"><a class="nav-link" href="{% url 'provider_dashboard' %}"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'add_service' %}"><i class="fas fa-plus-circle"></i> Add Service</a></li>
-            <li class="nav-item"><a class="nav-link active" href="{% url 'manage_services' %}"><i class="fas fa-concierge-bell"></i> My Services</a></li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'provider_requests' %}"><i class="fas fa-envelope-open-text"></i> Requests</a></li>
-            <hr class="text-secondary opacity-25">
-            <li class="nav-item"><a class="nav-link" href="{% url 'profile' %}"><i class="fas fa-user-cog"></i> Profile</a></li>
-            <li class="nav-item mt-auto"><a class="nav-link text-danger" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'provider_dashboard' %}">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'add_service' %}">
+                    <i class="fas fa-plus-circle"></i> Add Service
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'manage_services' %}">
+                    <i class="fas fa-concierge-bell"></i> My Services
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'provider_requests' %}">
+                    <i class="fas fa-envelope-open-text"></i> Requests
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'report_page' provider.id %}">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'profile' %}">
+                    <i class="fas fa-user-cog"></i> Profile
+                </a>
+            </li>
         </ul>
-    </nav>
+        <hr class="text-secondary opacity-25">
+        <div class="mt-auto">
+            <a class="nav-link text-danger" href="{% url 'logout' %}">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
 
     <main class="main-content">
         <header class="mb-4 d-flex justify-content-between align-items-center">

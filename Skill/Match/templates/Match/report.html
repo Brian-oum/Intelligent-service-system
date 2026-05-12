@@ -45,74 +45,110 @@
       min-height: 100vh;
       display: flex;
     }
+/* ── Sidebar FIXED ───────────────────────────── */
+.sidebar {
+    width: 260px;
+    background: #1e293b;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+}
 
-    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+/* profile */
+.sidebar-profile {
+    text-align: center;
+    padding: 10px 20px;
+    margin-bottom: 20px;
+}
+
+.sidebar-profile .avatar {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    margin-bottom: 10px;
+    border: 2px solid #334155;
+}
+
+.sidebar-profile h6 {
+    color: #fff;
+    margin: 0;
+    font-weight: 700;
+}
+
+.sidebar-profile small {
+    color: #94a3b8;
+}
+
+/* links */
+.nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+}
+
+.nav-links li a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    color: #94a3b8;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: 0.2s;
+}
+
+.nav-links li a:hover {
+    background: rgba(14,165,233,0.1);
+    color: #fff;
+}
+
+.nav-links li a.active {
+    color: #0ea5e9;
+    border-left: 3px solid #0ea5e9;
+    background: rgba(14,165,233,0.1);
+}
+
+/* logout */
+.sidebar-bottom {
+    padding: 15px 20px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.logout {
+    color: #ff4d6d;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* MAIN FIX (IMPORTANT) */
+.main-wrap {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+}
+
+/* MOBILE FIX */
+@media (max-width: 768px) {
     .sidebar {
-      width: var(--sidebar-w);
-      min-width: var(--sidebar-w);
-      background: var(--sidebar-bg);
-      height: 100vh;
-      position: sticky;
-      top: 0;
-      display: flex;
-      flex-direction: column;
-      padding: 1.5rem 0;
-      z-index: 200;
-      transition: transform .3s;
+        transform: translateX(-100%);
+        transition: 0.3s;
+        position: fixed;
     }
 
-    .sidebar-brand {
-      padding: 0 1.5rem 1.8rem;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-    }
-    .sidebar-brand h5 {
-      font-weight: 800;
-      font-size: 1rem;
-      color: var(--accent);
-      letter-spacing: -.01em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .sidebar-brand small {
-      font-size: .7rem;
-      color: rgba(255,255,255,.3);
-      font-weight: 400;
+    .sidebar.open {
+        transform: translateX(0);
     }
 
-    .nav { display: flex; flex-direction: column; gap: 2px; padding: 1.2rem .75rem 0; flex: 1; }
-
-    .nav-link {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: .65rem .9rem;
-      border-radius: 9px;
-      color: rgba(255,255,255,.45);
-      font-size: .85rem;
-      font-weight: 500;
-      text-decoration: none;
-      transition: background .18s, color .18s;
+    .main-wrap {
+        margin-left: 0;
+        width: 100%;
     }
-    .nav-link i { width: 18px; text-align: center; font-size: .9rem; }
-    .nav-link:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
-    .nav-link.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-      border-left: 3px solid var(--accent);
-      padding-left: calc(.9rem - 3px);
-    }
-
-    .nav-divider {
-      height: 1px;
-      background: rgba(255,255,255,.06);
-      margin: .6rem 0;
-    }
-
-    .nav-logout { margin-top: auto !important; padding: 0 .75rem 0; }
-    .nav-logout .nav-link { color: rgba(255,100,100,.55); }
-    .nav-logout .nav-link:hover { background: rgba(255,77,109,.1); color: var(--danger); }
-
+}
     /* ── Main Wrapper ────────────────────────────────────────────────────── */
     .main-wrap {
       flex: 1;
@@ -639,54 +675,34 @@
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
 <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
-<nav class="sidebar" id="sidebar">
-  <div class="sidebar-brand">
-    <h5>{{ provider.company_name }}</h5>
-  </div>
+<div class="sidebar" id="sidebar">
+    
+    <!-- Profile -->
+    <div class="sidebar-profile">
+        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
+             class="avatar">
+        <h6>{{ provider.company_name }}</h6>
+        <small>Service Provider</small>
+    </div>
 
-  <ul class="nav">
-    <li>
-      <a class="nav-link" href="{% url 'provider_dashboard' %}">
-        <i class="fas fa-chart-pie"></i> Dashboard
-      </a>
-    </li>
-    <li>
-      <a class="nav-link" href="{% url 'add_service' %}">
-        <i class="fas fa-plus-circle"></i> Add Service
-      </a>
-    </li>
-    <li>
-      <a class="nav-link" href="{% url 'manage_services' %}">
-        <i class="fas fa-concierge-bell"></i> My Services
-      </a>
-    </li>
-    <li>
-      <a class="nav-link" href="{% url 'provider_requests' %}">
-        <i class="fas fa-envelope-open-text"></i> Requests
-      </a>
-    </li>
-    <li>
-      <a class="nav-link active" href="{% url 'report_page' provider.id %}">
-        <i class="fas fa-chart-line"></i> Reports
-      </a>
-    </li>
-    <div class="nav-divider"></div>
-    <li>
-      <a class="nav-link" href="{% url 'profile' %}">
-        <i class="fas fa-user-cog"></i> Profile
-      </a>
-    </li>
-  </ul>
+    <!-- Nav -->
+    <ul class="nav-links">
+        <li><a href="{% url 'provider_dashboard' %}"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+        <li><a href="{% url 'add_service' %}"><i class="fas fa-plus-circle"></i> Add Service</a></li>
+        <li><a href="{% url 'manage_services' %}"><i class="fas fa-concierge-bell"></i> My Services</a></li>
+        <li><a href="{% url 'provider_requests' %}"><i class="fas fa-envelope-open-text"></i> Requests</a></li>
+        <li><a href="{% url 'report_page' provider.id %}" class="active"><i class="fas fa-chart-line"></i> Reports</a></li>
+        <li><a href="{% url 'profile' %}"><i class="fas fa-user-cog"></i> Profile</a></li>
+    </ul>
 
-  <ul class="nav nav-logout" style="flex:0; padding-bottom:.5rem;">
-    <li>
-      <a class="nav-link" href="{% url 'logout' %}">
-        <i class="fas fa-sign-out-alt"></i> Logout
-      </a>
-    </li>
-  </ul>
-</nav>
+    <!-- Logout -->
+    <div class="sidebar-bottom">
+        <a href="{% url 'logout' %}" class="logout">
+            <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </a>
+    </div>
 
+</div>
 <!-- ── Main ─────────────────────────────────────────────────────────────── -->
 <div class="main-wrap">
 
