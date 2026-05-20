@@ -1364,3 +1364,4 @@ def export_pdf(request, provider_id):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
  
+    

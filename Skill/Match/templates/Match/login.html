@@ -1,4 +1,4 @@
-
+{% load socialaccount %}
 {% block content %}
 
 <style>
@@ -101,6 +101,55 @@
         text-align: center;
         border: 1px solid #fee2e2;
     }
+    /* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+    padding: 0 12px;
+    font-size: 13px;
+    color: #9ca3af;
+    font-weight: 600;
+}
+
+/* Google Button */
+.google-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 50px;
+    border: 1px solid #d1d5db;
+    background: white;
+    text-decoration: none;
+    color: #374151;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.google-btn:hover {
+    background: #f9fafb;
+    transform: translateY(-1px);
+    color: #111827;
+}
+
+.google-btn img {
+    width: 20px;
+    height: 20px;
+}
 </style>
 
 <div class="login-container">
@@ -130,6 +179,15 @@
             </div>
 
             <button type="submit" class="btn-login">Login</button>
+            <div class="divider">
+                <span>OR</span>
+            </div>
+
+            <!-- Google Login -->
+            <a href="{% provider_login_url 'google' %}" class="google-btn">
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google">
+                Continue with Google
+            </a>
         </form>
 
         <div class="auth-links">
