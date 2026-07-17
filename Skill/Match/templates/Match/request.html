@@ -1,8 +1,9 @@
-
 {% block content %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Leaflet Routing Machine CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 
 <style>
     :root {
@@ -82,17 +83,61 @@
 
     textarea.form-control-pill { height: 120px; border-radius: 12px !important; }
     .form-label { font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-main); font-size: 0.9rem; }
-    
+
     .map-trigger { cursor: pointer; background-color: #f9fafb !important; border: 1px dashed var(--primary); }
     .btn-submit { background-color: var(--sidebar-bg); color: #fff; border: none; border-radius: 12px; padding: 14px; width: 100%; font-weight: 600; transition: all 0.3s; }
     .btn-submit:hover { background-color: var(--primary); transform: translateY(-2px); }
 
     /* Map Styles */
-    #map { height: 400px !important; width: 100%; border-radius: 15px; margin-top: 15px; border: 1px solid #eee; }
+    .map-shell { position: relative; }
+    #map { height: 460px !important; width: 100%; border-radius: 15px; margin-top: 15px; border: 1px solid #eee; }
     .search-pill-container { display: flex; border: 1px solid var(--form-border-color); border-radius: 50px; overflow: hidden; padding: 4px; background: #fff; }
     .search-pill-container input { border: none !important; flex-grow: 1; padding-left: 15px; box-shadow: none !important; }
     .suggestion-box { position: absolute; width: 100%; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 2000; top: 55px; max-height: 200px; overflow-y: auto; display: none; }
     .suggestion-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f1f1f1; font-size: 0.9rem; }
+
+    /* --- PROVIDER INFO PANEL (replaces the bare popup) --- */
+    .provider-panel {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 270px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+        z-index: 1500;
+        padding: 18px;
+        display: none;
+        animation: panelIn .18s ease-out;
+    }
+    @keyframes panelIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: translateY(0); } }
+
+    .provider-panel .close-panel {
+        position: absolute; top: 10px; right: 12px;
+        cursor: pointer; color: var(--text-muted); font-size: 0.9rem;
+        background: none; border: none;
+    }
+    .provider-panel .p-name { font-weight: 800; font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px; padding-right: 18px; }
+    .provider-panel .p-address { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; }
+    .provider-panel .p-stat-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .provider-panel .p-stat {
+        flex: 1; background: var(--bg-soft); border-radius: 10px;
+        padding: 8px 6px; text-align: center;
+    }
+    .provider-panel .p-stat .val { font-weight: 700; font-size: 0.95rem; color: var(--primary); }
+    .provider-panel .p-stat .lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .provider-panel .btn-request {
+        width: 100%; background: var(--sidebar-bg); color: #fff; border: none;
+        border-radius: 10px; padding: 10px; font-weight: 600; font-size: 0.9rem;
+    }
+    .provider-panel .btn-request:hover { background: var(--primary); }
+    .provider-panel .route-status { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; min-height: 14px; }
+
+    /* hide LRM's bulky default itinerary panel, we surface distance/ETA in our own card */
+    .leaflet-routing-container { display: none !important; }
+
+    /* smoothly animate marker icon transitions via CSS transform (Leaflet handles position via JS, this softens icon-level transitions like bounce) */
+    .provider-marker-icon { transition: transform 0.15s ease-out; }
 </style>
 
 <div class="d-flex">
@@ -141,7 +186,7 @@
                 {% csrf_token %}
                 <div class="mb-3">
                     <label class="form-label">Service Location</label>
-                    <input type="text" name="location" id="display_location" class="form-control-pill map-trigger" 
+                    <input type="text" name="location" id="display_location" class="form-control-pill map-trigger"
                            placeholder="Tap to search or pin location..." readonly
                            data-bs-toggle="modal" data-bs-target="#mapModal" required>
                 </div>
@@ -153,6 +198,7 @@
 
                 <input type="hidden" name="latitude" id="id_latitude">
                 <input type="hidden" name="longitude" id="id_longitude">
+                <input type="hidden" name="provider_id" id="id_provider_id">
 
                 <button type="submit" class="btn-submit">Submit Request</button>
             </form>
@@ -182,7 +228,28 @@
                     </button>
                 </div>
 
-                <div id="map"></div>
+                <div class="map-shell">
+                    <div id="map"></div>
+
+                    <!-- Provider info panel: shown when a provider marker is clicked -->
+                    <div id="providerPanel" class="provider-panel">
+                        <button type="button" class="close-panel" id="closeProviderPanel">&times;</button>
+                        <div class="p-name" id="pp-name">Provider</div>
+                        <div class="p-address" id="pp-address">Address</div>
+                        <div class="route-status" id="pp-route-status"></div>
+                        <div class="p-stat-row">
+                            <div class="p-stat">
+                                <div class="val" id="pp-distance">--</div>
+                                <div class="lbl">Distance</div>
+                            </div>
+                            <div class="p-stat">
+                                <div class="val" id="pp-eta">--</div>
+                                <div class="lbl">ETA</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-request" id="pp-request-btn">Request This Provider</button>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-dark px-5 py-2 rounded-pill w-100 fw-bold" id="confirmLocation">Confirm This Address</button>
@@ -192,7 +259,10 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Routing Machine: gives turn-by-turn, distance & ETA via OSRM out of the box -->
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 const providers = [
 {% for provider in providers %}
@@ -210,12 +280,20 @@ const providers = [
 const userLat = {{ user_profile.latitude|default:"-1.286389" }};
 const userLng = {{ user_profile.longitude|default:"36.817223" }};
 </script>
+
 <script>
-    let map, marker, searchTimeout;
+/* ============================================================
+   STATE
+   ============================================================ */
+let map, marker, searchTimeout;
+let routingControl = null;       // Leaflet Routing Machine instance (one at a time)
+let activeProviderId = null;     // which provider is currently routed/selected
+const providerMarkers = {};      // id -> L.marker, so we can animate / re-select later
 
 /* Inputs */
 const latInput = document.getElementById("id_latitude");
 const lngInput = document.getElementById("id_longitude");
+const providerIdInput = document.getElementById("id_provider_id");
 const displayInput = document.getElementById("display_location");
 
 const modalElement = document.getElementById('mapModal');
@@ -223,114 +301,315 @@ const modalElement = document.getElementById('mapModal');
 const searchInput = document.getElementById("map-search");
 const suggestionBox = document.getElementById("suggestions");
 
+/* Provider info panel elements */
+const providerPanel = document.getElementById("providerPanel");
+const ppName = document.getElementById("pp-name");
+const ppAddress = document.getElementById("pp-address");
+const ppDistance = document.getElementById("pp-distance");
+const ppEta = document.getElementById("pp-eta");
+const ppRouteStatus = document.getElementById("pp-route-status");
+const ppRequestBtn = document.getElementById("pp-request-btn");
 
-/* Fetch readable address from coordinates */
+/* ============================================================
+   ADDRESS LOOKUP (unchanged)
+   ============================================================ */
 async function fetchAddress(lat, lng) {
-
     try {
-
         const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`
         );
-
         const data = await response.json();
-
         return data.display_name || "Selected Location";
-
     } catch (e) {
-
         return "Selected Location";
-
     }
-
 }
 
-
-/* Set user marker */
-function setMarker(lat, lng, address=null) {
-
+/* ============================================================
+   USER MARKER (the pin the seeker is placing) — unchanged logic
+   ============================================================ */
+function setMarker(lat, lng, address = null) {
     const pos = [lat, lng];
+    if (!map) return;
 
-    if(!map) return;
+    if (!marker) {
+        marker = L.marker(pos, { draggable: true }).addTo(map);
 
-    if(!marker){
-
-        marker = L.marker(pos, {draggable:true}).addTo(map);
-
-        marker.on("dragend", async function(){
-
+        marker.on("dragend", async function () {
             const newPos = marker.getLatLng();
-
             latInput.value = newPos.lat;
             lngInput.value = newPos.lng;
-
             searchInput.value = await fetchAddress(newPos.lat, newPos.lng);
 
+            // if a provider is currently selected, re-draw the route from the new pin
+            if (activeProviderId !== null) {
+                drawRouteToProvider(activeProviderId);
+            }
         });
-
-    }
-    else{
-
+    } else {
         marker.setLatLng(pos);
-
     }
 
     map.setView(pos, 15);
-
     latInput.value = lat;
     lngInput.value = lng;
 
-    if(address){
-
+    if (address) {
         searchInput.value = address;
-
     }
 
+    // moving the user pin should refresh any active route
+    if (activeProviderId !== null) {
+        drawRouteToProvider(activeProviderId);
+    }
 }
 
-
-function loadProviders(){
+/* ============================================================
+   PROVIDER MARKERS
+   ============================================================ */
+function loadProviders() {
+    // Collect points so we can fit the map to whatever we actually have,
+    // instead of trusting a hardcoded center/zoom that may not contain them.
+    const boundsPoints = [[userLat, userLng]];
 
     providers.forEach(provider => {
-
         const icon = L.icon({
-            iconUrl:"https://cdn-icons-png.flaticon.com/512/684/684908.png",
-            iconSize:[32,32]
+            iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+            iconSize: [32, 32],
+            className: "provider-marker-icon"
         });
 
         const providerMarker = L.marker(
             [provider.lat, provider.lng],
-            {icon:icon}
+            { icon: icon }
         ).addTo(map);
 
-        providerMarker.bindPopup(`
-            <div style="text-align:center">
-                <strong>${provider.name}</strong><br>
-                ${provider.address}<br><br>
+        // Click now opens the rich info panel + draws the route, instead of a bare popup
+        providerMarker.on("click", () => {
+            openProviderPanel(provider);
+            drawRouteToProvider(provider.id);
+        });
 
-                <button 
-                    class="btn btn-sm btn-primary"
-                    onclick="selectProvider(${provider.id}, '${provider.name}')"
-                >
-                    Request Service
-                </button>
-            </div>
-        `);
-
+        providerMarkers[provider.id] = providerMarker;
+        boundsPoints.push([provider.lat, provider.lng]);
     });
 
+    if (boundsPoints.length > 1) {
+        // Multiple points: fit the map so the user AND every provider are visible.
+        map.fitBounds(L.latLngBounds(boundsPoints), { padding: [40, 40], maxZoom: 14 });
+    } else {
+        // Only the user point (no providers) — just center on them.
+        map.setView([userLat, userLng], 13);
+    }
 }
 
-/* Initialize map when modal opens */
-modalElement.addEventListener('shown.bs.modal', function(){
+/* ============================================================
+   PROVIDER INFO PANEL
+   ============================================================ */
+function findProvider(id) {
+    return providers.find(p => p.id === id);
+}
 
-    setTimeout(()=>{
+function openProviderPanel(provider) {
+    activeProviderId = provider.id;
 
-        if(!map){
+    ppName.textContent = provider.name;
+    ppAddress.textContent = provider.address;
+    ppDistance.textContent = "--";
+    ppEta.textContent = "--";
+    ppRouteStatus.textContent = "Calculating route...";
 
-            map = L.map("map").setView([-1.286389,36.817223],13);
+    providerPanel.style.display = "block";
 
-            // OpenStreetMap France (no referrer block)
+    ppRequestBtn.onclick = () => {
+        providerIdInput.value = provider.id;
+        // Use the provider's address as the requested location context if no pin set yet
+        if (!latInput.value || !lngInput.value) {
+            setMarker(provider.lat, provider.lng, provider.address);
+        }
+        displayInput.value = searchInput.value || provider.address;
+        bootstrap.Modal.getInstance(modalElement).hide();
+    };
+}
+
+document.getElementById("closeProviderPanel").addEventListener("click", () => {
+    providerPanel.style.display = "none";
+    activeProviderId = null;
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+});
+
+/* ============================================================
+   ROUTING — Leaflet Routing Machine (OSRM by default)
+   Draws the road route between the user's pin and the clicked
+   provider, and surfaces distance + ETA in the info panel.
+   ============================================================ */
+function drawRouteToProvider(providerId) {
+    const provider = findProvider(providerId);
+    if (!provider) return;
+
+    // Need a starting point: prefer the user's placed pin, fall back to userLat/userLng
+    const startLat = latInput.value ? parseFloat(latInput.value) : userLat;
+    const startLng = lngInput.value ? parseFloat(lngInput.value) : userLng;
+
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+
+    ppRouteStatus.textContent = "Calculating route...";
+
+    routingControl = L.Routing.control({
+        waypoints: [
+            L.latLng(startLat, startLng),
+            L.latLng(provider.lat, provider.lng)
+        ],
+        // --- OSRM (default, no API key needed) ---
+        router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
+        }),
+
+        /* --- To switch to OpenRouteService instead, comment the osrmv1
+           block above and uncomment this. You need a free ORS API key:
+           https://openrouteservice.org/dev/#/signup
+
+        router: L.Routing.openrouteservice('YOUR_ORS_API_KEY', {
+            profile: 'driving-car'
+        }),
+        */
+
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+        show: false, // hide the default turn-by-turn itinerary box; we use our own panel
+        createMarker: function (i, wp) {
+            // Don't let LRM create its own start/end markers — we already have
+            // the user pin and the provider marker on the map.
+            return null;
+        },
+        lineOptions: {
+            styles: [{ color: '#0ea5e9', weight: 5, opacity: 0.85 }]
+        }
+    }).addTo(map);
+
+    routingControl.on('routesfound', function (e) {
+        const route = e.routes[0];
+        const distanceKm = (route.summary.totalDistance / 1000).toFixed(1);
+        const etaMin = Math.round(route.summary.totalTime / 60);
+
+        ppDistance.textContent = `${distanceKm} km`;
+        ppEta.textContent = etaMin < 60 ? `${etaMin} min` : `${Math.floor(etaMin / 60)}h ${etaMin % 60}m`;
+        ppRouteStatus.textContent = "";
+    });
+
+    routingControl.on('routingerror', function () {
+        ppRouteStatus.textContent = "Could not calculate route.";
+        ppDistance.textContent = "--";
+        ppEta.textContent = "--";
+    });
+}
+
+/* ============================================================
+   SMOOTH PROVIDER MOVEMENT ANIMATION
+   Call animateMarkerTo(providerId, newLat, newLng) whenever you
+   receive an updated provider position (e.g. from polling an API
+   or a websocket push) instead of calling setLatLng() directly.
+   This tweens the marker between the old and new position so it
+   glides instead of jumping.
+   ============================================================ */
+function animateMarkerTo(providerId, newLat, newLng, durationMs = 1000) {
+    const m = providerMarkers[providerId];
+    if (!m) return;
+
+    const start = m.getLatLng();
+    const end = L.latLng(newLat, newLng);
+    const startTime = performance.now();
+
+    function step(now) {
+        const t = Math.min((now - startTime) / durationMs, 1);
+        // easeInOutQuad for a more natural glide than linear interpolation
+        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+        const lat = start.lat + (end.lat - start.lat) * ease;
+        const lng = start.lng + (end.lng - start.lng) * ease;
+
+        m.setLatLng([lat, lng]);
+
+        if (t < 1) {
+            requestAnimationFrame(step);
+        } else {
+            // update our cached provider coordinates so future routes/panels are accurate
+            const provider = findProvider(providerId);
+            if (provider) {
+                provider.lat = newLat;
+                provider.lng = newLng;
+            }
+            // if this provider's route is currently shown, refresh it to the new position
+            if (activeProviderId === providerId) {
+                drawRouteToProvider(providerId);
+            }
+        }
+    }
+
+    requestAnimationFrame(step);
+}
+
+/* ------------------------------------------------------------
+   Example polling hook — wire this to your real endpoint.
+   Replace the URL with one that returns the provider's latest
+   {latitude, longitude}, e.g. GET /api/providers/<id>/location/
+   This polls every 5s only while that provider's panel/route is
+   open, instead of hammering the server for every provider always.
+   ------------------------------------------------------------ */
+let providerPollInterval = null;
+
+function startProviderTracking(providerId) {
+    stopProviderTracking();
+
+    providerPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/providers/${providerId}/location/`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.latitude && data.longitude) {
+                animateMarkerTo(providerId, data.latitude, data.longitude);
+            }
+        } catch (e) {
+            // silent fail — don't spam errors for a background poll
+        }
+    }, 5000);
+}
+
+function stopProviderTracking() {
+    if (providerPollInterval) {
+        clearInterval(providerPollInterval);
+        providerPollInterval = null;
+    }
+}
+
+/* hook tracking into panel open/close */
+const _openProviderPanelOriginal = openProviderPanel;
+openProviderPanel = function (provider) {
+    _openProviderPanelOriginal(provider);
+    startProviderTracking(provider.id);
+};
+
+document.getElementById("closeProviderPanel").addEventListener("click", () => {
+    stopProviderTracking();
+});
+
+/* ============================================================
+   MODAL INIT / MAP SETUP
+   ============================================================ */
+modalElement.addEventListener('shown.bs.modal', function () {
+    setTimeout(() => {
+        if (!map) {
+            map = L.map("map").setView([userLat, userLng], 13);
+
             L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
                 maxZoom: 20
@@ -338,132 +617,85 @@ modalElement.addEventListener('shown.bs.modal', function(){
 
             loadProviders();
 
-            map.on("click", async function(e){
-
+            map.on("click", async function (e) {
                 setMarker(e.latlng.lat, e.latlng.lng);
-
-                searchInput.value = await fetchAddress(
-                    e.latlng.lat,
-                    e.latlng.lng
-                );
-
+                searchInput.value = await fetchAddress(e.latlng.lat, e.latlng.lng);
             });
-
         }
 
         map.invalidateSize();
 
-        if(latInput.value && lngInput.value){
-
+        if (latInput.value && lngInput.value) {
             setMarker(latInput.value, lngInput.value);
-
         }
-
-    },300);
-
+    }, 300);
 });
 
+modalElement.addEventListener('hidden.bs.modal', function () {
+    stopProviderTracking();
+});
 
-/* Location search autocomplete */
-searchInput.addEventListener("input", function(){
-
+/* ============================================================
+   SEARCH AUTOCOMPLETE (unchanged)
+   ============================================================ */
+searchInput.addEventListener("input", function () {
     clearTimeout(searchTimeout);
-
     const query = this.value;
 
-    if(query.length < 3){
-
+    if (query.length < 3) {
         suggestionBox.style.display = "none";
-
         return;
-
     }
 
-    searchTimeout = setTimeout(()=>{
-
-        fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
-        )
-        .then(res=>res.json())
-        .then(data=>{
-
-            suggestionBox.innerHTML = "";
-
-            if(data.length > 0){
-
-                suggestionBox.style.display = "block";
-
-                data.forEach(item=>{
-
-                    const div = document.createElement("div");
-
-                    div.className = "suggestion-item";
-
-                    div.innerText = item.display_name;
-
-                    div.onclick = ()=>{
-
-                        setMarker(item.lat,item.lon,item.display_name);
-
-                        suggestionBox.style.display="none";
-
-                    };
-
-                    suggestionBox.appendChild(div);
-
-                });
-
-            }
-
-        });
-
-    },400);
-
+    searchTimeout = setTimeout(() => {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+            .then(res => res.json())
+            .then(data => {
+                suggestionBox.innerHTML = "";
+                if (data.length > 0) {
+                    suggestionBox.style.display = "block";
+                    data.forEach(item => {
+                        const div = document.createElement("div");
+                        div.className = "suggestion-item";
+                        div.innerText = item.display_name;
+                        div.onclick = () => {
+                            setMarker(item.lat, item.lon, item.display_name);
+                            suggestionBox.style.display = "none";
+                        };
+                        suggestionBox.appendChild(div);
+                    });
+                }
+            });
+    }, 400);
 });
 
-
-/* Use current location */
-document.getElementById("useCurrentLocation")
-.addEventListener("click", function(){
-
-    if(navigator.geolocation){
-
+/* ============================================================
+   CURRENT LOCATION (unchanged)
+   ============================================================ */
+document.getElementById("useCurrentLocation").addEventListener("click", function () {
+    if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            async position=>{
-
+            async position => {
                 const lat = position.coords.latitude;
-
                 const lng = position.coords.longitude;
-
-                const address = await fetchAddress(lat,lng);
-
-                setMarker(lat,lng,address);
-
+                const address = await fetchAddress(lat, lng);
+                setMarker(lat, lng, address);
             },
-            ()=>{
-
+            () => {
                 alert("Unable to retrieve your location");
-
             }
         );
-
     }
-
 });
 
-
-/* Confirm selected location */
-document.getElementById("confirmLocation")
-.addEventListener("click", function(){
-
-    if(latInput.value && lngInput.value){
-
+/* ============================================================
+   CONFIRM LOCATION (unchanged)
+   ============================================================ */
+document.getElementById("confirmLocation").addEventListener("click", function () {
+    if (latInput.value && lngInput.value) {
         displayInput.value = searchInput.value || "Location Selected";
-
         bootstrap.Modal.getInstance(modalElement).hide();
-
     }
-
 });
 </script>
 {% endblock %}

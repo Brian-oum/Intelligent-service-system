@@ -1,0 +1,458 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="set-wrap">
+
+    <div class="set-header">
+        <span class="premium-eyebrow">Account</span>
+        <h1 class="premium-heading">Settings</h1>
+        <p class="premium-sub">Manage your profile, security, notifications and how Fixkona looks for you.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="set-layout">
+
+        <!-- ============ TAB NAV ============ -->
+        <div class="set-tabs" role="tablist" aria-orientation="vertical">
+            <button class="set-tab {% if active_tab == 'profile' %}is-active{% endif %}" data-tab="profile" type="button">
+                <i class="fa-solid fa-user"></i><span>Profile</span>
+            </button>
+            <button class="set-tab {% if active_tab == 'security' %}is-active{% endif %}" data-tab="security" type="button">
+                <i class="fa-solid fa-shield-halved"></i><span>Security</span>
+            </button>
+            <button class="set-tab {% if active_tab == 'notifications' %}is-active{% endif %}" data-tab="notifications" type="button">
+                <i class="fa-solid fa-bell"></i><span>Notifications</span>
+            </button>
+            <button class="set-tab {% if active_tab == 'appearance' %}is-active{% endif %}" data-tab="appearance" type="button">
+                <i class="fa-solid fa-circle-half-stroke"></i><span>Appearance</span>
+            </button>
+            <button class="set-tab {% if active_tab == 'privacy' %}is-active{% endif %}" data-tab="privacy" type="button">
+                <i class="fa-solid fa-lock"></i><span>Privacy</span>
+            </button>
+            <button class="set-tab set-tab--danger {% if active_tab == 'deactivate' %}is-active{% endif %}" data-tab="deactivate" type="button">
+                <i class="fa-solid fa-triangle-exclamation"></i><span>Danger Zone</span>
+            </button>
+        </div>
+
+        <!-- ============ PANELS ============ -->
+        <div class="set-panels">
+
+            <!-- ---------- PROFILE ---------- -->
+            <section class="set-panel {% if active_tab == 'profile' %}is-active{% endif %}" data-panel="profile">
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Profile photo</h3>
+                        <p>Shown on your account and, if enabled, on your public listing.</p>
+                    </div>
+                    <form method="post" enctype="multipart/form-data" class="set-avatar-row">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="avatar">
+                        <img class="set-avatar" src="{% if user.avatar %}{{ user.avatar.url }}{% else %}https://ui-avatars.com/api/?name={{ user.username }}&background=0B0E14&color=FF4D2E&size=128{% endif %}" alt="Avatar">
+                        <div>
+                            <label class="set-btn set-btn--outline" for="avatarInput">
+                                <i class="fa-solid fa-upload"></i> Change photo
+                            </label>
+                            {{ avatar_form.avatar }}
+                            <button type="submit" class="set-btn set-btn--ghost" id="avatarSaveBtn" style="display:none;">Save photo</button>
+                            <p class="set-hint">PNG or JPG, up to 5MB.</p>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>{% if provider %}Company details{% else %}Personal details{% endif %}</h3>
+                        <p>{% if provider %}Update the information customers see about your business.{% else %}Keep your contact details up to date.{% endif %}</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="profile">
+                        <div class="set-grid">
+                            {% for field in user_form %}
+                                <div class="set-field {% if field.field.widget.input_type == 'checkbox' %}set-field--full{% endif %}">
+                                    <label>{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}<span class="set-error">{{ field.errors.0 }}</span>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="set-btn set-btn--primary">Save changes</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ---------- SECURITY ---------- -->
+            <section class="set-panel {% if active_tab == 'security' %}is-active{% endif %}" data-panel="security">
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Change password</h3>
+                        <p>Use a strong password you don't use elsewhere.</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="password">
+                        <div class="set-grid set-grid--1">
+                            {% for field in password_form %}
+                                <div class="set-field">
+                                    <label>{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}<span class="set-error">{{ field.errors.0 }}</span>{% endif %}
+                                    {% if field.help_text %}<span class="set-hint">{{ field.help_text|safe }}</span>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="set-btn set-btn--primary">Update password</button>
+                    </form>
+                </div>
+
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Active session</h3>
+                        <p>You're currently signed in on this device.</p>
+                    </div>
+                    <div class="set-session-row">
+                        <div class="set-session-info">
+                            <i class="fa-solid fa-desktop"></i>
+                            <div>
+                                <strong>This device</strong>
+                                <span>Signed in now</span>
+                            </div>
+                        </div>
+                        <a href="{% url 'logout' %}" class="set-btn set-btn--outline">Log out</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ---------- NOTIFICATIONS ---------- -->
+            <section class="set-panel {% if active_tab == 'notifications' %}is-active{% endif %}" data-panel="notifications">
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Notification preferences</h3>
+                        <p>Choose what you'd like to hear from us about.</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="notifications">
+
+                        <div class="set-switch-row">
+                            <div>
+                                <strong>Email notifications</strong>
+                                <span>Request updates, receipts and account activity.</span>
+                            </div>
+                            <label class="set-switch">
+                                {{ notif_form.email_notifications }}
+                                <span class="set-switch__track"></span>
+                            </label>
+                        </div>
+
+                        <div class="set-switch-row">
+                            <div>
+                                <strong>SMS notifications</strong>
+                                <span>Time-sensitive alerts sent to your phone.</span>
+                            </div>
+                            <label class="set-switch">
+                                {{ notif_form.sms_notifications }}
+                                <span class="set-switch__track"></span>
+                            </label>
+                        </div>
+
+                        <div class="set-switch-row">
+                            <div>
+                                <strong>Request status alerts</strong>
+                                <span>{% if provider %}Notify me when a new request comes in or changes.{% else %}Notify me when my request is accepted, completed or rejected.{% endif %}</span>
+                            </div>
+                            <label class="set-switch">
+                                {{ notif_form.request_update_alerts }}
+                                <span class="set-switch__track"></span>
+                            </label>
+                        </div>
+
+                        <div class="set-switch-row">
+                            <div>
+                                <strong>Product &amp; marketing emails</strong>
+                                <span>Occasional news, tips and offers from Fixkona.</span>
+                            </div>
+                            <label class="set-switch">
+                                {{ notif_form.marketing_emails }}
+                                <span class="set-switch__track"></span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="set-btn set-btn--primary">Save preferences</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ---------- APPEARANCE ---------- -->
+            <section class="set-panel {% if active_tab == 'appearance' %}is-active{% endif %}" data-panel="appearance">
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Theme</h3>
+                        <p>Applies instantly and syncs to any device you log in on.</p>
+                    </div>
+
+                    <div class="theme-picker" id="themePicker">
+                        <button type="button" class="theme-opt {% if user.theme_preference == 'light' %}is-selected{% endif %}" data-theme="light">
+                            <span class="theme-swatch theme-swatch--light"><i class="fa-solid fa-sun"></i></span>
+                            <span>Light</span>
+                        </button>
+                        <button type="button" class="theme-opt {% if user.theme_preference == 'dark' %}is-selected{% endif %}" data-theme="dark">
+                            <span class="theme-swatch theme-swatch--dark"><i class="fa-solid fa-moon"></i></span>
+                            <span>Dark</span>
+                        </button>
+                        <button type="button" class="theme-opt {% if user.theme_preference == 'system' or not user.theme_preference %}is-selected{% endif %}" data-theme="system">
+                            <span class="theme-swatch theme-swatch--system"><i class="fa-solid fa-circle-half-stroke"></i></span>
+                            <span>System</span>
+                        </button>
+                    </div>
+                    <p class="set-hint" id="themeSavedHint" style="opacity:0; transition:opacity .3s;"><i class="fa-solid fa-check"></i> Saved</p>
+                </div>
+
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Language</h3>
+                        <p>Choose the language used across your dashboard.</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="appearance">
+                        <input type="hidden" name="theme_preference" value="{{ user.theme_preference }}">
+                        <div class="set-grid set-grid--1">
+                            <div class="set-field">
+                                <label>{{ appearance_form.preferred_language.label }}</label>
+                                {{ appearance_form.preferred_language }}
+                            </div>
+                        </div>
+                        <button type="submit" class="set-btn set-btn--primary">Save language</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- ---------- PRIVACY ---------- -->
+            <section class="set-panel {% if active_tab == 'privacy' %}is-active{% endif %}" data-panel="privacy">
+                <div class="set-card">
+                    <div class="set-card__head">
+                        <h3>Privacy</h3>
+                        <p>Control what others can see about you.</p>
+                    </div>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="form_name" value="privacy">
+
+                        <div class="set-grid set-grid--1">
+                            <div class="set-field">
+                                <label>{{ privacy_form.profile_visibility.label }}</label>
+                                {{ privacy_form.profile_visibility }}
+                                <span class="set-hint">{% if provider %}Private hides your listing from search results.{% else %}Private hides your activity from providers you haven't contacted.{% endif %}</span>
+                            </div>
+                        </div>
+
+                        <div class="set-switch-row">
+                            <div>
+                                <strong>Show phone number publicly</strong>
+                                <span>{% if provider %}Let customers see your contact number on your listing.{% else %}Let providers see your number once you've sent a request.{% endif %}</span>
+                            </div>
+                            <label class="set-switch">
+                                {{ privacy_form.show_phone_publicly }}
+                                <span class="set-switch__track"></span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="set-btn set-btn--primary">Save privacy settings</button>
+                    </form>
+                </div>
+            </section>
+
+            
+
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_head %}
+<style>
+    .set-wrap { max-width: 980px; }
+    .set-header { margin-bottom: 28px; }
+
+    .set-layout { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+    @media (max-width: 800px) { .set-layout { grid-template-columns: 1fr; } }
+
+    /* ---- Tabs ---- */
+    .set-tabs { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 20px; }
+    @media (max-width: 800px) {
+        .set-tabs { flex-direction: row; overflow-x: auto; position: static; padding-bottom: 6px; gap: 6px; }
+        .set-tab span { display: none; }
+        .set-tab { flex-shrink: 0; }
+    }
+    .set-tab {
+        display: flex; align-items: center; gap: 10px;
+        background: transparent; border: 1px solid transparent; border-radius: 6px;
+        padding: 11px 14px; text-align: left; font-size: 0.88rem; font-weight: 500;
+        color: var(--text-muted); cursor: pointer; transition: all .15s ease;
+    }
+    .set-tab i { width: 16px; text-align: center; }
+    .set-tab:hover { background: var(--lz-ink-08); color: var(--lz-ink); }
+    .set-tab.is-active { background: var(--panel); border-color: var(--panel-line); color: var(--lz-ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .set-tab--danger.is-active, .set-tab--danger:hover { color: var(--lz-signal); }
+
+    /* ---- Panels ---- */
+    .set-panel { display: none; flex-direction: column; gap: 20px; animation: setFade .25s ease; }
+    .set-panel.is-active { display: flex; }
+    @keyframes setFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .set-card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 8px; padding: 26px; }
+    .set-card--danger { border-color: rgba(255,77,46,0.35); background: rgba(255,77,46,0.04); }
+    .set-card__head { margin-bottom: 18px; }
+    .set-card__head h3 { font-family: 'Space Grotesk', sans-serif; font-size: 1.08rem; font-weight: 600; margin: 0 0 4px; color: var(--lz-ink); }
+    .set-card__head h3 i { color: var(--lz-signal); margin-right: 6px; }
+    .set-card__head p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+
+    /* ---- Avatar ---- */
+    .set-avatar-row { display: flex; align-items: center; gap: 20px; }
+    .set-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid var(--panel-line); }
+    #id_avatar { display: none; }
+    .set-hint { display: block; margin-top: 8px; font-size: 0.78rem; color: var(--text-muted); }
+
+    /* ---- Fields ---- */
+    .set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .set-grid--1 { grid-template-columns: 1fr; }
+    .set-field--full { grid-column: 1 / -1; }
+    .set-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .set-field input[type="text"], .set-field input[type="email"], .set-field input[type="password"],
+    .set-field input[type="tel"], .set-field input[type="url"], .set-field select, .set-field textarea,
+    .set-input {
+        width: 100%; background: var(--panel-2); border: 1px solid var(--panel-line); border-radius: 5px;
+        padding: 11px 13px; font-size: 0.9rem; color: var(--lz-ink); font-family: 'Inter', sans-serif;
+        transition: border-color .15s ease;
+    }
+    .set-field input:focus, .set-field select:focus, .set-field textarea:focus, .set-input:focus {
+        outline: none; border-color: var(--lz-signal);
+    }
+    .set-error { display: block; color: var(--lz-signal); font-size: 0.76rem; margin-top: 5px; }
+
+    /* ---- Buttons ---- */
+    .set-btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 5px; padding: 11px 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all .15s ease; }
+    .set-btn--primary { background: var(--lz-signal); color: #fff; }
+    .set-btn--primary:hover { background: #FF6A4D; transform: translateY(-1px); }
+    .set-btn--outline { background: transparent; border: 1px solid var(--panel-line); color: var(--lz-ink); }
+    .set-btn--outline:hover { border-color: var(--lz-ink); }
+    .set-btn--ghost { background: transparent; color: var(--text-muted); padding: 8px 4px; text-decoration: underline; }
+    .set-btn--danger { background: var(--lz-signal); color: #fff; }
+    .set-btn--danger:hover { background: #e2371c; }
+
+    /* ---- Switches ---- */
+    .set-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--panel-line); }
+    .set-switch-row:first-of-type { border-top: none; padding-top: 0; }
+    .set-switch-row strong { display: block; font-size: 0.9rem; color: var(--lz-ink); }
+    .set-switch-row span { font-size: 0.8rem; color: var(--text-muted); }
+    .set-switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+    .set-switch__input { opacity: 0; width: 0; height: 0; }
+    .set-switch__track { position: absolute; inset: 0; background: var(--panel-2); border: 1px solid var(--panel-line); border-radius: 20px; cursor: pointer; transition: background .2s ease; }
+    .set-switch__track::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .set-switch__input:checked + .set-switch__track { background: var(--lz-signal); border-color: var(--lz-signal); }
+    .set-switch__input:checked + .set-switch__track::before { transform: translateX(18px); }
+
+    /* ---- Theme picker ---- */
+    .theme-picker { display: flex; gap: 14px; flex-wrap: wrap; }
+    .theme-opt { display: flex; flex-direction: column; align-items: center; gap: 8px; background: transparent; border: 1.5px solid var(--panel-line); border-radius: 10px; padding: 14px 22px; cursor: pointer; font-size: 0.82rem; color: var(--text-muted); font-weight: 600; transition: all .15s ease; }
+    .theme-opt:hover { border-color: var(--lz-ink-60); }
+    .theme-opt.is-selected { border-color: var(--lz-signal); color: var(--lz-ink); background: rgba(255,77,46,0.06); }
+    .theme-swatch { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .theme-swatch--light { background: #F5F2ED; color: #0B0E14; border: 1px solid #DDD6C9; }
+    .theme-swatch--dark { background: #0B0E14; color: #F5F2ED; }
+    .theme-swatch--system { background: linear-gradient(135deg, #F5F2ED 50%, #0B0E14 50%); color: var(--lz-signal); border: 1px solid var(--panel-line); }
+
+    /* ---- Session row ---- */
+    .set-session-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .set-session-info { display: flex; align-items: center; gap: 14px; }
+    .set-session-info i { font-size: 1.3rem; color: var(--text-muted); }
+    .set-session-info strong { display: block; font-size: 0.9rem; color: var(--lz-ink); }
+    .set-session-info span { font-size: 0.78rem; color: var(--live); }
+
+    /* ---- Modal ---- */
+    .set-modal { background: var(--panel); color: var(--lz-ink); border: 1px solid var(--panel-line); }
+    .set-modal .modal-header, .set-modal .modal-footer { border-color: var(--panel-line); }
+    .set-modal .modal-title i { color: var(--lz-signal); margin-right: 6px; }
+    .set-confirm-check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 0.82rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // ---------- TAB SWITCHING ----------
+    const tabs = document.querySelectorAll('.set-tab');
+    const panels = document.querySelectorAll('.set-panel');
+
+    function activate(name) {
+        tabs.forEach(t => t.classList.toggle('is-active', t.dataset.tab === name));
+        panels.forEach(p => p.classList.toggle('is-active', p.dataset.panel === name));
+        const url = new URL(window.location);
+        url.searchParams.set('tab', name);
+        history.replaceState(null, '', url);
+    }
+
+    tabs.forEach(tab => tab.addEventListener('click', () => activate(tab.dataset.tab)));
+
+    // ---------- AVATAR: reveal Save button once a file is chosen ----------
+    const avatarInput = document.getElementById('id_avatar');
+    const avatarSaveBtn = document.getElementById('avatarSaveBtn');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', () => {
+            if (avatarInput.files.length) avatarSaveBtn.style.display = 'inline-flex';
+        });
+    }
+
+    // ---------- THEME PICKER ----------
+    const themePicker = document.getElementById('themePicker');
+    const themeHint = document.getElementById('themeSavedHint');
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+    function applyTheme(theme) {
+        const resolved = theme === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : theme;
+        document.documentElement.setAttribute('data-theme', resolved);
+        localStorage.setItem('fixkona-theme', theme);
+    }
+
+    if (themePicker) {
+        themePicker.querySelectorAll('.theme-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                themePicker.querySelectorAll('.theme-opt').forEach(b => b.classList.remove('is-selected'));
+                btn.classList.add('is-selected');
+                applyTheme(theme);
+
+                // keep the hidden field on the Appearance form in sync
+                const hidden = document.querySelector('input[name="theme_preference"]');
+                if (hidden) hidden.value = theme;
+
+                fetch("{% url 'update_theme_ajax' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'theme=' + encodeURIComponent(theme)
+                }).then(() => {
+                    themeHint.style.opacity = 1;
+                    setTimeout(() => themeHint.style.opacity = 0, 1500);
+                });
+            });
+        });
+    }
+})();
+</script>
+{% endblock %}

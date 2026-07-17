@@ -1,201 +1,401 @@
+{% extends 'Match/auth_base.html' %}
+{% load static %}
 {% load socialaccount %}
 {% block content %}
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+<!-- Apply theme before first paint to avoid a light/dark flash -->
+<script>
+    (function () {
+        var stored = localStorage.getItem('fixkona-theme') || '{{ user.theme_preference|default:"system" }}';
+        var resolved = stored === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : stored;
+        document.documentElement.setAttribute('data-theme', resolved);
+    })();
+</script>
+
 <style>
+    /* ============ FIXKONA THEME SYSTEM (matches provider_base.html) ============ */
     :root {
-        --form-border-color: #d1d5db;
-        --text-main: #374151;
+        --lz-paper:     #F5F2ED;
+        --lz-paper-alt: #EDE9E2;
+        --lz-ink:       #0B0E14;
+        --lz-ink-60:    rgba(11, 14, 20, 0.55);
+        --lz-ink-08:    rgba(11, 14, 20, 0.08);
+        --lz-muted:     #6B7280;
+        --lz-signal:    #FF4D2E;
+        --lz-border:    rgba(11, 14, 20, 0.1);
+        --lz-dark-end:  #0B0E14;
+
+        --ink:            var(--lz-dark-end);
+        --panel:          var(--lz-paper);
+        --panel-2:        var(--lz-paper-alt);
+        --panel-line:     var(--lz-border);
+        --signal:         var(--lz-signal);
+        --text-muted:     var(--lz-muted);
+        --white:          var(--lz-ink);
+
+        --form-border-color: var(--panel-line);
+        --text-main:          var(--white);
+        --accent-orange:      var(--signal);
+    }
+    :root[data-theme="dark"] {
+        --lz-paper:     #12161F;
+        --lz-paper-alt: #191E29;
+        --lz-ink:       #F2F1ED;
+        --lz-ink-60:    rgba(242, 241, 237, 0.62);
+        --lz-ink-08:    rgba(242, 241, 237, 0.08);
+        --lz-muted:     #9AA3AF;
+        --lz-border:    rgba(242, 241, 237, 0.1);
     }
 
-    /* Centering the login card on the page */
-    .login-container {
-        min-height: 80vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .theme-toggle-fab {
+        position: fixed; top: 24px; right: 24px; z-index: 1200;
+        width: 42px; height: 42px; border-radius: 50%;
+        border: 1px solid var(--panel-line);
+        background: var(--panel-2); color: var(--white);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+    .theme-toggle-fab:hover { border-color: var(--signal); color: var(--signal); }
+    @media (max-width: 900px) { .theme-toggle-fab { top: 16px; right: 16px; } }
+
+    * { box-sizing: border-box; }
+
+    @keyframes slideUpFade {
+        from { opacity: 0; transform: translateY(36px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .auth-split {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: clamp(320px, 42vw, 600px) 1fr;
+        gap: 28px;
+        padding: 28px;
         font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background: var(--panel);
+        transition: background-color .2s ease;
     }
 
-    .login-card {
-        background: #fff;
-        padding: 40px;
-        border-radius: 20px;
+    /* ============ LEFT — IMAGE PANEL ============
+       Swap the background-image URL for your own photo. The gradient
+       underneath is just a fallback so this never looks broken while
+       the image loads (or if it's missing). Sized down and rounded so
+       it reads as a framed visual rather than a full-bleed edge. */
+    .auth-split__visual {
+        position: sticky;
+        top: 28px;
+        height: calc(100vh - 56px);
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 20px 50px -20px rgba(0,0,0,0.35);
+        background:
+            linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.88) 100%),
+            url('https://images.unsplash.com/photo-1646640381839-02748ae8ddf0?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat,
+            linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 36px;
+        color: #fff;
         width: 100%;
-        max-width: 450px; /* Keeps the login form tight */
+        animation: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .auth-split__brand {
+        position: absolute;
+        top: 28px; left: 32px;
+        display: inline-flex; align-items: center; gap: 9px;
+        font-weight: 700; font-size: 1.1rem; letter-spacing: -0.01em;
+        text-decoration: none; color: #fff;
+    }
+    .auth-split__brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-orange); }
+    .auth-split__quote {
+        font-family: 'Space Grotesk', sans-serif;
+        font-style: italic;
+        font-size: 2.1rem; line-height: 1.3; font-weight: 700;
+        color: var(--accent-orange);
+        max-width: 500px; margin-bottom: 12px;
+        text-shadow: 0 2px 16px rgba(0,0,0,0.45);
+    }
+    .auth-split__quote-meta { font-size: 0.82rem; color: rgba(255,255,255,0.75); }
+
+    /* ============ RIGHT — FORM PANEL ============ */
+    .auth-split__form-side {
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px;
+    }
+    .login-card {
+        width: 100%; max-width: 400px;
+        animation: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+    }
+    @media (min-width: 1200px) {
+        .login-card { margin-left: 100px; }
     }
 
-    /* Minimalist Header matching your screenshot */
+    /* Logo shown above the form on the right-hand side */
+    .form-side-brand {
+        display: flex; align-items: center; justify-content: center; gap: 9px;
+        margin-bottom: 28px;
+        font-weight: 700; font-size: 1.2rem; letter-spacing: -0.01em;
+        text-decoration: none; color: var(--white);
+    }
+    .form-side-brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-orange); }
+
     .login-header {
-        font-size: 1.8rem;
-        font-weight: 500;
-        color: var(--text-main);
-        border-bottom: 3px solid #000;
-        display: inline-block;
-        padding-bottom: 5px;
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: var(--white);
+        margin-bottom: 6px;
+    }
+    .login-sub {
+        color: var(--text-muted);
+        font-size: 0.92rem;
         margin-bottom: 30px;
     }
 
-    /* Pill-shaped inputs */
+    .form-field { margin-bottom: 18px; }
+    .form-field label {
+        display: block;
+        font-size: 0.8rem; font-weight: 600; color: var(--text-main);
+        margin-bottom: 7px; margin-left: 4px;
+    }
+
     .form-control-pill {
         width: 100%;
-        padding: 12px 25px;
+        padding: 12px 22px;
+        background-color: var(--panel-2);
         border: 1px solid var(--form-border-color);
         border-radius: 50px !important;
-        font-size: 15px;
-        margin-bottom: 20px;
+        font-size: 16px;
+        color: var(--white);
         transition: all 0.2s ease;
         display: block;
     }
-
+    .form-control-pill::placeholder { color: var(--text-muted); }
     .form-control-pill:focus {
-        border-color: #000;
+        border-color: var(--signal);
         outline: none;
-        box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+        box-shadow: 0 0 0 3px rgba(255,77,46,0.12);
     }
 
-    /* Black pill button */
+    .forgot-link {
+        display: block; text-align: right;
+        font-size: 0.8rem; font-weight: 600; color: var(--white);
+        margin: -10px 4px 18px; text-decoration: none;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+
     .btn-login {
-        background-color: #000;
-        color: #fff;
+        background-color: var(--signal);
+        color: var(--ink) !important;
         border: none;
         border-radius: 50px;
-        padding: 12px;
+        padding: 13px;
         width: 100%;
         font-weight: 600;
         font-size: 16px;
         transition: transform 0.2s, background-color 0.2s;
     }
-
     .btn-login:hover {
-        background-color: #333;
+        background-color: #FF6A4D;
         transform: translateY(-1px);
-        color: white;
+        color: var(--ink) !important;
     }
 
-    /* Links styling */
     .auth-links {
-        margin-top: 25px;
-        font-size: 0.9rem;
-        color: #6b7280;
+        margin-top: 26px;
+        font-size: 0.88rem;
+        color: var(--text-muted);
         text-align: center;
     }
-
+    .auth-links p { margin-bottom: 6px; }
+    .auth-links p:last-child { margin-bottom: 0; }
     .auth-links a {
-        color: #000;
+        color: var(--white);
         text-decoration: none;
         font-weight: 600;
     }
+    .auth-links a:hover { text-decoration: underline; color: var(--signal); }
 
-    .auth-links a:hover {
-        text-decoration: underline;
-    }
-
-    /* Error messages */
     .error-msg {
-        background-color: #fef2f2;
-        color: #b91c1c;
+        background-color: rgba(255,77,46,0.1);
+        color: var(--signal);
         padding: 10px 20px;
         border-radius: 50px;
         font-size: 0.85rem;
         margin-bottom: 20px;
         text-align: center;
-        border: 1px solid #fee2e2;
+        border: 1px solid rgba(255,77,46,0.25);
     }
-    /* Divider */
-.divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 20px 0;
-}
 
-.divider::before,
-.divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid #e5e7eb;
-}
+    .divider {
+        display: flex; align-items: center; text-align: center;
+        margin: 22px 0;
+    }
+    .divider::before, .divider::after {
+        content: ''; flex: 1; border-bottom: 1px solid var(--panel-line);
+    }
+    .divider span {
+        padding: 0 12px; font-size: 13px; color: var(--text-muted); font-weight: 600;
+    }
 
-.divider span {
-    padding: 0 12px;
-    font-size: 13px;
-    color: #9ca3af;
-    font-weight: 600;
-}
+    .google-btn {
+        width: 100%;
+        display: flex; align-items: center; justify-content: center; gap: 12px;
+        padding: 12px;
+        border-radius: 50px;
+        border: 1px solid var(--panel-line);
+        background: var(--panel-2);
+        text-decoration: none;
+        color: var(--white);
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    .google-btn:hover {
+        background: var(--panel);
+        border-color: var(--signal);
+        transform: translateY(-1px);
+        color: var(--white);
+    }
+    .google-btn img { width: 20px; height: 20px; }
 
-/* Google Button */
-.google-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 50px;
-    border: 1px solid #d1d5db;
-    background: white;
-    text-decoration: none;
-    color: #374151;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.google-btn:hover {
-    background: #f9fafb;
-    transform: translateY(-1px);
-    color: #111827;
-}
-
-.google-btn img {
-    width: 20px;
-    height: 20px;
-}
+    @media (max-width: 900px) {
+        .auth-split {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto 1fr;
+            padding: 0; gap: 0;
+        }
+        .auth-split__visual {
+            position: relative;
+            top: auto;
+            height: 34vh;
+            min-height: 240px;
+            max-height: 320px;
+            width: 100%;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 22px 24px 52px;
+        }
+        .auth-split__quote {
+            font-size: 1.25rem;
+            line-height: 1.28;
+            max-width: 100%;
+            margin-bottom: 6px;
+        }
+        .auth-split__quote-meta { font-size: 0.74rem; }
+        .auth-split__form-side {
+            position: relative;
+            z-index: 2;
+            align-items: flex-start;
+            margin-top: -28px;
+            padding: 32px 22px 40px;
+            background: var(--panel);
+            border-radius: 28px 28px 0 0;
+            box-shadow: 0 -14px 30px rgba(0,0,0,0.14);
+        }
+    }
+    @media (max-width: 420px) {
+        .auth-split__form-side { padding: 24px 16px 32px; }
+        .login-header { font-size: 1.5rem; }
+    }
 </style>
 
-<div class="login-container">
-    <div class="login-card shadow-sm">
-        
-        <h2 class="login-header">Login</h2>
+<button type="button" class="theme-toggle-fab" id="themeToggleFab" aria-label="Toggle dark mode">
+    <i class="fa-solid fa-moon"></i>
+</button>
 
-        {% if messages %}
-            {% for msg in messages %}
-                <div class="error-msg">
-                    {{ msg }}
-                </div>
-            {% endfor %}
-        {% endif %}
+<div class="auth-split">
 
-        <form method="POST">
-            {% csrf_token %}
-            
-            <div class="mb-2">
-                <label class="form-label ms-3 fw-bold small text-muted">Username</label>
-                <input type="text" name="username" class="form-control-pill" placeholder="Enter your username" required>
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label ms-3 fw-bold small text-muted">Password</label>
-                <input type="password" name="password" class="form-control-pill" autocomplete="off" placeholder="Enter your password" required>
-            </div>
-
-            <button type="submit" class="btn-login">Login</button>
-            <div class="divider">
-                <span>OR</span>
-            </div>
-
-            <!-- Google Login -->
-            <a href="{% provider_login_url 'google' %}" class="google-btn">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google">
-                Continue with Google
-            </a>
-        </form>
-
-        <div class="auth-links">
-            <p class="mb-1">New here? <a href="{% url 'register_user' %}">Register as User</a></p>
-            <p>Own a business? <a href="{% url 'provider_signup_step1' %}">Register as Company</a></p>
+    <!-- ============ LEFT: IMAGE PANEL ============ -->
+    <div class="auth-split__visual">
+        <a href="{% url 'landing_page' %}" class="auth-split__brand">
+            <span class="auth-split__brand-dot"></span> Fixkona
+        </a>
+        <div class="auth-split__quote">
+            Found a plumber within the hour. Booked, paid, done — no back and forth.
         </div>
-
+        <div class="auth-split__quote-meta">Verified customer</div>
     </div>
+
+    <!-- ============ RIGHT: FORM PANEL ============ -->
+    <div class="auth-split__form-side">
+        <div class="login-card">
+
+            <a href="{% url 'landing_page' %}" class="form-side-brand">
+                <span class="form-side-brand-dot"></span> Fixkona
+            </a>
+
+            <h2 class="login-header">Log in</h2>
+            <p class="login-sub">Enter your details to continue.</p>
+
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="error-msg">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="form-field">
+                    <label for="login_username">Username</label>
+                    <input type="text" id="login_username" name="username" class="form-control-pill" placeholder="Enter your username" required>
+                </div>
+
+                <div class="form-field">
+                    <label for="login_password">Password</label>
+                    <input type="password" id="login_password" name="password" class="form-control-pill" autocomplete="off" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn-login">Sign in</button>
+
+                <div class="divider"><span>OR</span></div>
+
+                <a href="{% provider_login_url 'google' %}" class="google-btn">
+                    <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google">
+                    Continue with Google
+                </a>
+            </form>
+
+            <div class="auth-links">
+                <p>New here? <a href="{% url 'register_user' %}">Register as User</a></p>
+                <p>Own a business? <a href="{% url 'provider_signup_step1' %}">Register as Company</a></p>
+            </div>
+
+        </div>
+    </div>
+
 </div>
 
+<script>
+    (function () {
+        var btn = document.getElementById('themeToggleFab');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function syncIcon() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        syncIcon();
+        btn.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('fixkona-theme', next);
+            syncIcon();
+        });
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+            if (!localStorage.getItem('fixkona-theme') || localStorage.getItem('fixkona-theme') === 'system') {
+                document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                syncIcon();
+            }
+        });
+    })();
+</script>
 {% endblock %}

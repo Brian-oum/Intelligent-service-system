@@ -1,0 +1,84 @@
+{% extends "Match/provider_base.html" %}
+{% load static %}
+{% block title %}Confirm Package{% endblock %}
+
+{% block extra_head %}
+<style>
+    .page-wrap { padding: 60px 44px; max-width: 640px; margin: 0 auto; width: 100%; }
+
+    .confirm-card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 36px; }
+    .confirm-card .premium-heading { font-size: 1.6rem; margin-bottom: 6px; }
+
+    .confirm-price-name { font-family: 'Space Grotesk', sans-serif; color: var(--white); font-weight: 700; font-size: 1.4rem; margin-bottom: 4px; }
+    .confirm-price-cycle { color: var(--text-muted); margin-bottom: 22px; }
+
+    .confirm-list { list-style: none; padding: 0; margin: 0 0 26px; }
+    .confirm-list li {
+        padding: 12px 0; border-top: 1px solid var(--panel-line);
+        font-size: 0.88rem; color: var(--lz-ink-60);
+        display: flex; gap: 10px; align-items: flex-start;
+    }
+    .confirm-list li:first-child { border-top: none; }
+    .confirm-list li i { color: var(--signal); margin-top: 3px; }
+
+    @media (max-width: 768px) {
+        .page-wrap { padding: 32px 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+    <div class="confirm-card">
+        <span class="premium-eyebrow">Confirm subscription</span>
+        <h2 class="premium-heading">Confirm your package</h2>
+        <p class="premium-sub" style="margin-bottom: 20px;">You're about to subscribe to:</p>
+
+        <div class="confirm-price-name">{{ plan.name }}</div>
+        <p class="confirm-price-cycle">KES {{ plan.price }} / {{ plan.get_billing_cycle_display }}</p>
+
+        <ul class="confirm-list">
+            <li>
+                <i class="fa-solid fa-envelope-open-text"></i>
+                <span>
+                    {% if plan.max_requests %}
+                        Up to {{ plan.max_requests }} customer requests per {{ plan.duration_days }}-day period
+                    {% else %}
+                        Unlimited customer requests
+                    {% endif %}
+                </span>
+            </li>
+            <li>
+                <i class="fa-solid fa-concierge-bell"></i>
+                <span>
+                    {% if plan.max_services %}
+                        Up to {{ plan.max_services }} service listing(s)
+                    {% else %}
+                        Unlimited service listings
+                    {% endif %}
+                </span>
+            </li>
+        </ul>
+
+        {% if provider.active_subscription %}
+            <div class="alert alert-warning mb-4">
+                You currently have an active <strong>{{ provider.active_subscription.plan.name }}</strong>
+                package. Continuing will end that package immediately and start this new one.
+            </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-3">
+                <button type="submit" class="premium-btn">Confirm &amp; Subscribe</button>
+                <a href="{% url 'subscription_plans' %}" class="premium-btn is-outline">Cancel</a>
+            </div>
+        </form>
+
+        <p class="small mt-4 mb-0" style="color: var(--text-muted);">
+            Note: this confirms the package immediately. If you're wiring up
+            payments (e.g. M-Pesa), trigger this step only after payment succeeds.
+        </p>
+    </div>
+</div>
+{% endblock %}

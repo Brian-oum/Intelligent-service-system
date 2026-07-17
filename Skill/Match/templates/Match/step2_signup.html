@@ -1,4 +1,4 @@
-
+{% extends 'Match/auth_base.html' %}
 {% load static %}
 {% block content %}
 
@@ -6,138 +6,560 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+<!-- Apply theme before first paint to avoid a light/dark flash -->
+<script>
+    (function () {
+        var stored = localStorage.getItem('fixkona-theme') || '{{ user.theme_preference|default:"system" }}';
+        var resolved = stored === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : stored;
+        document.documentElement.setAttribute('data-theme', resolved);
+    })();
+</script>
 
 <style>
+    /* ============ FIXKONA THEME SYSTEM (matches provider_base.html) ============ */
     :root {
-        --form-border-color: #d1d5db;
-        --accent-success: #28a745;
-        --text-main: #374151;
+        --lz-paper:     #F5F2ED;
+        --lz-paper-alt: #EDE9E2;
+        --lz-ink:       #0B0E14;
+        --lz-ink-60:    rgba(11, 14, 20, 0.55);
+        --lz-ink-08:    rgba(11, 14, 20, 0.08);
+        --lz-muted:     #6B7280;
+        --lz-signal:    #FF4D2E;
+        --lz-border:    rgba(11, 14, 20, 0.1);
+        --lz-dark-end:  #0B0E14;
+
+        --ink:            var(--lz-dark-end);
+        --panel:          var(--lz-paper);
+        --panel-2:        var(--lz-paper-alt);
+        --panel-line:     var(--lz-border);
+        --signal:         var(--lz-signal);
+        --text-muted:     var(--lz-muted);
+        --white:          var(--lz-ink);
+
+        --form-border-color: var(--panel-line);
+        --accent-success:    #1F9D55;
+        --text-main:         var(--white);
+        --text-muted-strong: #4B5563;
+    }
+    :root[data-theme="dark"] {
+        --lz-paper:     #12161F;
+        --lz-paper-alt: #191E29;
+        --lz-ink:       #F2F1ED;
+        --lz-ink-60:    rgba(242, 241, 237, 0.62);
+        --lz-ink-08:    rgba(242, 241, 237, 0.08);
+        --lz-muted:     #9AA3AF;
+        --lz-border:    rgba(242, 241, 237, 0.1);
+        --accent-success: #39FF6A;
+        --text-muted-strong: var(--lz-muted);
     }
 
-    body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; }
+    .theme-toggle-fab {
+        position: fixed; top: 24px; right: 24px; z-index: 1200;
+        width: 42px; height: 42px; border-radius: 50%;
+        border: 1px solid var(--panel-line);
+        background: var(--panel-2); color: var(--white);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+    .theme-toggle-fab:hover { border-color: var(--signal); color: var(--signal); }
+    @media (max-width: 900px) { .theme-toggle-fab { top: 16px; right: 16px; } }
+
+    body { font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; background-color: var(--panel); color: var(--white); transition: background-color .2s ease, color .2s ease; }
+
+    .step2-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem; font-weight: 500;
+        letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--signal);
+        display: block;
+        margin-bottom: 10px;
+    }
 
     h2.billing-header { 
-        font-size:1.8rem; font-weight:600; color: var(--text-main); 
-        border-bottom:3px solid #000; padding-bottom:5px; margin-bottom:25px; 
-        display:inline-block; 
+        font-family: 'Space Grotesk', sans-serif;
+        font-size:1.9rem; font-weight:600; color: var(--white); 
+        letter-spacing: -0.01em;
+        border-bottom: none; padding-bottom:0; margin-bottom:8px; 
+        display:block; 
     }
 
     .doc-form { 
-        background-color:#fff; padding:25px; border-radius:20px; 
-        border:1px solid #e5e7eb; margin-bottom:20px;
+        background-color: var(--panel); padding:32px; border-radius:18px; 
+        border:1px solid var(--panel-line); margin-bottom:22px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .doc-form:hover { border-color: var(--lz-ink-08); }
+
+    .doc-form__title {
+        display: flex; align-items: center; gap: 10px;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600; font-size: 1.1rem; color: var(--white);
+        margin: 0 0 4px;
+    }
+    .doc-form__title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--signal); flex-shrink: 0; }
+    .doc-form__hint { color: var(--text-muted-strong); font-size: 0.85rem; margin: 0 0 20px; }
+
+    label { 
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 500; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+        margin-bottom: 9px; display:block; color: var(--text-muted);
     }
 
-    label { font-weight:600; margin-bottom:8px; display:block; color: var(--text-main); }
+    input, textarea, select,
+    input.form-control, textarea.form-control, select.form-control,
+    .doc-form input, .doc-form textarea, .doc-form select { 
+        width:100% !important; padding:13px 20px !important; border:1px solid var(--form-border-color) !important;
+        background-color: var(--panel-2) !important; color: var(--white) !important;
+        border-radius:50px !important; font-size:16px !important; font-family: 'Inter', sans-serif;
+        transition: all 0.2s !important;
+    }
+    textarea, textarea.form-control { border-radius: 20px !important; }
 
-    input, textarea, select { 
-        width:100%; padding:12px 20px; border:1px solid var(--form-border-color);
-        border-radius:50px !important; font-size:14px; transition: all 0.2s;
+    input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1; }
+    input:focus, textarea:focus, select:focus,
+    input.form-control:focus, textarea.form-control:focus, select.form-control:focus {
+        border-color: var(--signal) !important; outline:none; box-shadow:0 0 0 3px rgba(255,77,46,0.14) !important;
     }
 
-    input:focus { border-color: #000; outline:none; box-shadow:0 0 0 2px rgba(0,0,0,0.05); }
-
-    .map-trigger-input { cursor:pointer; background-color:#f3f4f6 !important; border: 1px dashed #9ca3af; }
+    .map-trigger-input { cursor:pointer; background-color: var(--panel-2) !important; border: 1px dashed var(--panel-line) !important; color: var(--text-muted) !important; }
 
     /* Map Styling */
     #map { 
         width:100%; height:450px; border-radius:15px; 
-        border:1px solid #ddd; z-index: 1;
+        border:1px solid var(--panel-line); z-index: 1;
     }
     
-    .btn-pill { border-radius:50px; padding:12px 35px; font-weight:600; }
-    .btn-complete { background-color:#000; color:#fff; border:none; width:100%; transition: 0.3s; }
-    .btn-complete:hover { background-color:#333; transform:translateY(-2px); }
+    .btn-pill { border-radius:50px; padding:14px 35px; font-family: 'Space Grotesk', sans-serif; font-weight:600; letter-spacing: 0.02em; }
+    .btn-complete { background-color: var(--signal); color: var(--ink) !important; border:none; width:100%; transition: 0.3s; }
+    .btn-complete:hover { background-color: #FF6A4D; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(255,77,46,0.25); }
 
-    .modal-content { border-radius:25px; border:none; overflow: hidden; }
+    .form-text { color: var(--text-muted-strong) !important; }
+
+    .doc-form h5 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600; font-size: 1.1rem; color: var(--white);
+        margin: 0 0 4px;
+    }
+    .doc-form .text-muted,
+    .doc-form .text-muted.small {
+        color: var(--text-muted-strong) !important;
+    }
+
+    .modal-content { border-radius:25px; border:none; overflow: hidden; background-color: var(--panel); color: var(--white); }
+    .modal-header, .modal-footer { border-color: var(--panel-line) !important; }
+    .modal-header h5, .modal-header .fw-bold { color: var(--white); }
+    #map-search.form-control { background-color: var(--panel-2); color: var(--white); border-color: var(--panel-line); }
+    #map-search.form-control::placeholder { color: var(--text-muted); }
+
+    :root[data-theme="dark"] input,
+    :root[data-theme="dark"] textarea,
+    :root[data-theme="dark"] select,
+    :root[data-theme="dark"] input.form-control,
+    :root[data-theme="dark"] textarea.form-control,
+    :root[data-theme="dark"] select.form-control {
+        background-color: #191E29 !important;
+        color: #F2F1ED !important;
+        border-color: rgba(242,241,237,0.14) !important;
+        color-scheme: dark;
+    }
+    :root[data-theme="dark"] input::placeholder,
+    :root[data-theme="dark"] textarea::placeholder {
+        color: #9AA3AF !important;
+        opacity: 1;
+    }
+    :root[data-theme="light"] input,
+    :root[data-theme="light"] textarea,
+    :root[data-theme="light"] select {
+        color-scheme: light;
+    }
+    input[type="file"] {
+        color: var(--white) !important;
+        padding: 10px 16px !important;
+        border-radius: 12px !important;
+    }
+    input[type="file"]::file-selector-button {
+        margin-right: 12px; padding: 8px 14px; border-radius: 8px; border: none;
+        background: var(--signal); color: var(--ink); font-weight: 600;
+        font-family: 'Space Grotesk', sans-serif; cursor: pointer;
+    }
+
+    .signup-steps {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 18px;
+    }
+    .signup-steps .step { display: flex; align-items: center; gap: 6px; }
+    .signup-steps .step.is-done { color: var(--accent-success); }
+    .signup-steps .step.is-active { color: var(--white); }
+    .signup-steps .num {
+        width: 18px; height: 18px; border-radius: 50%;
+        border: 1px solid currentColor;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.62rem;
+    }
+    .signup-steps .step.is-done .num { background: var(--accent-success); border-color: var(--accent-success); color: var(--ink); }
+    .signup-steps .sep { color: var(--panel-line); }
+
+    @keyframes slideUpFade {
+        from { opacity: 0; transform: translateY(24px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .step2-page {
+        min-height: 100vh;
+        padding: 64px 24px 96px;
+    }
+
+    .step2-shell__form-side {
+        max-width: 760px;
+        margin: 0 auto;
+        animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .form-side-brand {
+        display: flex; align-items: center; justify-content: center; gap: 9px;
+        margin-bottom: 28px;
+        font-weight: 700; font-size: 1.2rem; letter-spacing: -0.01em;
+        text-decoration: none; color: var(--white);
+    }
+    .form-side-brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--signal); }
+
+    .step2-head { text-align: center; margin-bottom: 32px; }
+    .step2-head h2.billing-header { font-size: clamp(1.6rem, 3vw, 1.9rem); }
+    .step2-head p.form-side-sub { color: var(--text-muted-strong); font-size: 0.94rem; margin: 0 auto; max-width: 440px; }
+
+    .signup-steps { justify-content: center; }
+
+    .doc-form__num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 26px; height: 26px; border-radius: 50%;
+        background: rgba(255,77,46,0.14); color: var(--signal);
+        font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.78rem;
+        flex-shrink: 0;
+    }
+    .doc-form__head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .doc-form__head h5 { margin: 0; }
+    .doc-form__head + .text-muted { margin-left: 38px; }
+
+    /* ============ Step-by-step wizard ============
+       Only one .wizard-step is visible at a time; a progress bar plus
+       three labels up top track where the person is in the flow, and
+       Continue/Back buttons move between sections without losing data
+       (it's still one <form>, submitted once on the final step). */
+    .wizard-progress { margin-bottom: 36px; }
+    .wizard-progress__track {
+        position: relative;
+        height: 4px; border-radius: 4px;
+        background: var(--panel-line);
+        margin-bottom: 16px;
+        overflow: hidden;
+    }
+    .wizard-progress__fill {
+        position: absolute; top: 0; left: 0; height: 100%;
+        background: var(--signal);
+        border-radius: 4px;
+        width: 33.33%;
+        transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .wizard-progress__labels { display: flex; justify-content: space-between; gap: 8px; }
+    .wp-label {
+        display: flex; align-items: center; gap: 7px;
+        font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 500;
+        letter-spacing: 0.06em; text-transform: uppercase;
+        color: var(--text-muted);
+        transition: color 0.2s ease;
+    }
+    .wp-label .wp-num {
+        width: 18px; height: 18px; border-radius: 50%;
+        border: 1px solid currentColor;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.6rem; flex-shrink: 0;
+    }
+    .wp-label.is-active { color: var(--signal); }
+    .wp-label.is-done { color: var(--accent-success); }
+    .wp-label.is-done .wp-num { background: var(--accent-success); border-color: var(--accent-success); color: var(--ink); }
+    @media (max-width: 560px) { .wp-label span:last-child { display: none; } }
+
+    .wizard-step { display: none; }
+    .wizard-step.is-visible { display: block; animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    .wizard-nav {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; margin-top: 4px;
+    }
+    .wizard-nav .btn-pill { width: auto; }
+    .btn-outline-pill {
+        background: transparent; color: var(--white) !important;
+        border: 1px solid var(--panel-line);
+    }
+    .btn-outline-pill:hover { border-color: var(--signal); color: var(--signal) !important; }
+    .btn-next-step, .btn-complete { margin-left: auto; }
+
+    /* ---- Multi-service list (Step 2) ---- */
+    .service-entry {
+        padding: 18px 0;
+        border-top: 1px solid var(--panel-line);
+    }
+    .service-entry:first-of-type { border-top: none; padding-top: 0; }
+    .service-entry__head {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 4px;
+    }
+    .service-entry__label {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600; font-size: 0.9rem; color: var(--white);
+    }
+    .service-entry__remove {
+        background: none; border: none; color: var(--text-muted);
+        font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px;
+        cursor: pointer; padding: 4px 6px; border-radius: 4px;
+        transition: color 0.2s ease, background 0.2s ease;
+    }
+    .service-entry__remove:hover { color: var(--signal); background: var(--panel-2); }
+    .service-entry input[name$="-DELETE"] { display: none; }
+    .service-entry input[name$="-id"] { display: none; }
+    #serviceEmptyFormTpl { display: none; }
+
+    @media (max-width: 900px) {
+        .step2-page { padding: 32px 16px 64px; }
+    }
+    @media (max-width: 576px) {
+        .doc-form { padding: 22px 18px; border-radius: 14px; }
+        #map { height: 280px; }
+        .wizard-nav { flex-direction: column-reverse; align-items: stretch; }
+        .wizard-nav .btn-pill { width: 100%; }
+        .btn-next-step, .btn-complete { margin-left: 0; }
+        .wizard-progress__labels { gap: 4px; }
+    }
 </style>
 
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <h2 class="billing-header">Professional Details</h2>
+<button type="button" class="theme-toggle-fab" id="themeToggleFab" aria-label="Toggle dark mode">
+    <i class="fa-solid fa-moon"></i>
+</button>
 
-            {% if provider_form.errors or service_form.errors or document_form.errors %}
+<div class="step2-page">
+    <div class="step2-shell__form-side">
+
+        <a href="{% url 'landing_page' %}" class="form-side-brand">
+            <span class="form-side-brand-dot"></span> Fixkona
+        </a>
+
+        <div class="signup-steps">
+            <span class="step is-done"><span class="num">&#10003;</span> Account Details</span>
+            <span class="sep">&mdash;&mdash;</span>
+            <span class="step is-active"><span class="num">2</span> Business Profile</span>
+        </div>
+
+        <div class="step2-head">
+            <h2 class="billing-header">Professional Details</h2>
+            <p class="form-side-sub">Tell us about your business so customers can find and trust you — almost there, a complete profile gets you found faster.</p>
+        </div>
+
+            {% if provider_form.errors or service_formset.errors or service_formset.non_form_errors or documents_form.errors %}
                 <div class="alert alert-danger shadow-sm mb-4" style="border-radius: 15px;">
                     <h6 class="fw-bold">Please correct the following:</h6>
                     <ul class="mb-0 small">
                         {% for field in provider_form %}{% for error in field.errors %}<li><strong>Provider:</strong> {{ error }}</li>{% endfor %}{% endfor %}
-                        {% for field in service_form %}{% for error in field.errors %}<li><strong>Service:</strong> {{ error }}</li>{% endfor %}{% endfor %}
-                        {% for field in document_form %}{% for error in field.errors %}<li><strong>Doc:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+                        {% for error in service_formset.non_form_errors %}<li><strong>Services:</strong> {{ error }}</li>{% endfor %}
+                        {% for form in service_formset %}{% for field in form %}{% for error in field.errors %}<li><strong>Service:</strong> {{ error }}</li>{% endfor %}{% endfor %}{% endfor %}
+                        {% for field in documents_form %}{% for error in field.errors %}<li><strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
                     </ul>
                 </div>
             {% endif %}
 
-            <form method="POST" enctype="multipart/form-data" novalidate>
+            <form method="POST" enctype="multipart/form-data" novalidate id="providerProfileForm"
+                  data-error-step="{% if provider_form.errors %}1{% elif service_formset.errors or service_formset.non_form_errors %}2{% elif documents_form.errors %}3{% endif %}">
                 {% csrf_token %}
 
-                <section class="doc-form shadow-sm">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label>Company Name *</label>
-                            {{ provider_form.company_name }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label>Contact Number *</label>
-                            {{ provider_form.contact_number }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label>Physical Address *</label>
-                            {{ provider_form.address }}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label>Company Location *</label>
-                            <input type="text" id="display_location" class="map-trigger-input" 
-                                   placeholder="📍 Click to pin location on map" readonly
-                                   data-bs-toggle="modal" data-bs-target="#mapModal">
-                        </div>
-                        {{ provider_form.latitude }}
-                        {{ provider_form.longitude }}
+                <div class="wizard-progress">
+                    <div class="wizard-progress__track"><div class="wizard-progress__fill" id="wizardFill"></div></div>
+                    <div class="wizard-progress__labels">
+                        <span class="wp-label" data-wp="1"><span class="wp-num">1</span><span>Company Details</span></span>
+                        <span class="wp-label" data-wp="2"><span class="wp-num">2</span><span>Service Details</span></span>
+                        <span class="wp-label" data-wp="3"><span class="wp-num">3</span><span>Documents</span></span>
                     </div>
-                </section>
+                </div>
 
-                <section class="doc-form shadow-sm">
-                    <h5>Service Details</h5>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label>Category</label>
-                            {{ service_form.category }}
-                                <datalist id="category_list">
-                                    {% for cat in categories %}
-                                        <option value="{{ cat.name }}">
-                                    {% endfor %}
-                                </datalist>
+                <div class="wizard-step" data-step="1">
+                    <section class="doc-form shadow-sm">
+                        <div class="doc-form__head">
+                            <span class="doc-form__num">1</span>
+                            <h5>Company Details</h5>
                         </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label>Service Title</label>
-                            {{ service_form.title }}
+                        <p class="text-muted small mb-3">Basic info customers will see on your public profile.</p>
+                        <div class="row mt-3">
+                            <div class="col-md-6 mb-3">
+                                <label>Company Name *</label>
+                                {{ provider_form.company_name }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Contact Number *</label>
+                                {{ provider_form.contact_number }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Physical Address *</label>
+                                {{ provider_form.address }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Company Location *</label>
+                                <input type="text" id="display_location" class="map-trigger-input" 
+                                       placeholder="📍 Click to pin location on map" readonly
+                                       data-bs-toggle="modal" data-bs-target="#mapModal">
+                            </div>
+                            {{ provider_form.latitude }}
+                            {{ provider_form.longitude }}
                         </div>
-                        <div class="col-12 mb-3">
-                            <label>Description</label>
-                            {{ service_form.description }}
-                        </div>
+                    </section>
+                    <div class="wizard-nav">
+                        <span></span>
+                        <button type="button" class="btn-pill btn-complete btn-next-step" data-next="2">Continue &rarr;</button>
                     </div>
-                </section>
+                </div>
 
-                <section class="doc-form shadow-sm">
-                    <h5>Verification</h5>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label>Document Name</label>
-                            {{ document_form.document_name }}
+                <div class="wizard-step" data-step="2">
+                    <section class="doc-form shadow-sm">
+                        <div class="doc-form__head">
+                            <span class="doc-form__num">2</span>
+                            <h5>Service Details</h5>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label>File Upload</label>
-                            {{ document_form.document_file }}
+                        <p class="text-muted small mb-3">What you offer, so the right customers can find you. Add as many services as you like &mdash; you can always edit these later from your dashboard.</p>
+
+                        {{ service_formset.management_form }}
+
+                        <div id="serviceFormsList">
+                            {% for form in service_formset %}
+                                <div class="service-entry" data-service-index="{{ forloop.counter0 }}">
+                                    <div class="service-entry__head">
+                                        <span class="service-entry__label">Service {{ forloop.counter }}</span>
+                                        {% if not forloop.first %}
+                                            <button type="button" class="service-entry__remove">
+                                                <i class="fa-solid fa-trash"></i> Remove
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                    {% if form.non_field_errors %}
+                                        <div class="alert alert-danger py-2 small mb-2">{{ form.non_field_errors }}</div>
+                                    {% endif %}
+                                    <div class="row mt-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label>Category</label>
+                                            {{ form.category }}
+                                            <datalist id="category_list_{{ forloop.counter0 }}">
+                                                {% for cat in categories %}
+                                                    <option value="{{ cat.name }}">
+                                                {% endfor %}
+                                            </datalist>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label>Service Title</label>
+                                            {{ form.title }}
+                                        </div>
+                                        <div class="col-12 mb-3">
+                                            <label>Description</label>
+                                            {{ form.description }}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label>Rate Card &mdash; Starting Price (KES)</label>
+                                            {{ form.min_price }}
+                                            <div class="form-text">The minimum you charge for this service. Customers see this as "From KES X". You can update it any time.</div>
+                                        </div>
+                                    </div>
+                                    {{ form.id }}
+                                    {{ form.DELETE }}
+                                </div>
+                            {% endfor %}
                         </div>
+
+                        <button type="button" id="addServiceBtn" class="btn-pill btn-outline-pill mt-1">
+                            <i class="fa-solid fa-plus"></i> Add another service
+                        </button>
+
+                        <template id="serviceEmptyFormTpl">
+                            <div class="service-entry" data-service-index="__prefix__">
+                                <div class="service-entry__head">
+                                    <span class="service-entry__label">New service</span>
+                                    <button type="button" class="service-entry__remove">
+                                        <i class="fa-solid fa-trash"></i> Remove
+                                    </button>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6 mb-3">
+                                        <label>Category</label>
+                                        {{ service_formset.empty_form.category }}
+                                        <datalist id="category_list___prefix__">
+                                            {% for cat in categories %}
+                                                <option value="{{ cat.name }}">
+                                            {% endfor %}
+                                        </datalist>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label>Service Title</label>
+                                        {{ service_formset.empty_form.title }}
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label>Description</label>
+                                        {{ service_formset.empty_form.description }}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label>Rate Card &mdash; Starting Price (KES)</label>
+                                        {{ service_formset.empty_form.min_price }}
+                                        <div class="form-text">The minimum you charge for this service. Customers see this as "From KES X". You can update it any time.</div>
+                                    </div>
+                                </div>
+                                {{ service_formset.empty_form.id }}
+                                {{ service_formset.empty_form.DELETE }}
+                            </div>
+                        </template>
+                    </section>
+                    <div class="wizard-nav">
+                        <button type="button" class="btn-pill btn-outline-pill btn-back-step" data-back="1">&larr; Back</button>
+                        <button type="button" class="btn-pill btn-complete btn-next-step" data-next="3">Continue &rarr;</button>
                     </div>
-                </section>
+                </div>
 
-                <div class="mt-4 text-center">
-                    <button type="submit" class="btn-pill btn-complete btn-lg w-50 shadow">Complete Profile</button>
+                <div class="wizard-step" data-step="3">
+                    <section class="doc-form shadow-sm">
+                        <div class="doc-form__head">
+                            <span class="doc-form__num">3</span>
+                            <h5>Verification Documents</h5>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            We need these three documents to verify your business. Accepted formats: PDF, JPG, PNG.
+                        </p>
+                        <div class="row mt-2">
+                            <div class="col-md-4 mb-3">
+                                <label>{{ documents_form.business_certificate.label }}</label>
+                                {{ documents_form.business_certificate }}
+                                <div class="form-text">{{ documents_form.business_certificate.help_text }}</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label>{{ documents_form.kra_pin_certificate.label }}</label>
+                                {{ documents_form.kra_pin_certificate }}
+                                <div class="form-text">{{ documents_form.kra_pin_certificate.help_text }}</div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label>{{ documents_form.national_id.label }}</label>
+                                {{ documents_form.national_id }}
+                                <div class="form-text">{{ documents_form.national_id.help_text }}</div>
+                            </div>
+                        </div>
+                    </section>
+                    <div class="wizard-nav">
+                        <button type="button" class="btn-pill btn-outline-pill btn-back-step" data-back="2">&larr; Back</button>
+                        <button type="submit" class="btn-pill btn-complete btn-lg shadow">Complete Profile</button>
+                    </div>
                 </div>
             </form>
-        </div>
+
     </div>
 </div>
 
@@ -230,6 +652,174 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+</script>
+
+<script>
+    (function () {
+        var btn = document.getElementById('themeToggleFab');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function syncIcon() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        syncIcon();
+        btn.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('fixkona-theme', next);
+            syncIcon();
+        });
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+            if (!localStorage.getItem('fixkona-theme') || localStorage.getItem('fixkona-theme') === 'system') {
+                document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                syncIcon();
+            }
+        });
+    })();
+</script>
+
+<script>
+    // ============ Step-by-step wizard controller ============
+    (function () {
+        const form = document.getElementById('providerProfileForm');
+        if (!form) return;
+
+        const steps = Array.from(form.querySelectorAll('.wizard-step'));
+        const labels = Array.from(form.querySelectorAll('.wp-label'));
+        const fill = document.getElementById('wizardFill');
+        const total = steps.length;
+
+        function fieldsFor(stepEl) {
+            return Array.from(stepEl.querySelectorAll('input, select, textarea'))
+                .filter(function (el) {
+                    if (el.type === 'hidden' || el.disabled) return false;
+                    // Skip fields inside a service row the user removed
+                    // (hidden via display:none rather than deleted from
+                    // the DOM, so the formset's DELETE flag still posts).
+                    const removedEntry = el.closest('.service-entry[style*="display: none"]');
+                    return !removedEntry;
+                });
+        }
+
+        function validateStep(stepEl) {
+            const fields = fieldsFor(stepEl);
+            for (const el of fields) {
+                if (!el.checkValidity()) {
+                    el.reportValidity();
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function goTo(n) {
+            steps.forEach(function (stepEl) {
+                const stepNum = parseInt(stepEl.dataset.step, 10);
+                stepEl.classList.toggle('is-visible', stepNum === n);
+            });
+            labels.forEach(function (label) {
+                const labelNum = parseInt(label.dataset.wp, 10);
+                label.classList.toggle('is-active', labelNum === n);
+                label.classList.toggle('is-done', labelNum < n);
+            });
+            if (fill) fill.style.width = ((n - 1) / (total - 1) * 66.66 + 33.33) + '%';
+            const activeStep = steps.find(s => parseInt(s.dataset.step, 10) === n);
+            if (activeStep) {
+                activeStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        form.querySelectorAll('.btn-next-step').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const currentStep = btn.closest('.wizard-step');
+                if (!validateStep(currentStep)) return;
+                goTo(parseInt(btn.dataset.next, 10));
+            });
+        });
+
+        form.querySelectorAll('.btn-back-step').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                goTo(parseInt(btn.dataset.back, 10));
+            });
+        });
+
+        labels.forEach(function (label) {
+            label.style.cursor = 'pointer';
+            label.addEventListener('click', function () {
+                const targetStep = parseInt(label.dataset.wp, 10);
+                const currentVisible = steps.find(s => s.classList.contains('is-visible'));
+                const currentNum = currentVisible ? parseInt(currentVisible.dataset.step, 10) : 1;
+                // Only allow jumping backward freely; jumping forward still
+                // requires validating every step in between.
+                if (targetStep <= currentNum) {
+                    goTo(targetStep);
+                } else {
+                    for (let i = currentNum; i < targetStep; i++) {
+                        const stepEl = steps.find(s => parseInt(s.dataset.step, 10) === i);
+                        if (!validateStep(stepEl)) return;
+                    }
+                    goTo(targetStep);
+                }
+            });
+        });
+
+        // Land on the step that has server-side errors (if the form was
+        // just submitted and rejected), otherwise start at step 1.
+        const errorStep = parseInt(form.dataset.errorStep, 10);
+        goTo(errorStep && errorStep >= 1 && errorStep <= total ? errorStep : 1);
+    })();
+</script>
+
+<script>
+    // ---- Step 2: "Add another service" ----
+    (function () {
+        const list = document.getElementById('serviceFormsList');
+        const addBtn = document.getElementById('addServiceBtn');
+        const emptyTpl = document.getElementById('serviceEmptyFormTpl');
+        const totalForms = document.getElementById('id_service-TOTAL_FORMS');
+        if (!list || !addBtn || !emptyTpl || !totalForms) return;
+
+        function relabel() {
+            const visible = Array.from(list.querySelectorAll('.service-entry'))
+                .filter(function (entry) { return entry.style.display !== 'none'; });
+            visible.forEach(function (entry, i) {
+                const label = entry.querySelector('.service-entry__label');
+                if (label) label.textContent = 'Service ' + (i + 1);
+            });
+        }
+
+        addBtn.addEventListener('click', function () {
+            const index = parseInt(totalForms.value, 10);
+            const html = emptyTpl.innerHTML.split('__prefix__').join(index);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = html.trim();
+            const newEntry = wrapper.firstElementChild;
+            list.appendChild(newEntry);
+            totalForms.value = index + 1;
+            relabel();
+            newEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const firstInput = newEntry.querySelector('input, textarea');
+            if (firstInput) firstInput.focus();
+        });
+
+        list.addEventListener('click', function (e) {
+            const removeBtn = e.target.closest('.service-entry__remove');
+            if (!removeBtn) return;
+            const entry = removeBtn.closest('.service-entry');
+            const deleteInput = entry.querySelector('input[name$="-DELETE"]');
+            if (deleteInput) {
+                // Row already exists in the formset — mark it for deletion
+                // and hide it, rather than removing the DOM node, so the
+                // management form's TOTAL_FORMS count still lines up.
+                deleteInput.checked = true;
+                entry.style.display = 'none';
+            } else {
+                entry.remove();
+            }
+            relabel();
+        });
+    })();
 </script>
 
 {% endblock %}

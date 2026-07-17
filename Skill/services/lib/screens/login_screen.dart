@@ -9,70 +9,72 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
 
   bool isLoading = false;
 
-  loginUser() async {
-  FocusScope.of(context).unfocus();
+  Future<void> loginUser() async {
+    FocusScope.of(context).unfocus();
 
-  if (usernameController.text.isEmpty || passwordController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Please fill all fields")),
-    );
-    return;
-  }
-
-  setState(() => isLoading = true);
-
-  try {
-    final response = await ApiService.login({
-      "username": usernameController.text.trim(),
-      "password": passwordController.text.trim(),
-    });
-
-    print("LOGIN RESPONSE: $response");
-
-    setState(() => isLoading = false);
-
-    // ✅ SAFE CHECK (handles null + different API formats)
-    if (response != null && response["access"] != null) {
-
+    if (usernameController.text.trim().isEmpty ||
+        passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login successful")),
+        const SnackBar(content: Text("Please fill all fields")),
       );
-
-      // small delay for smooth UX
-      await Future.delayed(Duration(milliseconds: 300));
-
-      Navigator.pushReplacementNamed(context, "/home");
-
-    } else {
-      String errorMsg = "Login failed";
-
-      if (response != null && response["detail"] != null) {
-        errorMsg = response["detail"];
-      } else if (response != null && response["error"] != null) {
-        errorMsg = response["error"];
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
+      return;
     }
 
-  } catch (e) {
-    setState(() => isLoading = false);
+    setState(() => isLoading = true);
 
-    print("LOGIN ERROR: $e");
+    try {
+      final response = await ApiService.login({
+        "username": usernameController.text.trim(),
+        "password": passwordController.text.trim(),
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Network error. Check API connection.")),
-    );
+      print("LOGIN RESPONSE: $response");
+
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      // ✅ CHECK YOUR DJANGO API FORMAT
+      if (response["success"] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response["message"] ?? "Login successful",
+            ),
+          ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        Navigator.pushReplacementNamed(context, "/home");
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response["error"] ?? "Invalid username or password",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print("LOGIN ERROR: $e");
+
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Network error: ${e.toString()}"),
+        ),
+      );
+    }
   }
-}
 
   @override
   void dispose() {
@@ -93,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
                   blurRadius: 15,
@@ -105,31 +107,23 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
 
-                // HEADER
-                Text(
+                const Text(
                   "Login",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black87,
                   ),
                 ),
 
                 const SizedBox(height: 30),
 
-                // ERROR OR INFO SPACE CAN BE ADDED HERE
-
-                // USERNAME
+                // Username
                 TextField(
                   controller: usernameController,
                   decoration: InputDecoration(
-                    hintText: "Enter username",
+                    hintText: "Username",
                     filled: true,
                     fillColor: Colors.grey[100],
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(50),
                       borderSide: BorderSide.none,
@@ -139,18 +133,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 15),
 
-                // PASSWORD
+                // Password
                 TextField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
-                    hintText: "Enter password",
+                    hintText: "Password",
                     filled: true,
                     fillColor: Colors.grey[100],
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(50),
                       borderSide: BorderSide.none,
@@ -160,74 +150,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 25),
 
-                // LOGIN BUTTON
+                // Button
                 ElevatedButton(
                   onPressed: isLoading ? null : loginUser,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(50),
                     ),
                   ),
                   child: isLoading
-                      ? CircularProgressIndicator(color: Colors.white)
-                      : Text("Login"),
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("Login"),
                 ),
 
                 const SizedBox(height: 20),
 
-                // DIVIDER
-                Row(
-                  children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      child: Text("OR"),
-                    ),
-                    Expanded(child: Divider()),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // GOOGLE BUTTON (UI ONLY FOR NOW)
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: Icon(Icons.g_mobiledata, size: 30),
-                  label: Text("Continue with Google"),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                // NAVIGATION LINKS
                 Center(
-                  child: Column(
-                    children: [
-
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, "/register");
-                        },
-                        child: Text("New here? Register as User"),
-                      ),
-
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, "/register");
-                        },
-                        child: Text("Own a business? Register as Company"),
-                      ),
-                    ],
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, "/register");
+                    },
+                    child: const Text("Don't have an account? Register"),
                   ),
                 ),
-
               ],
             ),
           ),

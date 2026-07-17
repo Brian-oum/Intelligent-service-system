@@ -1,38 +1,44 @@
+{% extends "Match/provider_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reports · {{ provider.company_name }}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+{% block title %}Reports · {{ provider.company_name }}{% endblock %}
+
+{% block extra_head %}
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     /* ── Tokens ─────────────────────────────────────────────────────────── */
     :root {
-      --sidebar-bg:   #1e293b;
+      --lz-paper:     #F5F2ED;
+      --lz-paper-alt: #EDE9E2;
+      --lz-ink:       #0B0E14;
+      --lz-ink-60:    rgba(11, 14, 20, 0.55);
+      --lz-ink-08:    rgba(11, 14, 20, 0.08);
+      --lz-muted:     #6B7280;
+      --lz-signal:    #FF4D2E;
+      --lz-border:    rgba(11, 14, 20, 0.1);
+      --lz-dark-end:  #0B0E14;
+
+      --sidebar-bg:   var(--lz-dark-end);
       --sidebar-w:    240px;
-      --accent:       #0ea5e9;
-      --accent-dim:   rgba(0,212,170,.12);
+      --accent:       var(--lz-signal);
+      --accent-dim:   rgba(255,77,46,.12);
       --accent2:      #7c6aff;
       --danger:       #ff4d6d;
       --warning:      #ffb703;
-      --success:      #06d6a0;
+      --success:      #1F9D55;
       --info:         #4cc9f0;
-      --bg:           #f0f4f9;
-      --card:         #ffffff;
-      --navy:         #000000;
-      --text:         #1c2740;
-      --muted:        #6b7a99;
-      --border:       #e2e8f5;
-      --font:         'Outfit', sans-serif;
-      --mono:         'Space Mono', monospace;
+      --bg:           var(--lz-paper);
+      --card:         var(--lz-paper-alt);
+      --navy:         var(--lz-dark-end);
+      --text:         var(--lz-ink);
+      --muted:        var(--lz-muted);
+      --border:       var(--lz-border);
+      --font:         'Inter', sans-serif;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --mono:         'JetBrains Mono', monospace;
       --radius:       14px;
-      --shadow:       0 4px 24px rgba(17,24,39,.07);
-      --shadow-lg:    0 12px 40px rgba(17,24,39,.13);
+      --shadow:       0 4px 24px rgba(11,14,20,.06);
+      --shadow-lg:    0 12px 40px rgba(11,14,20,.12);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,115 +49,10 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: flex;
     }
-/* ── Sidebar FIXED ───────────────────────────── */
-.sidebar {
-    width: 260px;
-    background: #1e293b;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    padding: 20px 0;
-    display: flex;
-    flex-direction: column;
-    z-index: 1000;
-}
-
-/* profile */
-.sidebar-profile {
-    text-align: center;
-    padding: 10px 20px;
-    margin-bottom: 20px;
-}
-
-.sidebar-profile .avatar {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
-    margin-bottom: 10px;
-    border: 2px solid #334155;
-}
-
-.sidebar-profile h6 {
-    color: #fff;
-    margin: 0;
-    font-weight: 700;
-}
-
-.sidebar-profile small {
-    color: #94a3b8;
-}
-
-/* links */
-.nav-links {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex: 1;
-}
-
-.nav-links li a {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
-    color: #94a3b8;
-    text-decoration: none;
-    border-left: 3px solid transparent;
-    transition: 0.2s;
-}
-
-.nav-links li a:hover {
-    background: rgba(14,165,233,0.1);
-    color: #fff;
-}
-
-.nav-links li a.active {
-    color: #0ea5e9;
-    border-left: 3px solid #0ea5e9;
-    background: rgba(14,165,233,0.1);
-}
-
-/* logout */
-.sidebar-bottom {
-    padding: 15px 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-}
-
-.logout {
-    color: #ff4d6d;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-/* MAIN FIX (IMPORTANT) */
-.main-wrap {
-    margin-left: 260px;
-    width: calc(100% - 260px);
-}
-
-/* MOBILE FIX */
-@media (max-width: 768px) {
-    .sidebar {
-        transform: translateX(-100%);
-        transition: 0.3s;
-        position: fixed;
-    }
-
-    .sidebar.open {
-        transform: translateX(0);
-    }
-
-    .main-wrap {
-        margin-left: 0;
-        width: 100%;
-    }
-}
     /* ── Main Wrapper ────────────────────────────────────────────────────── */
     .main-wrap {
-      flex: 1;
+      width: 100%;
       overflow-x: hidden;
       min-width: 0;
     }
@@ -170,7 +71,8 @@
       z-index: 100;
     }
     .topbar-left h4 {
-      font-weight: 700;
+      font-family: var(--font-heading);
+      font-weight: 600;
       font-size: 1rem;
       color: var(--text);
     }
@@ -196,12 +98,16 @@
     .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
     .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .btn-accent { background: var(--accent); color: #fff; }
-    .btn-accent:hover { background: #00bfa0; }
+    .btn-accent:hover { background: #FF6A4D; }
     .btn-danger-soft { background: rgba(255,77,109,.08); color: var(--danger); border: 1.5px solid rgba(255,77,109,.2); }
     .btn-danger-soft:hover { background: rgba(255,77,109,.15); }
 
     /* ── Page Content ────────────────────────────────────────────────────── */
-    .page { padding: 2rem 2rem 4rem; max-width: 1300px; }
+/* ADJUSTED: Increased bottom padding to 6rem for better white space at the end of the report */
+.page { 
+    padding: 2rem 2rem 6rem; 
+    max-width: 100%; /* Change 1300px to 100% to fill the right side */
+}
 
     /* ── Hero Banner ─────────────────────────────────────────────────────── */
     .hero {
@@ -243,15 +149,16 @@
       font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
-      background: rgba(0,212,170,.15);
+      background: rgba(255,77,46,.15);
       color: var(--accent);
-      border: 1px solid rgba(0,212,170,.25);
+      border: 1px solid rgba(255,77,46,.3);
       padding: .2rem .7rem;
       border-radius: 999px;
       margin-bottom: .7rem;
     }
     .hero-name {
-      font-weight: 800;
+      font-family: var(--font-heading);
+      font-weight: 700;
       font-size: 2.1rem;
       color: #fff;
       line-height: 1.15;
@@ -324,19 +231,19 @@
     .kpi-lbl { font-size: .72rem; color: var(--muted); font-weight: 500; margin-top: .25rem; text-transform: uppercase; letter-spacing: .04em; }
     .kpi-trend { font-size: .72rem; margin-top: .5rem; display: flex; align-items: center; gap: .3rem; }
     .kpi-link {
-  text-decoration: none;
-  color: inherit;
-  display: block;
-}
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
 
-.kpi-link:hover {
-  text-decoration: none;
-  color: inherit;
-}
+    .kpi-link:hover {
+      text-decoration: none;
+      color: inherit;
+    }
 
-.kpi-card {
-  cursor: pointer;
-}
+    .kpi-card {
+      cursor: pointer;
+    }
 
     /* ── Section Title ───────────────────────────────────────────────────── */
     .sec-title {
@@ -387,7 +294,8 @@
       margin-bottom: 1.3rem;
     }
     .card-head h5 {
-      font-weight: 700;
+      font-family: var(--font-heading);
+      font-weight: 600;
       font-size: .92rem;
       color: var(--text);
     }
@@ -450,7 +358,7 @@
     .data-table thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
     .data-table tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
     .data-table tbody tr:last-child { border-bottom: none; }
-    .data-table tbody tr:nth-child(even) { background: #fafbff; }
+    .data-table tbody tr:nth-child(even) { background: var(--lz-paper); }
     .data-table tbody tr:hover { background: var(--accent-dim); }
     .data-table tbody td { padding: .8rem 1.1rem; color: var(--text); vertical-align: middle; }
     .data-table .muted { color: var(--muted); }
@@ -625,7 +533,7 @@
       .hero { flex-direction: column; align-items: flex-start; }
       .hero-stats { flex-wrap: wrap; }
       .heatmap-grid { grid-template-columns: repeat(6, 1fr); }
-      .page { padding: 1rem 1rem 3rem; }
+      .page { padding: 1rem 1rem 4rem; } /* Adjusted mobile bottom padding as well */
       .topbar { padding: 0 1rem; }
     }
 
@@ -644,7 +552,7 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-    ::-webkit-scrollbar-thumb:hover { background: #c4cede; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--lz-ink-60); }
 
     /* ── Mobile toggle ───────────────────────────────────────────────────── */
     .menu-toggle {
@@ -668,41 +576,13 @@
     }
     .overlay.show { display: block; }
   </style>
-</head>
-<body>
+{% endblock %}
+
+{% block content %}
 
 <!-- Sidebar overlay (mobile) -->
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
-<div class="sidebar" id="sidebar">
-    
-    <!-- Profile -->
-    <div class="sidebar-profile">
-        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
-             class="avatar">
-        <h6>{{ provider.company_name }}</h6>
-        <small>Service Provider</small>
-    </div>
-
-    <!-- Nav -->
-    <ul class="nav-links">
-        <li><a href="{% url 'provider_dashboard' %}"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
-        <li><a href="{% url 'add_service' %}"><i class="fas fa-plus-circle"></i> Add Service</a></li>
-        <li><a href="{% url 'manage_services' %}"><i class="fas fa-concierge-bell"></i> My Services</a></li>
-        <li><a href="{% url 'provider_requests' %}"><i class="fas fa-envelope-open-text"></i> Requests</a></li>
-        <li><a href="{% url 'report_page' provider.id %}" class="active"><i class="fas fa-chart-line"></i> Reports</a></li>
-        <li><a href="{% url 'profile' %}"><i class="fas fa-user-cog"></i> Profile</a></li>
-    </ul>
-
-    <!-- Logout -->
-    <div class="sidebar-bottom">
-        <a href="{% url 'logout' %}" class="logout">
-            <i class="fa-solid fa-right-from-bracket"></i> Logout
-        </a>
-    </div>
-
-</div>
 <!-- ── Main ─────────────────────────────────────────────────────────────── -->
 <div class="main-wrap">
 
@@ -733,86 +613,86 @@
     <!-- KPI Row -->
     <div class="kpi-grid fade-up delay-1">
 
-  <!-- Total Requests -->
-  <a href="{% url 'provider_requests' %}" class="kpi-link">
-    <div class="kpi-card" style="--kpi-color:var(--info)">
-      <div class="kpi-icon" style="background:rgba(76,201,240,.1); color:var(--info)">
-        <i class="fas fa-layer-group"></i>
-      </div>
-      <div class="kpi-val" style="color:var(--navy)">{{ total_requests }}</div>
-      <div class="kpi-lbl">Total Requests</div>
-      <div class="kpi-trend" style="color:var(--muted)">
-        <i class="fas fa-infinity" style="font-size:.65rem"></i> Lifetime volume
-      </div>
-    </div>
-  </a>
+      <!-- Total Requests -->
+      <a href="{% url 'provider_requests' %}" class="kpi-link">
+        <div class="kpi-card" style="--kpi-color:var(--info)">
+          <div class="kpi-icon" style="background:rgba(76,201,240,.1); color:var(--info)">
+            <i class="fas fa-layer-group"></i>
+          </div>
+          <div class="kpi-val" style="color:var(--navy)">{{ total_requests }}</div>
+          <div class="kpi-lbl">Total Requests</div>
+          <div class="kpi-trend" style="color:var(--muted)">
+            <i class="fas fa-infinity" style="font-size:.65rem"></i> Lifetime volume
+          </div>
+        </div>
+      </a>
 
-  <!-- Completed -->
-  <a href="{% url 'provider_requests' %}?status=completed" class="kpi-link">
-    <div class="kpi-card" style="--kpi-color:var(--success)">
-      <div class="kpi-icon" style="background:rgba(6,214,160,.1); color:var(--success)">
-        <i class="fas fa-check-circle"></i>
-      </div>
-      <div class="kpi-val" style="color:var(--navy)">{{ completed_requests }}</div>
-      <div class="kpi-lbl">Completed</div>
-      <div class="kpi-trend" style="color:var(--success)">
-        {% if total_requests %}
-          {% widthratio completed_requests total_requests 100 as comp_pct %}
-          <i class="fas fa-arrow-up"></i> {{ comp_pct }}% completion rate
-        {% else %}—{% endif %}
-      </div>
-    </div>
-  </a>
+      <!-- Completed -->
+      <a href="{% url 'provider_requests' %}?status=completed" class="kpi-link">
+        <div class="kpi-card" style="--kpi-color:var(--success)">
+          <div class="kpi-icon" style="background:rgba(6,214,160,.1); color:var(--success)">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="kpi-val" style="color:var(--navy)">{{ completed_requests }}</div>
+          <div class="kpi-lbl">Completed</div>
+          <div class="kpi-trend" style="color:var(--success)">
+            {% if total_requests %}
+              {% widthratio completed_requests total_requests 100 as comp_pct %}
+              <i class="fas fa-arrow-up"></i> {{ comp_pct }}% completion rate
+            {% else %}—{% endif %}
+          </div>
+        </div>
+      </a>
 
-  <!-- Pending -->
-  <a href="{% url 'provider_requests' %}?status=pending" class="kpi-link">
-    <div class="kpi-card" style="--kpi-color:var(--warning)">
-      <div class="kpi-icon" style="background:rgba(255,183,3,.1); color:var(--warning)">
-        <i class="fas fa-hourglass-half"></i>
-      </div>
-      <div class="kpi-val" style="color:var(--navy)">{{ pending_requests }}</div>
-      <div class="kpi-lbl">Pending</div>
-      <div class="kpi-trend" style="color:var(--warning)">
-        <i class="fas fa-exclamation-circle"></i> Needs attention
-      </div>
-    </div>
-  </a>
+      <!-- Pending -->
+      <a href="{% url 'provider_requests' %}?status=pending" class="kpi-link">
+        <div class="kpi-card" style="--kpi-color:var(--warning)">
+          <div class="kpi-icon" style="background:rgba(255,183,3,.1); color:var(--warning)">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div class="kpi-val" style="color:var(--navy)">{{ pending_requests }}</div>
+          <div class="kpi-lbl">Pending</div>
+          <div class="kpi-trend" style="color:var(--warning)">
+            <i class="fas fa-exclamation-circle"></i> Needs attention
+          </div>
+        </div>
+      </a>
 
-  <!-- Rejected -->
-  <a href="{% url 'provider_requests' %}?status=rejected" class="kpi-link">
-    <div class="kpi-card" style="--kpi-color:var(--danger)">
-      <div class="kpi-icon" style="background:rgba(255,77,109,.1); color:var(--danger)">
-        <i class="fas fa-times-circle"></i>
-      </div>
-      <div class="kpi-val" style="color:var(--navy)">{{ rejected_requests }}</div>
-      <div class="kpi-lbl">Rejected</div>
-      <div class="kpi-trend" style="color:var(--muted)">
-        {% if total_requests %}
-          {% widthratio rejected_requests total_requests 100 as rej_pct %}
-          <i class="fas fa-percent" style="font-size:.65rem"></i> {{ rej_pct }}% of total
-        {% else %}—{% endif %}
-      </div>
-    </div>
-  </a>
+      <!-- Rejected -->
+      <a href="{% url 'provider_requests' %}?status=rejected" class="kpi-link">
+        <div class="kpi-card" style="--kpi-color:var(--danger)">
+          <div class="kpi-icon" style="background:rgba(255,77,109,.1); color:var(--danger)">
+            <i class="fas fa-times-circle"></i>
+          </div>
+          <div class="kpi-val" style="color:var(--navy)">{{ rejected_requests }}</div>
+          <div class="kpi-lbl">Rejected</div>
+          <div class="kpi-trend" style="color:var(--muted)">
+            {% if total_requests %}
+              {% widthratio rejected_requests total_requests 100 as rej_pct %}
+              <i class="fas fa-percent" style="font-size:.65rem"></i> {{ rej_pct }}% of total
+            {% else %}—{% endif %}
+          </div>
+        </div>
+      </a>
 
-  <!-- Rating -->
-  <a href="#reviews-section" class="kpi-link">
-    <div class="kpi-card" style="--kpi-color:#a855f7">
-      <div class="kpi-icon" style="background:rgba(168,85,247,.1); color:#a855f7">
-        <i class="fas fa-star"></i>
-      </div>
-      <div class="kpi-val" style="color:#000000">
-        {% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}—{% endif %}
-      </div>
-      <div class="kpi-lbl">Avg Rating</div>
-      <div class="kpi-trend" style="color:var(--muted)">
-        <i class="fas fa-comments" style="font-size:.65rem"></i>
-        {{ total_reviews }} review{{ total_reviews|pluralize }}
-      </div>
-    </div>
-  </a>
+      <!-- Rating -->
+      <a href="#reviews-section" class="kpi-link">
+        <div class="kpi-card" style="--kpi-color:#a855f7">
+          <div class="kpi-icon" style="background:rgba(168,85,247,.1); color:#a855f7">
+            <i class="fas fa-star"></i>
+          </div>
+          <div class="kpi-val" style="color:#000000">
+            {% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}—{% endif %}
+          </div>
+          <div class="kpi-lbl">Avg Rating</div>
+          <div class="kpi-trend" style="color:var(--muted)">
+            <i class="fas fa-comments" style="font-size:.65rem"></i>
+            {{ total_reviews }} review{{ total_reviews|pluralize }}
+          </div>
+        </div>
+      </a>
 
-</div>
+    </div>
     <!-- Monthly Trend + Funnel -->
     <div class="grid-3-2 fade-up delay-2">
 
@@ -1111,9 +991,15 @@
     </div>
     {% endif %}
 
+    <!-- ADDED: Optional clean layout spacer at the very bottom of the page container -->
+    <div style="height: 20px;"></div>
+
   </div><!-- /page -->
 </div><!-- /main-wrap -->
 
+{% endblock %}
+
+{% block extra_js %}
 <!-- ── Scripts ───────────────────────────────────────────────────────────── -->
 <script>
   /* ── Data from Django ─────────────────────────────────────────────────── */
@@ -1172,12 +1058,12 @@
         y: {
           beginAtZero: true,
           grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
-          ticks: { color: '#6b7a99', font: { size: 11 }, maxTicksLimit: 6 },
+          ticks: { color: '#6B7280', font: { size: 11 }, maxTicksLimit: 6 },
           border: { display: false }
         },
         x: {
           grid: { display: false },
-          ticks: { color: '#6b7a99', font: { size: 11 } },
+          ticks: { color: '#6B7280', font: { size: 11 } },
           border: { display: false }
         }
       }
@@ -1255,5 +1141,4 @@
     document.getElementById('overlay').classList.remove('show');
   }
 </script>
-</body>
-</html>
+{% endblock %}

@@ -1,222 +1,170 @@
+{% extends "Match/provider_base.html" %}
 {% load static %}
-{% block content %}
+{% block title %}My Services{% endblock %}
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-
+{% block extra_head %}
 <style>
-    :root {
-        --sidebar-bg: #1e293b;
-        --sidebar-hover: #334155;
-        --main-bg: #f8fafc;
-        --accent-color: #0ea5e9;
+    .page-wrap { padding: 44px 44px 60px; width: 100%; }
+
+    .page-header-row {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
     }
+    .page-header-row .premium-heading { margin-bottom: 6px; }
+    .page-header-row .premium-sub { margin: 0; }
 
-    body { background-color: var(--main-bg); font-family: 'Inter', sans-serif; }
+    /* ============ TABLE CARD ============ */
+    .services-table-card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; overflow: hidden; }
 
-    /* Sidebar */
-.sidebar {
-    width: 260px;
-    background: var(--sidebar-bg);
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    padding: 20px 0;
-    z-index: 1000;
-}
-
-.sidebar .nav-link {
-    color: #94a3b8;
-    padding: 12px 25px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.2s;
-    border-left: 3px solid transparent;
-}
-
-.sidebar .nav-link i {
-    width: 20px;
-    font-size: 1.1rem;
-}
-
-.sidebar .nav-link:hover {
-    background: var(--sidebar-accent);
-    color: #fff;
-}
-
-.sidebar .nav-link.active {
-    background: rgba(14, 165, 233, 0.1);
-    color: var(--primary);
-    border-left-color: var(--primary);
-}
-
-    .main-content { margin-left: 240px; padding: 30px; width: calc(100% - 240px); }
-    .card { border: none; border-radius: 12px; overflow: hidden; }
-
-    .table thead th {
-        background-color: #f1f5f9;
+    table.services-table { width: 100%; border-collapse: collapse; color: var(--white); margin: 0; }
+    .services-table thead th {
+        background: var(--panel-2);
         text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        color: #64748b;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
         border: none;
-        padding: 15px;
+        padding: 16px;
+        text-align: left;
+    }
+    .services-table tbody td { padding: 16px; vertical-align: middle; border-top: 1px solid var(--panel-line); font-size: 0.88rem; }
+
+    .service-icon-box {
+        width: 40px; height: 40px; border-radius: 8px;
+        background: rgba(255,77,46,0.12); color: var(--signal);
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .svc-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
+    .svc-desc { font-size: 0.78rem; color: var(--text-muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .badge-cat {
+        background: var(--panel-2); color: var(--white); border: 1px solid var(--panel-line);
+        padding: 4px 10px; border-radius: 20px; font-size: 0.72rem;
     }
 
-    .table tbody td { padding: 15px; vertical-align: middle; border-color: #f1f5f9; }
+    .badge-status { padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+    .badge-status.is-active { background: rgba(31,157,85,0.14); color: var(--live); }
+    .badge-status.is-inactive { background: rgba(154,163,175,0.16); color: var(--text-muted); }
 
-    .service-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        background: rgba(14, 165, 233, 0.1);
-        color: var(--accent-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .badge-verify { padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+    .badge-verify.is-verified { background: var(--live); color: #fff; }
+    .badge-verify.is-pending { background: rgba(224,166,60,0.18); color: #E0A63C; }
+
+    .rate-value { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--white); }
+    .badge-rate-missing {
+        padding: 4px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 6px;
+        background: rgba(255,77,46,0.12); color: var(--signal);
     }
+
+    .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .icon-btn {
+        width: 34px; height: 34px; border-radius: 6px;
+        border: 1px solid var(--panel-line); background: var(--panel-2);
+        display: flex; align-items: center; justify-content: center;
+        text-decoration: none; transition: border-color .15s ease;
+    }
+    .icon-btn:hover { border-color: var(--signal); }
+    .icon-btn.is-edit i { color: var(--signal); }
+    .icon-btn.is-delete i { color: #FF6A4D; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-state i { font-size: 2rem; margin-bottom: 14px; display: block; opacity: 0.5; }
+    .empty-state h5 { color: var(--white); font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
 
     @media (max-width: 768px) {
-        .sidebar { margin-left: -240px; }
-        .main-content { margin-left: 0; width: 100%; }
+        .page-wrap { padding: 28px 20px 44px; }
     }
 </style>
+{% endblock %}
 
-<div class="d-flex">
-    <div class="sidebar text-white d-flex flex-column">
-        <div class="text-center mb-5 px-3">
-            <div class="position-relative d-inline-block">
-                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
-                     class="rounded-circle mb-2 border border-2 border-secondary" width="65">
-            </div>
-            <h6 class="fw-bold mb-0 mt-2">{{ provider.companyname }}</h6>
-            <small style="color: var(--text-muted)">Service Provider</small>
+{% block content %}
+<div class="page-wrap">
+    <div class="page-header-row">
+        <div>
+            <span class="premium-eyebrow">Provider / Services</span>
+            <h2 class="premium-heading">My Services</h2>
+            <p class="premium-sub">Manage your active listings and pricing.</p>
         </div>
-        
-        <ul class="nav flex-column gap-1">
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'provider_dashboard' %}">
-                    <i class="fas fa-chart-pie"></i> Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'add_service' %}">
-                    <i class="fas fa-plus-circle"></i> Add Service
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="{% url 'manage_services' %}">
-                    <i class="fas fa-concierge-bell"></i> My Services
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'provider_requests' %}">
-                    <i class="fas fa-envelope-open-text"></i> Requests
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'report_page' provider.id %}">
-                    <i class="fas fa-chart-line"></i> Reports
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'profile' %}">
-                    <i class="fas fa-user-cog"></i> Profile
-                </a>
-            </li>
-        </ul>
-        <hr class="text-secondary opacity-25">
-        <div class="mt-auto">
-            <a class="nav-link text-danger" href="{% url 'logout' %}">
-                <i class="fa-solid fa-right-from-bracket"></i> Logout
-            </a>
-        </div>
+        <a href="{% url 'add_service' %}" class="premium-btn"><i class="fa-solid fa-plus"></i>&nbsp; Add New Service</a>
     </div>
 
-    <main class="main-content">
-        <header class="mb-4 d-flex justify-content-between align-items-center">
-            <div>
-                <h3 class="fw-bold text-dark">My Services</h3>
-                <p class="text-muted mb-0">Manage your active listings and pricing.</p>
-            </div>
-            <a href="{% url 'add_service' %}" class="btn btn-primary shadow-sm px-4">
-                <i class="fas fa-plus me-2"></i>Add New Service
-            </a>
-        </header>
-
-        <div class="card shadow-sm">
-            <div class="table-responsive">
-                <table class="table mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">Service Details</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Verification</th>
-                            <th class="text-end pe-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for service in services %}
-                        <tr>
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center">
-                                    <div class="service-icon me-3"><i class="fas fa-tools"></i></div>
-                                    <div>
-                                        <div class="fw-bold text-dark">{{ service.title }}</div>
-                                        <div class="small text-muted text-truncate" style="max-width: 200px;">{{ service.description|truncatechars:40 }}</div>
-                                    </div>
+    <div class="services-table-card">
+        <div class="table-responsive">
+            <table class="services-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Service Details</th>
+                        <th>Category</th>
+                        <th>Rate Card</th>
+                        <th>Status</th>
+                        <th>Verification</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for service in services %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="service-icon-box"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+                                <div>
+                                    <div class="svc-title">{{ service.title }}</div>
+                                    <div class="svc-desc">{{ service.description|truncatechars:40 }}</div>
                                 </div>
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark border px-2 py-1">{{ service.category.name }}</span>
-                            </td>
-                            <td>
-                                {% if service.is_active %}
-                                    <span class="badge bg-success-subtle text-success border border-success px-3 rounded-pill">
-                                        <i class="fas fa-check-circle me-1"></i> Active
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 rounded-pill">
-                                        <i class="fas fa-pause-circle me-1"></i> Inactive
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if service.is_verified %}
-                                    <span class="badge bg-success text-white px-3 rounded-pill"><i class="fas fa-check me-1"></i> Verified</span>
-                                {% else %}
-                                    <span class="badge bg-warning text-dark px-3 rounded-pill"><i class="fas fa-clock me-1"></i> Pending</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end pe-4">
-                                <div class="btn-group shadow-sm">
-                                    <a href="{% url 'edit_service' service.id %}" class="btn btn-sm btn-white border" title="Edit">
-                                        <i class="fas fa-edit text-primary"></i>
-                                    </a>
-                                    <a href="{% url 'delete_service' service.id %}" class="btn btn-sm btn-white border" title="Delete" onclick="return confirm('Are you sure?')">
-                                        <i class="fas fa-trash text-danger"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div class="opacity-50 mb-3"><i class="fas fa-concierge-bell fa-3x"></i></div>
-                                <h5 class="text-muted">No services found</h5>
-                                <p class="small text-muted">You haven't added any services to your profile yet.</p>
-                                <a href="{% url 'add_service' %}" class="btn btn-sm btn-outline-primary mt-2">Start Adding</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </td>
+                        <td><span class="badge-cat">{{ service.category.name }}</span></td>
+                        <td>
+                            {% if service.min_price %}
+                                <span class="rate-value">From KES {{ service.min_price|floatformat:0 }}</span>
+                            {% else %}
+                                <span class="badge-rate-missing" title="Add a rate card so customers know your starting price">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> Not set
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if service.is_active %}
+                                <span class="badge-status is-active"><i class="fa-solid fa-circle-check"></i> Active</span>
+                            {% else %}
+                                <span class="badge-status is-inactive"><i class="fa-solid fa-circle-pause"></i> Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if service.is_verified %}
+                                <span class="badge-verify is-verified"><i class="fa-solid fa-check"></i> Verified</span>
+                            {% else %}
+                                <span class="badge-verify is-pending"><i class="fa-solid fa-clock"></i> Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="row-actions">
+                                <a href="{% url 'edit_service' service.id %}" class="icon-btn is-edit" title="Edit">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                <a href="{% url 'delete_service' service.id %}" class="icon-btn is-delete" title="Delete" onclick="return confirm('Are you sure?')">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fa-solid fa-concierge-bell"></i>
+                                <h5>No services found</h5>
+                                <p class="small mb-2">You haven't added any services to your profile yet.</p>
+                                <a href="{% url 'add_service' %}" class="premium-btn is-outline">Start Adding</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-    </main>
+    </div>
 </div>
-
 {% endblock %}

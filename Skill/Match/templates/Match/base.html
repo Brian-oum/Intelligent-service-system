@@ -1,48 +1,126 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Intelligent Service Matching System{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    {% block extra_head %}{% endblock %}
     <style>
-        /* Basic Reset */
-        * { margin:0; padding:0; box-sizing:border-box; font-family: Arial, sans-serif; }
+        /* ===================================================================
+           DESIGN TOKENS — shared with the landing page's restyle, so every
+           page (dashboards, forms, marketing) reads as one product.
+           =================================================================== */
+        :root {
+            --ink: #0B0E14;
+            --panel: #1A1F2B;
+            --panel-line: rgba(255, 255, 255, 0.08);
+            --signal: #FF4D2E;
+            --signal-soft: #FF6A4D;
+            --live: #39FF6A;
+            --text-muted: #7C8591;
+            --white: #FFFFFF;
+            --paper: #FDFBF7; /* light surface for non-hero pages that aren't dark-themed */
+        }
 
-        body { background: white;
-             color:#06253f; min-height:100vh; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        header a.logo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+    
+    /* New styles for layout matching */
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Space between logo image and text */
+}
 
-        /* Header */
+/* Controls the size and scaling of your logo graphic */
+header a.logo img {
+    height: 50px; /* Adjust height to match your brand assets */
+    width: auto;
+    object-fit: contain;
+    display: block;
+    transition: filter 0.3s ease;
+}
+
+/* Optional: If your logo is pure black/dark, this automatically inverts it 
+   to white when on transparent hero screens or dark scrolled headers */
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+
+        a { color: inherit; }
+
+        /* ===================================================================
+           HEADER — opaque by default (used on dashboards, forms, auth
+           pages). Pages with a full-bleed hero behind it add
+           `hero-page` to <body>, which switches the header to a
+           transparent overlay that turns solid once the page scrolls.
+           =================================================================== */
         header {
             width: 100%;
-            padding: 15px 50px;
+            padding: 18px 50px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background-color:white;
+            background-color: var(--white);
+            border-bottom: 1px solid rgba(11, 14, 20, 0.08);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         header a.logo {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: rgb(8, 3, 53);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--ink);
             text-decoration: none;
+            letter-spacing: -0.01em;
         }
 
-        nav {
+        #siteNav {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 28px;
         }
 
-        nav a {
-            color: rgb(12, 4, 32);
+        #siteNav a {
+            color: var(--ink);
             text-decoration: none;
-            font-weight: bold;
-            transition: 0.3s;
+            font-weight: 500;
+            font-size: 0.92rem;
+            transition: color 0.2s ease;
         }
+
+        #siteNav a:hover { color: var(--signal); }
+
+        #siteNav a.nav-cta {
+            background: var(--signal);
+            color: var(--white);
+            padding: 9px 20px;
+            border-radius: 2px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+        }
+
+        #siteNav a.nav-cta:hover { background: var(--signal-soft); color: var(--white); }
 
         /* Dropdown */
         .dropdown {
@@ -51,43 +129,373 @@
             cursor: pointer;
         }
 
+        .dropdown > span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+            font-size: 0.92rem;
+        }
+
         .dropdown-content {
             display: none;
             position: absolute;
             right: 0;
-            background-color: rgba(255,255,255,0.95);
-            min-width: 150px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            top: calc(100% + 10px);
+            background-color: var(--white);
+            min-width: 170px;
+            box-shadow: 0 16px 32px rgba(11, 14, 20, 0.18);
             z-index: 1;
-            border-radius: 5px;
+            border-radius: 6px;
             overflow: hidden;
+            border: 1px solid rgba(11, 14, 20, 0.06);
         }
 
         .dropdown-content a {
-            color: #06253f;
-            padding: 12px 15px;
+            color: var(--ink);
+            padding: 12px 16px;
             text-decoration: none;
             display: block;
-            font-weight: normal;
+            font-weight: 500;
+            font-size: 0.88rem;
         }
-        .dropdown:hover .dropdown-content { display: block; }
 
-    main {
-        display: block;        /* normal vertical flow */
-        padding: 20px;
-        min-height: auto;      /* let content decide height */
-        text-align: left;      /* optional for forms */
-    }
+        .dropdown-content a:hover { background: #F7F4EF; color: var(--ink); }
+        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown.is-open .dropdown-content { display: block; }
+
+        /* ===================================================================
+           MOBILE NAV TOGGLE — hidden on desktop, shown at the mobile
+           breakpoint below. Turns <nav> into a slide-in panel.
+           =================================================================== */
+        .nav-toggle {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            z-index: 1002;
+        }
+
+        .nav-toggle span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: var(--ink);
+            border-radius: 2px;
+            transition: transform 0.25s ease, opacity 0.2s ease, background-color 0.2s ease;
+        }
+
+        body.hero-page header .nav-toggle span { background: var(--white); }
+        body.hero-page header.is-scrolled .nav-toggle span { background: var(--white); }
+
+        .nav-toggle.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-toggle.is-open span:nth-child(2) { opacity: 0; }
+        .nav-toggle.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .nav-scrim {
+            position: fixed;
+            inset: 0;
+            background: rgba(11, 14, 20, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            z-index: 999;
+        }
+
+        .nav-scrim.is-open { opacity: 1; pointer-events: auto; }
+
+        @media (max-width: 860px) {
+            header { padding: 16px 20px; }
+
+            header a.logo img { height: 38px; }
+            header a.logo span { font-size: 1.1rem; }
+
+            .nav-toggle { display: flex; }
+
+            #siteNav {
+                position: fixed;
+                top: 0;
+                right: 0;
+                height: 100vh;
+                height: 100dvh;
+                width: min(80vw, 320px);
+                background: var(--white);
+                flex-direction: column;
+                align-items: flex-start;
+                justify-content: flex-start;
+                gap: 4px;
+                padding: 90px 28px 28px;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                box-shadow: -16px 0 40px rgba(11, 14, 20, 0.16);
+                z-index: 1000;
+            }
+
+            #siteNav.is-open { transform: translateX(0); }
+
+            #siteNav a { color: var(--ink); width: 100%; padding: 12px 0; border-bottom: 1px solid rgba(11, 14, 20, 0.07); }
+            body.hero-page header #siteNav.is-open a:not(.nav-cta) { color: var(--ink); }
+
+            #siteNav a.nav-cta { width: 100%; text-align: center; margin-top: 10px; border-bottom: none; }
+
+            .dropdown { width: 100%; }
+            .dropdown > span { color: var(--ink); padding: 12px 0; width: 100%; border-bottom: 1px solid rgba(11, 14, 20, 0.07); }
+            body.hero-page header #siteNav.is-open .dropdown > span { color: var(--ink); }
+
+            .dropdown-content {
+                display: none;
+                position: static;
+                box-shadow: none;
+                border: none;
+                border-radius: 0;
+                min-width: 0;
+                width: 100%;
+            }
+
+            .dropdown-content a { padding: 10px 0 10px 12px; border-bottom: none; }
+        }
+
+        /* ===================================================================
+           HERO-PAGE OVERLAY HEADER — transparent + light text until the
+           page scrolls past the hero, then it becomes the same opaque
+           header used everywhere else.
+           =================================================================== */
+        body.hero-page header {
+            position: fixed;
+            background-color: transparent;
+            border-bottom-color: transparent;
+        }
+
+        body.hero-page header a.logo,
+        body.hero-page header #siteNav a:not(.nav-cta) {
+            color: var(--white);
+        }
+
+        body.hero-page header.is-scrolled {
+            background-color: var(--ink);
+            border-bottom-color: var(--panel-line);
+        }
+
+        body.hero-page header.is-scrolled a.logo,
+        body.hero-page header.is-scrolled #siteNav a:not(.nav-cta) {
+            color: var(--white);
+        }
+
+        /* When fixed, header no longer pushes content down, so the hero
+           section needs to sit flush at the top — pages opting into
+           hero-page are responsible for their own full-bleed section. */
+        body.hero-page main { padding-top: 0; }
+
+        /* ===================================================================
+           MAIN — intentionally unopinionated. Dashboard/sidebar layouts
+           and the landing page each define their own spacing; a global
+           padding here would fight both.
+           =================================================================== */
+        main {
+            display: block;
+            min-height: auto;
+        }
+        /* ================================================================
+   RICH FOOTER
+   ================================================================ */
+.im-footer--rich {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    color: var(--white, #fff);
+    font-family: 'Inter', sans-serif;
+    background-image:
+        linear-gradient(180deg,
+            var(--ink, #0B0E14) 0%,
+            rgba(11,14,20,0.55) 340px,
+            rgba(11,14,20,0.72) 65%,
+            rgba(11,14,20,0.92) 100%),
+        url('{% static 'images/footer.webp' %}');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+}
+/* The gradient above starts at a flat, fully-opaque --ink (matching the
+   section that sits above the footer) and only gradually reveals the
+   photo beneath it — that soft fade IS the separator, so no hard line
+   is needed at the seam between the two sections. */
+.im-footer__top {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 80px 0 60px;
+    position: relative;
+    z-index: 2;
+}
+.im-footer__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1.7fr;
+    gap: 48px;
+    align-items: start;
+}
+.im-footer__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.01em;
+    margin-bottom: 18px;
+}
+.im-footer__logo-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--signal, #FF4D2E);
+    flex-shrink: 0;
+}
+.im-footer__tagline {
+    font-size: 0.84rem;
+    color: #fff;
+    line-height: 1.65;
+    margin: 0 0 26px;
+    max-width: 280px;
+}
+.im-footer__socials {
+    display: flex;
+    gap: 10px;
+}
+.im-footer__social-link {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.im-footer__social-link:hover {
+    background: var(--signal, #FF4D2E);
+    border-color: var(--signal, #FF4D2E);
+    color: #fff;
+}
+.im-footer__nav-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #fff;
+    margin: 0 0 20px;
+}
+.im-footer__nav-list {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.im-footer__nav-list a {
+    font-size: 0.86rem;
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.im-footer__nav-list a:hover { color: var(--signal, #FF4D2E); }
+.im-footer__newsletter-sub {
+    font-size: 0.83rem;
+    color: #fff;
+    line-height: 1.6;
+    margin: 0 0 16px;
+}
+.im-footer__newsletter-form {
+    display: flex;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.im-footer__newsletter-input {
+    flex: 1; min-width: 0;
+    background: rgba(255,255,255,0.05);
+    border: none; outline: none;
+    padding: 11px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.84rem;
+    color: #fff;
+}
+.im-footer__newsletter-input::placeholder { color: rgba(255,255,255,0.28); }
+.im-footer__newsletter-btn {
+    background: var(--signal, #FF4D2E);
+    border: none;
+    color: #fff;
+    padding: 11px 18px;
+    font-size: 1.05rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.im-footer__newsletter-btn:hover { background: #FF6A4D; }
+.im-footer__newsletter-legal {
+    font-size: 0.73rem;
+    color: rgba(255,255,255,0.22);
+    margin: 0;
+}
+.im-footer__bottom {
+    position: relative;
+    z-index: 2;
+    padding: 24px 0;
+    background: linear-gradient(180deg, rgba(11,14,20,0) 0%, rgba(11,14,20,0.55) 100%);
+}
+.im-footer__bottom p,
+.im-footer__bottom a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color 0.2s;
+}
+.im-footer__bottom a:hover { color: #fff; }
+
+@media (max-width: 1100px) {
+    .im-footer__grid { grid-template-columns: 1fr 1fr 1fr; }
+    .im-footer__brand-col { grid-column: 1 / -1; }
+    .im-footer__newsletter-col { grid-column: span 2; }
+}
+@media (max-width: 640px) {
+    .im-footer__grid { grid-template-columns: 1fr 1fr; }
+    .im-footer__brand-col,
+    .im-footer__newsletter-col { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
+    .im-footer--rich { min-height: auto; }
+    .im-footer__top { padding: 64px 0 40px; align-items: flex-start; }
+    .im-footer__bottom .container { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
 
     </style>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
-<header>
-    <a href="{% url 'landing_page' %}" class="logo">eFundi</a>
-    <nav>
+<header id="siteHeader">
+    <a href="{% url 'landing_page' %}" class="logo">
+        <img src="{% static 'images/logo3.png' %}" alt="Fixkona Logo Asset">
+        <span>Fixkona</span>
+    </a>
+    <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="siteNav">
+        <span></span><span></span><span></span>
+    </button>
+    <nav id="siteNav">
+        <a href="{% url 'landing_page' %}">Home</a>
+        <a href="{% url 'about_page' %}">About Us</a>
+        <a href="{% url 'services' %}">Services</a>
         {% if user.is_authenticated %}
-            <div class="dropdown">
+            <div class="dropdown" id="navDropdown">
                 <span>{{ user.username }} <i class="fa fa-caret-down"></i></span>
                 <div class="dropdown-content">
                     {% if user.role == 'company' %}
@@ -100,14 +508,188 @@
             </div>
         {% else %}
             <a href="{% url 'login' %}">Login</a>
-            <a href="{% url 'provider_signup_step1' %}">Sign Up as Pro</a>
+            <a href="{% url 'provider_signup_step1' %}" class="nav-cta">Sign Up as Pro</a>
         {% endif %}
     </nav>
 </header>
+<div class="nav-scrim" id="navScrim"></div>
 
 <main>
     {% block content %}{% endblock %}
 </main>
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<footer class="im-footer im-footer--rich">
+
+    <!-- Top bar -->
+    <div class="im-footer__top">
+        <div class="container">
+            <div class="im-footer__grid">
+
+                <!-- Brand column -->
+                <div class="im-footer__brand-col">
+                    <a href="#" class="im-footer__logo">
+                        <span class="im-footer__logo-dot"></span>
+                        <span>Fixkona</span>
+                    </a>
+                    <p class="im-footer__tagline">
+                        Kenya's fastest way to connect skilled professionals and companies  with homeowners. Trusted by 40 000+ households.
+                    </p>
+                    <div class="im-footer__socials">
+                        <a href="#" class="im-footer__social-link" aria-label="Facebook">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                        </a>
+                        <a href="#" class="im-footer__social-link" aria-label="Twitter/X">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4l16 16M4 20L20 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                        </a>
+                        <a href="#" class="im-footer__social-link" aria-label="Instagram">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+                        </a>
+                        <a href="#" class="im-footer__social-link" aria-label="LinkedIn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Services column -->
+                <div class="im-footer__nav-col">
+                    <h4 class="im-footer__nav-heading">Services</h4>
+                    <ul class="im-footer__nav-list">
+                        <li><a href="#">Plumbing</a></li>
+                        <li><a href="#">Electrical</a></li>
+                        <li><a href="#">Roofing &amp; Gutters</a></li>
+                        <li><a href="#">Painting</a></li>
+                        <li><a href="#">Cleaning</a></li>
+                        <li><a href="#">Landscaping</a></li>
+                    </ul>
+                </div>
+
+                <!-- Company column -->
+                <div class="im-footer__nav-col">
+                    <h4 class="im-footer__nav-heading">Company</h4>
+                    <ul class="im-footer__nav-list">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">How It Works</a></li>
+                        <li><a href="#">Become a Pro</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Press</a></li>
+                        <li><a href="#">Blog</a></li>
+                    </ul>
+                </div>
+
+                <!-- Support column -->
+                <div class="im-footer__nav-col">
+                    <h4 class="im-footer__nav-heading">Support</h4>
+                    <ul class="im-footer__nav-list">
+                        <li><a href="#">Help Centre</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="#">Safety Guidelines</a></li>
+                        <li><a href="#">Dispute Resolution</a></li>
+                        <li><a href="#">Report an Issue</a></li>
+                    </ul>
+                </div>
+
+                <!-- Newsletter column -->
+                <div class="im-footer__newsletter-col">
+                    <h4 class="im-footer__nav-heading">Stay in the loop</h4>
+                    <p class="im-footer__newsletter-sub">Get tips, deals and new service alerts straight to your inbox.</p>
+                    <div class="im-footer__newsletter-form">
+                        <input type="email" class="im-footer__newsletter-input" placeholder="your@email.com" aria-label="Email address">
+                        <button class="im-footer__newsletter-btn" type="button">→</button>
+                    </div>
+                    <p class="im-footer__newsletter-legal">No spam. Unsubscribe anytime.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="im-footer__bottom">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <p class="mb-0 small">&copy; 2026 Intelligent Service Matching System. All rights reserved.</p>
+            <nav aria-label="Legal links" class="d-flex gap-4 flex-wrap">
+                <a href="#" class="small">Privacy Policy</a>
+                <a href="#" class="small">Terms of Service</a>
+                <a href="#" class="small">Cookie Policy</a>
+                <a href="#" class="small">POPIA Compliance</a>
+            </nav>
+        </div>
+    </div>
+
+</footer>
+
+<script>
+    // Only matters on hero-page bodies, but harmless elsewhere — toggles
+    // the header to its opaque state once the page scrolls past the hero.
+    (function () {
+        const header = document.getElementById('siteHeader');
+        if (!header || !document.body.classList.contains('hero-page')) return;
+
+        function updateHeaderState() {
+            header.classList.toggle('is-scrolled', window.scrollY > 80);
+        }
+
+        window.addEventListener('scroll', updateHeaderState, { passive: true });
+        updateHeaderState();
+    })();
+
+    // Mobile nav: slide-in panel triggered by the hamburger button, plus
+    // a tap-friendly dropdown (the desktop version relies on :hover,
+    // which doesn't fire on touch devices).
+    (function () {
+        const toggle = document.getElementById('navToggle');
+        const nav = document.getElementById('siteNav');
+        const scrim = document.getElementById('navScrim');
+        const dropdown = document.getElementById('navDropdown');
+        if (!toggle || !nav || !scrim) return;
+
+        function closeNav() {
+            nav.classList.remove('is-open');
+            scrim.classList.remove('is-open');
+            toggle.classList.remove('is-open');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+
+        function openNav() {
+            nav.classList.add('is-open');
+            scrim.classList.add('is-open');
+            toggle.classList.add('is-open');
+            toggle.setAttribute('aria-expanded', 'true');
+        }
+
+        toggle.addEventListener('click', function () {
+            nav.classList.contains('is-open') ? closeNav() : openNav();
+        });
+
+        scrim.addEventListener('click', closeNav);
+
+        // Close the panel after tapping a real link (not the profile toggle).
+        nav.querySelectorAll('a:not(.dropdown-content a)').forEach(function (link) {
+            link.addEventListener('click', closeNav);
+        });
+        if (dropdown) {
+            dropdown.querySelectorAll('.dropdown-content a').forEach(function (link) {
+                link.addEventListener('click', closeNav);
+            });
+        }
+
+        // Tap-to-open profile dropdown on mobile widths.
+        if (dropdown) {
+            dropdown.querySelector('span').addEventListener('click', function (e) {
+                if (window.innerWidth > 860) return;
+                e.stopPropagation();
+                dropdown.classList.toggle('is-open');
+            });
+        }
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 860) closeNav();
+        });
+    })();
+</script>
 
 </body>
 </html>

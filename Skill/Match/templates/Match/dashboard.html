@@ -1,491 +1,869 @@
-
+{% extends "Match/provider_base.html" %}
 {% load static %}
-{% block content %}
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
     :root {
-        --sidebar-bg: #1e293b;
-        --sidebar-hover: #334155;
-        --main-bg: #f8fafc;
-        --accent-color: #0ea5e9;
+        --prov-info: #2563EB;
+        --prov-gold: #E0A63C;
     }
 
-    body { background-color: var(--main-bg); font-family: 'Inter', sans-serif; }
+    .dash-wrap { padding: 44px 44px 60px; width: 100%; }
 
-    /* Sidebar */
-.sidebar {
-    width: 260px;
-    background: var(--sidebar-bg);
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    padding: 20px 0;
-    z-index: 1000;
-}
+    .dash-header {
+        display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap;
+        gap: 20px; margin-bottom: 32px;
+    }
+    .dash-header .premium-heading { margin-bottom: 6px; }
+    .dash-header .premium-eyebrow { margin-bottom: 10px; }
 
-.sidebar .nav-link {
-    color: #94a3b8;
-    padding: 12px 25px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    transition: all 0.2s;
-    border-left: 3px solid transparent;
-}
+    /* ============ STAT LEDGER ============ */
+    .stat-ledger {
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        margin-bottom: 26px;
+        overflow: hidden;
+    }
+    .stat-seg-link { text-decoration: none; color: inherit; display: block; transition: background 0.15s ease; }
+    .stat-seg-link:hover { background: var(--panel-2); text-decoration: none; color: inherit; }
+    .stat-seg {
+        padding: 26px 28px;
+        border-right: 1px solid var(--panel-line);
+        position: relative;
+        height: 100%;
+    }
+    .stat-seg-link:last-child .stat-seg { border-right: none; }
+    .stat-seg .seg-top {
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
+    }
+    .stat-seg .seg-label {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 600;
+        letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .stat-seg .seg-icon {
+        width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-size: 0.7rem; background: var(--panel-2); color: var(--lz-ink-60);
+        flex-shrink: 0;
+    }
+    .stat-seg .seg-value {
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 2.3rem;
+        color: var(--white); line-height: 1;
+    }
+    .stat-seg .seg-value .seg-value-suffix { font-size: 1rem; font-weight: 500; color: var(--text-muted); }
+    .stat-seg .seg-hint { font-size: 0.76rem; color: var(--text-muted); margin-top: 8px; }
+    .stat-seg .seg-hint strong { color: var(--lz-ink); font-weight: 600; }
+    .stat-seg.is-signal .seg-value { color: var(--signal); }
+    .stat-seg.is-signal .seg-icon { background: rgba(255,77,46,0.12); color: var(--signal); }
+    .stat-seg.is-live .seg-value { color: var(--live); }
+    .stat-seg.is-live .seg-icon { background: rgba(31,157,85,0.12); color: var(--live); }
+    .stat-seg.is-gold .seg-icon { background: rgba(224,166,60,0.14); color: var(--prov-gold); }
 
-.sidebar .nav-link i {
-    width: 20px;
-    font-size: 1.1rem;
-}
-
-.sidebar .nav-link:hover {
-    background: var(--sidebar-accent);
-    color: #fff;
-}
-
-.sidebar .nav-link.active {
-    background: rgba(14, 165, 233, 0.1);
-    color: var(--primary);
-    border-left-color: var(--primary);
-}
-    /* Content Area */
-    .main-content {
-        margin-left: 240px;
-        padding: 30px;
-        width: calc(100% - 240px);
+    .seg-pulse-dot {
+        width: 8px; height: 8px; border-radius: 50%; background: var(--signal);
+        animation: seg-pulse 2s infinite;
+    }
+    @keyframes seg-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255,77,46,0.5); }
+        70% { box-shadow: 0 0 0 7px rgba(255,77,46,0); }
+        100% { box-shadow: 0 0 0 0 rgba(255,77,46,0); }
     }
 
-    .card { border: none; border-radius: 12px; transition: transform 0.2s; }
+    .seg-stars { display: flex; gap: 2px; font-size: 0.7rem; color: var(--prov-gold); }
+    .seg-stars i.is-empty { color: var(--panel-line); }
 
-    .stat-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+    /* ============ PACKAGE CARD ============ */
+    .pkg-card { margin-bottom: 26px; }
+    .pkg-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+    .pkg-icon-box {
+        width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        background: rgba(255,77,46,0.1); color: var(--signal); font-size: 1.15rem; flex-shrink: 0;
+    }
+    .pkg-icon-box.is-danger { background: rgba(194,58,33,0.1); color: var(--signal-dim); }
+    .pkg-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.1rem; color: var(--white); margin: 0 0 4px; }
+    .pkg-meta { font-size: 0.82rem; color: var(--text-muted); }
+    .pkg-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pkg-progress-row { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 8px; }
+    .pkg-progress-row .pkg-progress-label { font-weight: 600; color: var(--lz-ink); }
+    .pkg-progress-row .pkg-progress-count { color: var(--text-muted); }
+    .pkg-progress-track { height: 7px; border-radius: 6px; background: var(--panel-2); overflow: hidden; }
+    .pkg-progress-fill { height: 100%; border-radius: 6px; background: var(--signal); transition: width 0.4s ease; }
+    .pkg-progress-fill.is-live { background: var(--live); }
+    .pkg-progress-hint { display: block; font-size: 0.74rem; color: var(--text-muted); margin-top: 6px; }
+    .pkg-warning {
+        background: rgba(255,77,46,0.08); border-left: 3px solid var(--signal); border-radius: 4px;
+        padding: 10px 14px; font-size: 0.82rem; color: var(--lz-ink); margin-bottom: 20px;
+    }
+
+    /* ============ RATE CARD NOTIFICATION ============ */
+    .rate-card-notice {
+        background: rgba(224,166,60,0.1);
+        border: 1px solid rgba(224,166,60,0.3);
+        border-left: 3px solid #E0A63C;
+        border-radius: 6px;
+        padding: 18px 22px;
+        margin-bottom: 24px;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .rate-card-notice__icon {
+        width: 38px; height: 38px; border-radius: 8px; flex-shrink: 0;
+        background: rgba(224,166,60,0.18); color: #E0A63C;
+        display: flex; align-items: center; justify-content: center; font-size: 1rem;
+    }
+    .rate-card-notice__body { flex: 1; min-width: 220px; }
+    .rate-card-notice__body h6 {
+        font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white);
+        margin: 0 0 4px;
+    }
+    .rate-card-notice__body p { color: var(--text-muted); font-size: 0.84rem; margin: 0 0 10px; }
+    .rate-card-notice__list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .rate-card-notice__pill {
+        font-size: 0.74rem; color: var(--white); background: var(--panel-2);
+        border: 1px solid var(--panel-line); padding: 4px 10px; border-radius: 20px;
+    }
+    .rate-card-notice__actions { display: flex; align-items: center; }
+
+    /* ============ CONTENT GRID ============ */
+    .dash-grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: 22px; align-items: start; }
+    .dash-col-stack { display: flex; flex-direction: column; gap: 22px; }
+
+    .dash-card {
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        padding: 28px;
+    }
+    .dash-card .card-head {
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
+    }
+    .dash-card .card-head h5 {
+        font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.05rem;
+        color: var(--white); margin: 0; position: relative; padding-bottom: 4px;
+    }
+    .dash-card .card-head h5::after {
+        content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 0;
+        background: var(--signal); animation: draw-underline 0.5s ease-out forwards;
+    }
+    @keyframes draw-underline { to { width: 28px; } }
+    .dash-card .card-head i { color: var(--text-muted); font-size: 0.9rem; }
+
+    .pill {
+        display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+        font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 3px 10px; border-radius: 20px;
+    }
+    .pill-signal { background: rgba(255,77,46,0.12); color: var(--signal); }
+    .pill-live { background: rgba(31,157,85,0.12); color: var(--live); }
+    .pill-gold { background: rgba(224,166,60,0.14); color: var(--prov-gold); }
+
+    /* ============ PENDING ACTION ITEMS ============ */
+    .action-item {
+        display: flex; align-items: flex-start; gap: 12px; padding: 16px 0;
+        border-bottom: 1px solid var(--panel-line);
+    }
+    .action-item:last-child { border-bottom: none; padding-bottom: 4px; }
+    .action-item:first-child { padding-top: 0; }
+    .action-dot { margin-top: 6px; flex-shrink: 0; }
+    .action-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--panel-line); flex-shrink: 0; }
+    .action-body { flex: 1; min-width: 0; }
+    .action-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+    .action-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.88rem; color: var(--white); }
+    .action-time { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+    .action-location {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        background: var(--panel-2); border-radius: 5px; padding: 8px 10px; margin-bottom: 10px;
+    }
+    .action-location span { font-size: 0.76rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+    .action-location i { color: var(--signal); margin-right: 4px; }
+    .action-location a {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.63rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.04em; color: var(--signal); text-decoration: none; white-space: nowrap;
+    }
+    .action-location a:hover { text-decoration: underline; }
+    .action-buttons { display: flex; gap: 8px; }
+    .action-buttons form { flex: 1; }
+    .action-btn {
+        width: 100%; border: none; border-radius: 5px; padding: 7px 10px; font-size: 0.76rem; font-weight: 600;
+        cursor: pointer; transition: all 0.15s ease; font-family: 'Inter', sans-serif;
+    }
+    .action-btn--accept { background: var(--live); color: #fff; }
+    .action-btn--accept:hover { background: #197f45; }
+    .action-btn--decline { background: transparent; border: 1px solid var(--panel-line); color: var(--signal); }
+    .action-btn--decline:hover { border-color: var(--signal); background: rgba(255,77,46,0.06); }
+
+    /* ============ REVIEWS ============ */
+    .review-item { padding: 14px 0; border-bottom: 1px solid var(--panel-line); }
+    .review-item:last-child { border-bottom: none; padding-bottom: 4px; }
+    .review-item:first-child { padding-top: 0; }
+    .review-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .review-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--panel-line); flex-shrink: 0; }
+    .review-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.84rem; color: var(--white); }
+    .review-stars { display: flex; gap: 2px; font-size: 0.68rem; color: var(--prov-gold); }
+    .review-stars i.is-empty { color: var(--panel-line); }
+    .review-comment { font-size: 0.83rem; color: var(--text-muted); font-style: italic; margin: 0; line-height: 1.5; }
+
+    .dash-empty { text-align: center; padding: 30px 10px; }
+    .dash-empty i { font-size: 1.6rem; color: var(--lz-ink-60); margin-bottom: 10px; display: block; }
+    .dash-empty p { color: var(--text-muted); font-size: 0.86rem; margin: 0; }
+
+    /* Both list cards hold a fixed max height regardless of item count
+       (now up to 10) — the list scrolls internally instead of pushing
+       the card, or the page, taller. Applies at every breakpoint. */
+    .action-list-scroll, .review-list-scroll {
+        max-height: 400px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 6px;
+        margin-right: -6px;
+    }
+    .action-list-scroll::-webkit-scrollbar, .review-list-scroll::-webkit-scrollbar { width: 6px; }
+    .action-list-scroll::-webkit-scrollbar-track, .review-list-scroll::-webkit-scrollbar-track { background: transparent; }
+    .action-list-scroll::-webkit-scrollbar-thumb, .review-list-scroll::-webkit-scrollbar-thumb { background: var(--panel-line); border-radius: 3px; }
+    .action-list-scroll::-webkit-scrollbar-thumb:hover, .review-list-scroll::-webkit-scrollbar-thumb:hover { background: var(--lz-ink-60); }
+    .action-list-scroll, .review-list-scroll { scrollbar-width: thin; scrollbar-color: var(--panel-line) transparent; }
+
+    /* ============ CTA BANNER ============ */
+    .dash-cta { margin-top: 22px; }
+    .dash-cta strong { font-family: 'Space Grotesk', sans-serif; font-size: 1.02rem; }
+
+    @media (max-width: 991px) {
+        .dash-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+        .dash-wrap { padding: 28px 20px 44px; }
+        .stat-ledger { grid-template-columns: repeat(2, 1fr); }
     }
 
-    /* Pulsing dot for pending items */
-    .status-pulse {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background-color: #ffc107;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
+    /* ============ CHART CARD — compact preview + tap-to-expand ============
+       On small screens the chart shrinks into a compact preview (via
+       Chart.js's own aspectRatio, so nothing gets clipped) and the whole
+       card becomes tappable, opening the same chart larger in a modal. */
+    .chart-card { position: relative; }
+    .chart-canvas-wrap { width: 100%; }
+    .chart-expand-hint {
+        display: none; align-items: center; justify-content: center; gap: 6px;
+        margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--panel-line);
+        font-size: 0.72rem; color: var(--text-muted);
     }
-
-    @keyframes pulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
-    }
-
-    .last-child-border-0:last-child { border-bottom: none !important; }
+    .chart-expand-hint i { font-size: 0.68rem; }
 
     @media (max-width: 768px) {
-        .sidebar { margin-left: -240px; }
-        .main-content { margin-left: 0; width: 100%; }
+        .chart-card { cursor: pointer; }
+        .chart-card:active { background: var(--panel-2); }
+        .chart-expand-hint { display: flex; }
     }
-    /* Enhanced Stat Cards */
-.stat-card {
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 16px;
-    background: #ffffff;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-}
 
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.05);
-    border-color: var(--accent-color);
-}
+    .chart-modal-overlay {
+        position: fixed; inset: 0; background: rgba(11,14,20,0.75); backdrop-filter: blur(2px);
+        z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .chart-modal-overlay.is-open { display: flex; }
+    .chart-modal-box {
+        background: var(--panel); border: 1px solid var(--panel-line); border-radius: 10px;
+        width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto;
+        padding: 26px 20px 20px; position: relative;
+        animation: dash-unveil 0.22s ease-out both;
+    }
+    .chart-modal-box h5 {
+        font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1rem;
+        color: var(--white); margin: 0 0 18px;
+    }
+    .chart-modal-close {
+        position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border-radius: 50%;
+        background: var(--panel-2); border: none; color: var(--text-muted); font-size: 1.05rem;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;
+        transition: color 0.15s ease;
+    }
+    .chart-modal-close:hover { color: var(--white); }
 
-.stat-icon-box {
-    width: 54px;
-    height: 54px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    transition: transform 0.3s ease;
-}
+    /* ============ LOAD-IN ANIMATION ============ */
+    @keyframes dash-wrap-slideup {
+        from { opacity: 0; transform: translateY(28px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes dash-unveil {
+        from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(8px) scale(0.985); }
+        60%  { opacity: 1; }
+        to   { opacity: 1; clip-path: inset(0 0 0% 0); transform: translateY(0) scale(1); }
+    }
+    @keyframes dash-settle {
+        from { opacity: 0; transform: translateY(-6px); letter-spacing: -0.01em; }
+        to   { opacity: 1; transform: translateY(0); letter-spacing: normal; }
+    }
+    @keyframes dash-pop {
+        0%   { opacity: 0; transform: scale(0.4) rotate(-8deg); }
+        60%  { opacity: 1; transform: scale(1.08) rotate(1deg); }
+        100% { opacity: 1; transform: scale(1) rotate(0); }
+    }
+    @keyframes dash-slide-in {
+        from { opacity: 0; transform: translateX(-16px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
 
-.stat-card:hover .stat-icon-box {
-    transform: scale(1.1) rotate(-5deg);
-}
+    .dash-wrap { animation: dash-wrap-slideup 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .dash-header { opacity: 0; animation: dash-settle 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.02s forwards; }
 
-.stat-label {
-    font-size: 0.8rem;
-    letter-spacing: 0.05rem;
-    color: var(--text-muted);
-}
+    .stat-ledger { overflow: hidden; }
+    .stat-seg {
+        opacity: 0;
+        animation: dash-unveil 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        transform-origin: top center;
+    }
+    .stat-seg-link:nth-child(1) .stat-seg { animation-delay: 0.10s; }
+    .stat-seg-link:nth-child(2) .stat-seg { animation-delay: 0.18s; }
+    .stat-seg-link:nth-child(3) .stat-seg { animation-delay: 0.26s; }
+    .stat-seg-link:nth-child(4) .stat-seg { animation-delay: 0.34s; }
 
-.stat-value {
-    font-size: 1.75rem;
-    letter-spacing: -0.02rem;
-}
+    .stat-seg .seg-icon {
+        opacity: 0;
+        animation: dash-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        animation-delay: inherit;
+    }
+    .stat-seg .seg-value {
+        display: inline-block;
+        opacity: 0;
+        animation: dash-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+    .stat-seg-link:nth-child(1) .seg-value { animation-delay: 0.24s; }
+    .stat-seg-link:nth-child(2) .seg-value { animation-delay: 0.32s; }
+    .stat-seg-link:nth-child(3) .seg-value { animation-delay: 0.40s; }
+    .stat-seg-link:nth-child(4) .seg-value { animation-delay: 0.48s; }
 
-/* Subtle background decorative circle */
-.stat-card::after {
-    content: '';
-    position: absolute;
-    width: 80px;
-    height: 80px;
-    background: var(--accent-color);
-    opacity: 0.03;
-    border-radius: 50%;
-    top: -20px;
-    right: -20px;
-}
-.stat-card-link {
-    text-decoration: none;
-    color: inherit;
-    display: block;
-}
+    .pkg-card, .dash-card {
+        opacity: 0;
+        animation: dash-unveil 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        transform-origin: top center;
+    }
+    .pkg-card { animation-delay: 0.38s; }
+    .dash-grid .dash-card:nth-child(1) { animation-delay: 0.46s; }
+    .dash-col-stack .dash-card:nth-child(1) { animation-delay: 0.54s; }
+    .dash-col-stack .dash-card:nth-child(2) { animation-delay: 0.62s; }
 
-.stat-card-link:hover {
-    text-decoration: none;
-    color: inherit;
-}
+    .action-item, .review-item {
+        opacity: 0;
+        animation: dash-slide-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation-delay: calc(0.7s + (var(--row-i, 0) * 0.08s));
+    }
+    .dash-empty {
+        opacity: 0;
+        animation: dash-unveil 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+    }
 
-.stat-card {
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
+    .dash-cta {
+        opacity: 0;
+        position: relative;
+        overflow: hidden;
+        animation: dash-unveil 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.7s forwards;
+    }
+    .dash-cta::before {
+        content: "";
+        position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+        background: linear-gradient(115deg, transparent, rgba(255,255,255,0.14), transparent);
+        transform: skewX(-20deg);
+        animation: cta-sheen 0.9s ease-out 1.2s forwards;
+    }
+    @keyframes cta-sheen { to { left: 130%; } }
 
-.stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
+    @media (prefers-reduced-motion: reduce) {
+        .dash-wrap, .dash-header, .stat-seg, .stat-seg .seg-icon, .stat-seg .seg-value,
+        .pkg-card, .dash-card, .dash-card .card-head h5::after, .action-item, .review-item,
+        .dash-empty, .dash-cta, .dash-cta::before {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+            clip-path: none !important;
+            width: auto !important;
+            left: -100% !important;
+        }
+    }
 </style>
+{% endblock %}
 
-<div class="d-flex">
-    <div class="sidebar text-white d-flex flex-column">
-        <div class="text-center mb-5 px-3">
-            <div class="position-relative d-inline-block">
-                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
-                     class="rounded-circle mb-2 border border-2 border-secondary" width="65">
-            </div>
-            <h6 class="fw-bold mb-0 mt-2">{{ provider.companyname }}</h6>
-            <small style="color: var(--text-muted)">Service Provider</small>
-        </div>
-        
-        <ul class="nav flex-column gap-1">
-            <li class="nav-item">
-                <a class="nav-link active" href="{% url 'provider_dashboard' %}">
-                    <i class="fas fa-chart-pie"></i> Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'add_service' %}">
-                    <i class="fas fa-plus-circle"></i> Add Service
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'manage_services' %}">
-                    <i class="fas fa-concierge-bell"></i> My Services
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'provider_requests' %}">
-                    <i class="fas fa-envelope-open-text"></i> Requests
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'report_page' provider.id %}">
-                    <i class="fas fa-chart-line"></i> Reports
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'profile' %}">
-                    <i class="fas fa-user-cog"></i> Profile
-                </a>
-            </li>
-        </ul>
-        <hr class="text-secondary opacity-25">
-        <div class="mt-auto">
-            <a class="nav-link text-danger" href="{% url 'logout' %}">
-                <i class="fa-solid fa-right-from-bracket"></i> Logout
-            </a>
+{% block content %}
+<div class="dash-wrap">
+
+    <div class="dash-header">
+        <div>
+            <h2 class="premium-heading">Welcome back, {{ user.first_name|default:"Provider" }}</h2>
+            <p class="premium-sub">Here's what's happening with your services today.</p>
         </div>
     </div>
 
-    <main class="main-content">
-        <header class="mb-4">
-            <h3 class="fw-bold">Welcome back, {{ user.first_name|default:"Provider" }}</h3>
-            <p class="text-muted">Here is what's happening with your services today.</p>
-        </header>
+    <!-- ============ RATE CARD NOTIFICATION ============ -->
+    {% if missing_rate_card_count %}
+        <div class="rate-card-notice">
+            <div class="rate-card-notice__icon"><i class="fa-solid fa-tag"></i></div>
+            <div class="rate-card-notice__body">
+                <h6>
+                    {{ missing_rate_card_count }} service{{ missing_rate_card_count|pluralize }} missing a rate card
+                </h6>
+                <p>
+                    Set a minimum price on every listing so customers know your starting rate before they reach out.
+                </p>
+                <div class="rate-card-notice__list">
+                    {% for svc in services_missing_rate_card %}
+                        <span class="rate-card-notice__pill">{{ svc.title }}</span>
+                    {% endfor %}
+                </div>
+                <div class="rate-card-notice__actions">
+                    <a href="{% url 'manage_services' %}" class="premium-btn is-outline">
+                        <i class="fa-solid fa-tag"></i>&nbsp; Add Rate Cards
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
-        <div class="row g-4 mb-5">
+    <!-- ============ STAT LEDGER ============ -->
+    <div class="stat-ledger">
+        <a href="{% url 'provider_requests' %}" class="stat-seg-link">
+            <div class="stat-seg">
+                <div class="seg-top">
+                    <span class="seg-label">Service requests</span>
+                    <span class="seg-icon"><i class="fa-solid fa-layer-group"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ total_requests }}">0</div>
+                <div class="seg-hint">Lifetime volume</div>
+            </div>
+        </a>
 
-    <!-- Total Requests -->
-    <div class="col-md-3">
-        <a href="{% url 'provider_requests' %}" class="stat-card-link">
-            <div class="card stat-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="stat-icon-box bg-primary bg-opacity-10 text-primary">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
-                        <span class="badge bg-soft-primary text-primary small">Total</span>
-                    </div>
+        <a href="{% url 'provider_requests' %}?status=completed" class="stat-seg-link">
+            <div class="stat-seg is-live">
+                <div class="seg-top">
+                    <span class="seg-label">Completed</span>
+                    <span class="seg-icon"><i class="fa-solid fa-circle-check"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ completed_requests }}">0</div>
+                <div class="seg-hint"><strong>Done</strong> and delivered</div>
+            </div>
+        </a>
 
-                    <div>
-                        <p class="stat-label text-uppercase fw-bold mb-1">Service Requests</p>
-                        <h2 class="stat-value fw-bold mb-0 text-dark">{{ total_requests }}</h2>
+        <a href="{% url 'provider_requests' %}?status=pending" class="stat-seg-link">
+            <div class="stat-seg is-signal">
+                <div class="seg-top">
+                    <span class="seg-label">Waiting action</span>
+                    <span class="seg-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ pending_requests }}">0</div>
+                <div class="seg-hint">Needs response <strong>soon</strong></div>
+            </div>
+        </a>
 
-                        <div class="mt-2 small text-muted">
-                            <i class="fas fa-arrow-up text-success me-1"></i>
-                            Lifetime volume
-                        </div>
-                    </div>
+        <a href="{% url 'report_page' provider.id %}#reviews-section" class="stat-seg-link">
+            <div class="stat-seg is-gold">
+                <div class="seg-top">
+                    <span class="seg-label">Avg. rating</span>
+                    <span class="seg-icon"><i class="fa-solid fa-trophy"></i></span>
+                </div>
+                <div class="seg-value">
+                    {% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}0.0{% endif %}
+                    <span class="seg-value-suffix">/5.0</span>
+                </div>
+                <div class="seg-hint">
+                    <span class="seg-stars">
+                        {% for i in "12345" %}
+                            <i class="{% if forloop.counter <= avg_rating %}fa-solid{% else %}fa-regular is-empty{% endif %} fa-star"></i>
+                        {% endfor %}
+                    </span>
                 </div>
             </div>
         </a>
     </div>
 
-    <!-- Completed -->
-    <div class="col-md-3">
-        <a href="{% url 'provider_requests' %}?status=completed" class="stat-card-link">
-            <div class="card stat-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="stat-icon-box bg-success bg-opacity-10 text-success">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <span class="badge bg-success bg-opacity-10 text-success small">Success</span>
-                    </div>
-
+    <!-- ============ PACKAGE CARD ============ -->
+    <div class="dash-card pkg-card">
+        {% if subscription %}
+            <div class="pkg-top">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="pkg-icon-box"><i class="fa-solid fa-crown"></i></div>
                     <div>
-                        <p class="stat-label text-uppercase fw-bold mb-1">Completed</p>
-                        <h2 class="stat-value fw-bold mb-0 text-dark">{{ completed_requests }}</h2>
-
-                        <div class="mt-2 small text-muted">
-                            <span class="fw-bold text-success">Done</span> and delivered
+                        <h4 class="pkg-name">
+                            {{ subscription.plan.name }}
+                            {% if subscription.plan.is_featured %}<span class="pill pill-gold"><i class="fa-solid fa-star"></i> Featured</span>{% endif %}
+                        </h4>
+                        <div class="pkg-meta">
+                            KES {{ subscription.plan.price }} / {{ subscription.plan.get_billing_cycle_display }}
+                            &middot; {{ subscription.days_remaining }} day(s) remaining
                         </div>
                     </div>
                 </div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Pending -->
-    <div class="col-md-3">
-        <a href="{% url 'provider_requests' %}?status=pending" class="stat-card-link">
-            <div class="card stat-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="stat-icon-box bg-warning bg-opacity-10 text-warning">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <div class="status-pulse"></div>
-                    </div>
-
-                    <div>
-                        <p class="stat-label text-uppercase fw-bold mb-1">Waiting Action</p>
-                        <h2 class="stat-value fw-bold mb-0 text-dark">{{ pending_requests }}</h2>
-
-                        <div class="mt-2 small text-muted">
-                            Needs response
-                            <span class="text-warning fw-bold">Soon</span>
-                        </div>
-                    </div>
+                <div class="pkg-actions">
+                    <a href="{% url 'renew_subscription' subscription.id %}" class="premium-btn is-outline"><i class="fa-solid fa-rotate"></i>&nbsp; Renew</a>
+                    <a href="{% url 'subscription_plans' %}" class="premium-btn"><i class="fa-solid fa-arrow-up"></i>&nbsp; Upgrade</a>
                 </div>
             </div>
-        </a>
-    </div>
 
-    <!-- Average Rating -->
-    <div class="col-md-3">
-        <a href="{% url 'report_page' provider.id %}#reviews-section" class="stat-card-link">
-            <div class="card stat-card h-100">
-                <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div class="stat-icon-box bg-info bg-opacity-10 text-info">
-                            <i class="fas fa-trophy"></i>
-                        </div>
+            {% if subscription_warning %}
+                <div class="pkg-warning">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Your package expires in {{ subscription.days_remaining }} day(s). Renew now to keep your listing limits.
+                </div>
+            {% endif %}
 
-                        <div class="text-warning small">
-                            {% for i in "12345" %}
-                                <i class="{% if forloop.counter <= avg_rating %}fas{% else %}far{% endif %} fa-star"></i>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div>
-                        <p class="stat-label text-uppercase fw-bold mb-1">Avg. Rating</p>
-
-                        <h2 class="stat-value fw-bold mb-0 text-dark">
-                            {% if avg_rating %}
-                                {{ avg_rating|floatformat:1 }}
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="pkg-progress-row">
+                        <span class="pkg-progress-label">Customer requests</span>
+                        <span class="pkg-progress-count">
+                            {% if subscription.plan.max_requests %}
+                                {{ subscription.requests_used }} / {{ subscription.plan.max_requests }}
                             {% else %}
-                                0.0
+                                {{ subscription.requests_used }} &middot; Unlimited
                             {% endif %}
-                            <span class="fs-6 text-muted">/5.0</span>
-                        </h2>
-
-                        <div class="mt-2 small text-muted">
-                            Based on latest reviews
-                        </div>
+                        </span>
                     </div>
+                    {% if subscription.plan.max_requests %}
+                        <div class="pkg-progress-track">
+                            <div class="pkg-progress-fill" style="width: {% widthratio subscription.requests_used subscription.plan.max_requests 100 %}%;"></div>
+                        </div>
+                        <span class="pkg-progress-hint">{{ subscription.requests_remaining }} remaining this period</span>
+                    {% else %}
+                        <div class="pkg-progress-track"><div class="pkg-progress-fill" style="width: 100%;"></div></div>
+                        <span class="pkg-progress-hint">No cap on this package</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <div class="pkg-progress-row">
+                        <span class="pkg-progress-label">Service listings</span>
+                        <span class="pkg-progress-count">
+                            {% if subscription.plan.max_services %}
+                                {{ subscription.services_used }} / {{ subscription.plan.max_services }}
+                            {% else %}
+                                {{ subscription.services_used }} &middot; Unlimited
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if subscription.plan.max_services %}
+                        <div class="pkg-progress-track">
+                            <div class="pkg-progress-fill is-live" style="width: {% widthratio subscription.services_used subscription.plan.max_services 100 %}%;"></div>
+                        </div>
+                        <span class="pkg-progress-hint">{{ subscription.services_remaining }} remaining</span>
+                    {% else %}
+                        <div class="pkg-progress-track"><div class="pkg-progress-fill is-live" style="width: 100%;"></div></div>
+                        <span class="pkg-progress-hint">No cap on this package</span>
+                    {% endif %}
                 </div>
             </div>
-        </a>
+        {% else %}
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="pkg-icon-box is-danger"><i class="fa-solid fa-exclamation-circle"></i></div>
+                    <div>
+                        <h4 class="pkg-name">You don't have an active package</h4>
+                        <div class="pkg-meta">Choose a package so customers can reach you and you can list services.</div>
+                    </div>
+                </div>
+                <a href="{% url 'subscription_plans' %}" class="premium-btn"><i class="fa-solid fa-crown"></i>&nbsp; Browse Packages</a>
+            </div>
+        {% endif %}
     </div>
 
-</div>
-        <div class="row g-4">
-            <div class="col-lg-8">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold mb-4">Monthly Performance</h5>
-                        <div style="height: 300px;">
-                            <canvas id="requestsChart"></canvas>
-                        </div>
-                    </div>
-                </div>
+    <!-- ============ CHART + LISTS ============ -->
+    <div class="dash-grid">
+        <div class="dash-card chart-card" id="providerChartCard">
+            <div class="card-head">
+                <h5>Monthly performance</h5>
+                <i class="fa-solid fa-chart-line"></i>
             </div>
+            <div class="chart-canvas-wrap" id="providerChartCanvasWrap">
+                <canvas id="requestsChart" height="130"></canvas>
+            </div>
+            <div class="chart-expand-hint"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Tap to view full chart</div>
+        </div>
 
-            <div class="col-lg-4">
-                <div id="requests-section" class="card shadow-sm border-0 mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="card-title fw-bold mb-0">Pending Actions</h5>
-                            <span class="badge bg-warning text-dark rounded-pill">Needs Attention</span>
-                        </div>
-
-                        <div class="list-group list-group-flush">
-                            {% for request in latest_requests %}
-                                <div class="list-group-item px-0 py-3 border-bottom">
-                                    <div class="d-flex align-items-start">
-                                        <div class="me-3 mt-1"><span class="status-pulse"></span></div>
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex justify-content-between">
-                                                <h6 class="mb-0 fw-bold text-dark small">{{ request.service.title }}</h6>
-                                                <small class="text-muted">{{ request.created_at|timesince }} ago</small>
-                                            </div>
-                                            
-                                        <div class="my-2 p-2 bg-light rounded d-flex justify-content-between align-items-center">
-                                            <span class="small text-muted text-truncate me-2" style="max-width: 180px;" 
-                                                    title="{% if request.latitude %}{{ request.latitude|floatformat:6 }}, {{ request.longitude|floatformat:6 }}{% else %}{{ request.location }}{% endif %}">
-                                                <i class="fas fa-map-marker-alt me-1 text-danger"></i>
-                                                {% if request.latitude and request.longitude %}
-                                                    Pin: {{ request.latitude|floatformat:4 }}, {{ request.longitude|floatformat:4 }}
-                                                {% else %}
-                                                   {{ request.location }}
-                                                {% endif %}
-                                            </span>
-
-                                            {% if request.latitude and request.longitude %}
-                                                <a href="https://www.google.com/maps/search/?api=1&query={{ request.latitude }},{{ request.longitude }}" 
-                                                    target="_blank" class="btn btn-sm btn-primary py-0 px-2 d-flex align-items-center" style="font-size: 0.65rem;">
-                                                        <i class="fas fa-location-arrow me-1"></i> View
-                                                </a>
-                                           {% else %}
-                                                <span class="text-muted small" style="font-size: 0.65rem;">Location not available</span>
-                                            {% endif %}
-                                        </div>
-                                            <div class="d-flex gap-2 mt-2">
-                                                <form action="{% url 'provider_requests' %}" method="POST" class="flex-grow-1">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
-                                                    <button type="submit" name="action" value="accept" class="btn btn-sm btn-success w-100 py-1">Accept</button>
-                                                </form>
-                                                <form action="{% url 'provider_requests' %}" method="POST" class="flex-grow-1">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="request_id" value="{{ request.id }}">
-                                                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-outline-danger w-100 py-1">Decline</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            {% empty %}
-                                <p class="text-muted small text-center py-3">No requests found.</p>
-                            {% endfor %}
-                        </div>
-                    </div>
+        <div class="dash-col-stack">
+            <div id="requests-section" class="dash-card">
+                <div class="card-head">
+                    <h5>Pending actions</h5>
+                    <span class="pill pill-signal">Needs attention</span>
                 </div>
 
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold mb-3">Client Feedback</h5>
-                        {% for review in recent_reviews %}
-                        <div class="mb-3 pb-3 border-bottom last-child-border-0">
-                            <div class="d-flex align-items-center mb-1">
-                                <span class="fw-bold small me-2">{{ review.user.username }}</span>
-                                <div class="text-warning small">
-                                    {% for i in "12345" %}
-                                        <i class="{% if forloop.counter <= review.rating %}fas{% else %}far{% endif %} fa-star"></i>
-                                    {% endfor %}
+                {% if latest_requests %}
+                    <div class="action-list-scroll">
+                    {% for request in latest_requests %}
+                        <div class="action-item" style="--row-i: {{ forloop.counter0 }};">
+                            <div class="action-dot"><span class="seg-pulse-dot"></span></div>
+                            <img class="action-avatar" src="{{ request.user.avatar_url }}" alt="{{ request.user.username }}">
+                            <div class="action-body">
+                                <div class="action-top">
+                                    <span class="action-title">{{ request.service.title }} <span style="font-weight:400; color:var(--text-muted); font-size:0.78rem;">&middot; {{ request.user.username }}</span></span>
+                                    <span class="action-time">{{ request.created_at|timesince }} ago</span>
+                                </div>
+                                <div class="action-location">
+                                    <span title="{% if request.latitude %}{{ request.latitude|floatformat:6 }}, {{ request.longitude|floatformat:6 }}{% else %}{{ request.location }}{% endif %}">
+                                        <i class="fa-solid fa-location-dot"></i>
+                                        {% if request.latitude and request.longitude %}Pin: {{ request.latitude|floatformat:4 }}, {{ request.longitude|floatformat:4 }}{% else %}{{ request.location }}{% endif %}
+                                    </span>
+                                    {% if request.latitude and request.longitude %}
+                                        <a href="https://www.google.com/maps/search/?api=1&query={{ request.latitude }},{{ request.longitude }}" target="_blank"><i class="fa-solid fa-location-arrow"></i> View</a>
+                                    {% endif %}
+                                </div>
+                                <div class="action-buttons">
+                                    <form action="{% url 'provider_requests' %}" method="POST">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ request.id }}">
+                                        <button type="submit" name="action" value="accept" class="action-btn action-btn--accept">Accept</button>
+                                    </form>
+                                    <form action="{% url 'provider_requests' %}" method="POST">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ request.id }}">
+                                        <button type="submit" name="action" value="reject" class="action-btn action-btn--decline">Decline</button>
+                                    </form>
+                                    <button type="button" class="action-btn" onclick="window.openChatWith({seekerId: {{ request.user.id }}, requestId: {{ request.id }}})">
+                                        <i class="fa-solid fa-comment-dots"></i> Message
+                                    </button>
                                 </div>
                             </div>
-                            <p class="small text-muted italic mb-0">"{{ review.comment|truncatechars:80 }}"</p>
                         </div>
-                        {% empty %}
-                        <p class="text-muted small text-center py-3">No reviews yet.</p>
-                        {% endfor %}
+                    {% endfor %}
                     </div>
+                {% else %}
+                    <div class="dash-empty">
+                        <i class="fa-regular fa-folder-open"></i>
+                        <p>No requests found.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="dash-card">
+                <div class="card-head">
+                    <h5>Client feedback</h5>
+                    <i class="fa-solid fa-comment-dots"></i>
                 </div>
+
+                {% if recent_reviews %}
+                    <div class="review-list-scroll">
+                    {% for review in recent_reviews %}
+                        <div class="review-item" style="--row-i: {{ forloop.counter0 }};">
+                            <div class="review-top">
+                                <img class="review-avatar" src="{{ review.user.avatar_url }}" alt="{{ review.user.username }}">
+                                <span class="review-name">{{ review.user.username }}</span>
+                                <span class="review-stars">
+                                    {% for i in "12345" %}
+                                        <i class="{% if forloop.counter <= review.rating %}fa-solid{% else %}fa-regular is-empty{% endif %} fa-star"></i>
+                                    {% endfor %}
+                                </span>
+                            </div>
+                            <p class="review-comment">"{{ review.comment|truncatechars:80 }}"</p>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="dash-empty">
+                        <i class="fa-regular fa-comment"></i>
+                        <p>No reviews yet.</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
-    </main>
+    </div>
+
+    <div class="premium-banner dash-cta">
+        <p><strong>Want more customers?</strong> Add a new service listing to reach more people searching near you.</p>
+        <a href="{% url 'add_service' %}" class="premium-btn">Add a service</a>
+    </div>
+
+    <!-- ============ CHART EXPAND MODAL (mobile) ============ -->
+    <div class="chart-modal-overlay" id="providerChartModalOverlay">
+        <div class="chart-modal-box">
+            <button type="button" class="chart-modal-close" id="providerChartModalClose" aria-label="Close">&times;</button>
+            <h5>Monthly performance</h5>
+            <div id="providerChartModalCanvasWrap"></div>
+        </div>
+    </div>
+
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-    const months = JSON.parse('{{ months|escapejs }}');
-    const monthlyRequests = JSON.parse('{{ monthly_requests|escapejs }}');
-    const ctx = document.getElementById('requestsChart').getContext('2d');
+const monthlyRequestsData = JSON.parse('{{ monthly_requests|escapejs }}');
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: months,
-            datasets: [{
-                label: 'Requests',
-                data: monthlyRequests,
-                borderColor: '#0ea5e9',
-                backgroundColor: 'rgba(14, 165, 233, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: '#0ea5e9'
-            }]
+// Y-axis tops out at one more than the highest bar on the chart, instead of
+// a fixed scale that leaves the line looking flat on quieter months.
+const highestValue = monthlyRequestsData.length ? Math.max(...monthlyRequestsData) : 0;
+const yAxisMax = highestValue + 1;
+const yStepSize = yAxisMax <= 10 ? 1 : Math.ceil(yAxisMax / 5);
+
+// Chart shape: flatter/compact on small screens (a glanceable preview),
+// full/taller once expanded into the modal — see initChartExpand() below.
+const isMobileViewport = () => window.matchMedia('(max-width: 768px)').matches;
+const COMPACT_ASPECT_RATIO = 2.6;
+const EXPANDED_ASPECT_RATIO = 1.5;
+const DESKTOP_ASPECT_RATIO = 2;
+
+// Compact preview (mobile, collapsed) is a bare sparkline — no axis
+// ticks, no gridlines, no visible points, just the line — matching a
+// glanceable stock-ticker-style preview. Full axes + points return once
+// the chart is expanded into the modal (or on desktop, which never uses
+// the compact preview).
+function getScalesConfig(bare) {
+    if (bare) {
+        return {
+            y: { min: 0, max: yAxisMax, display: false },
+            x: { display: false }
+        };
+    }
+    return {
+        y: {
+            min: 0,
+            max: yAxisMax,
+            ticks: { stepSize: yStepSize, color: '#6B7280', font: { family: 'Inter', size: 11 } },
+            grid: { color: 'rgba(11,14,20,0.08)', borderDash: [4, 4] }
         },
-        options: {
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false } 
-            },
-            scales: {
-                y: { 
-                    grid: { borderDash: [5, 5] }, 
-                    beginAtZero: true,
-                    // --- Updated Axis Settings ---
-                    min: 0,
-                    max: 20,
-                    ticks: {
-                        stepSize: 5 // This ensures labels show 0, 5, 10, 15, 20
-                    }
-                    // ----------------------------
-                },
-                x: { 
-                    grid: { display: false } 
+        x: {
+            ticks: { color: '#6B7280', font: { family: 'Inter', size: 11 } },
+            grid: { display: false }
+        }
+    };
+}
+
+const startsBare = isMobileViewport();
+
+const requestChart = new Chart(document.getElementById('requestsChart'), {
+    type: 'line',
+    data: {
+        labels: JSON.parse('{{ months|escapejs }}'),
+        datasets: [{
+            label: 'Requests',
+            data: monthlyRequestsData,
+            borderColor: '#FF4D2E',
+            backgroundColor: 'rgba(255,77,46,0.08)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.4,
+            pointRadius: startsBare ? 0 : 3,
+            pointHoverRadius: startsBare ? 0 : 4,
+            pointBackgroundColor: '#FF4D2E',
+            pointBorderColor: '#F5F2ED',
+            pointBorderWidth: 1.5
+        }]
+    },
+    options: {
+        layout: { padding: startsBare ? 4 : 0 },
+        plugins: { legend: { display: false } },
+        scales: getScalesConfig(startsBare),
+        maintainAspectRatio: true,
+        aspectRatio: startsBare ? COMPACT_ASPECT_RATIO : DESKTOP_ASPECT_RATIO
+    }
+});
+
+/* ============ CHART EXPAND (mobile) ============
+   On small screens, tapping the chart card moves its canvas into a
+   full-size modal (same Chart instance — no duplicate data/render), then
+   moves it back on close. Desktop is unaffected; the click handler is a
+   no-op there. */
+function initChartExpand({ card, wrap, overlayId, modalWrapId, closeId, chart }) {
+    const overlay = document.getElementById(overlayId);
+    const modalWrap = document.getElementById(modalWrapId);
+    const closeBtn = document.getElementById(closeId);
+    const canvas = wrap.querySelector('canvas');
+    if (!card || !wrap || !overlay || !modalWrap || !closeBtn || !canvas || !chart) return;
+
+    function setChartStyle(bare) {
+        chart.options.scales = getScalesConfig(bare);
+        chart.options.layout = { padding: bare ? 4 : 0 };
+        chart.data.datasets[0].pointRadius = bare ? 0 : 3;
+        chart.data.datasets[0].pointHoverRadius = bare ? 0 : 4;
+    }
+
+    function openExpanded() {
+        if (!isMobileViewport()) return;
+        modalWrap.appendChild(canvas);
+        overlay.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        chart.options.aspectRatio = EXPANDED_ASPECT_RATIO;
+        setChartStyle(false);
+        requestAnimationFrame(() => requestAnimationFrame(() => chart.resize()));
+    }
+
+    function closeExpanded() {
+        wrap.appendChild(canvas);
+        overlay.classList.remove('is-open');
+        document.body.style.overflow = '';
+        const bare = isMobileViewport();
+        chart.options.aspectRatio = bare ? COMPACT_ASPECT_RATIO : DESKTOP_ASPECT_RATIO;
+        setChartStyle(bare);
+        requestAnimationFrame(() => requestAnimationFrame(() => chart.resize()));
+    }
+
+    card.addEventListener('click', openExpanded);
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeExpanded(); });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeExpanded(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeExpanded();
+    });
+
+    // Keep the (closed) chart's ratio in sync if the viewport crosses the
+    // mobile/desktop breakpoint (e.g. rotating a tablet, resizing a window).
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            if (overlay.classList.contains('is-open')) {
+                if (!isMobileViewport()) closeExpanded();
+                return;
+            }
+            const bare = isMobileViewport();
+            chart.options.aspectRatio = bare ? COMPACT_ASPECT_RATIO : DESKTOP_ASPECT_RATIO;
+            setChartStyle(bare);
+            chart.update();
+        }, 150);
+    });
+}
+
+initChartExpand({
+    card: document.getElementById('providerChartCard'),
+    wrap: document.getElementById('providerChartCanvasWrap'),
+    overlayId: 'providerChartModalOverlay',
+    modalWrapId: 'providerChartModalCanvasWrap',
+    closeId: 'providerChartModalClose',
+    chart: requestChart
+});
+
+/* ============ STAT COUNTER ANIMATION ============ */
+(function animateStatCounters() {
+    const counters = document.querySelectorAll('.seg-value[data-count-to]');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    counters.forEach((el, i) => {
+        const target = parseInt(el.dataset.countTo, 10) || 0;
+
+        if (prefersReducedMotion) {
+            el.textContent = target;
+            return;
+        }
+
+        const startDelay = 790 + i * 80;
+        const duration = 900;
+
+        setTimeout(() => {
+            const startTime = performance.now();
+
+            function tick(now) {
+                const progress = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(eased * target);
+                if (progress < 1) {
+                    requestAnimationFrame(tick);
+                } else {
+                    el.textContent = target;
                 }
             }
-        }
+            requestAnimationFrame(tick);
+        }, startDelay);
     });
+})();
 </script>
 
+{% include "Match/chat_widget.html" %}
 {% endblock %}

@@ -8,16 +8,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.mail import send_mail
 from django.middleware.csrf import rotate_token
-from .forms import (
-    UserRegistrationForm,
-    ServiceProviderForm,
-    CompanyDocumentForm,
-    ServiceForm, 
-    UserUpdateForm,
-    ServiceProviderUpdateForm, 
-    ReviewForm
-)
-from .models import User, ServiceProvider, Service, ServiceRequest, ServiceCategory, Review
+from .forms import *
+from .models import *
 from django.db.models import Count, Avg
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
@@ -26,15 +18,13 @@ import json
 from .utils import haversine_distance
 from decimal import Decimal
 # views.py
-from django.shortcuts import get_object_or_404
 from django.http import FileResponse
 from .models import CompanyDocument
 import csv
 import io
 from datetime import datetime, timedelta
 from django.http import HttpResponse
-from django.db.models import Count, Avg, Q
-from django.utils import timezone
+from django.db.models import Count, Avg, Q, Min
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -44,7 +34,89 @@ from reportlab.platypus import (
     HRFlowable, KeepTogether
 )
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
+import json
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.views.decorators.http import require_POST, require_GET
+from django.utils.timesince import timesince
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+import logging
 
+logger = logging.getLogger(__name__)
+User = get_user_model()
+
+# =========================
+# Step 2 signup: multi-service formset
+# =========================
+# Lets a provider list more than one service during signup (via the
+# "+ Add another service" button on step2_signup.html). Built on top of
+# the existing ServiceForm, so category/title/description/min_price
+# validation is unchanged — this just allows repeating that form.
+from django.forms import modelformset_factory
+
+ServiceFormSet = modelformset_factory(
+    Service,
+    form=ServiceForm,
+    extra=1,          # one empty row shown by default
+    can_delete=True,  # lets JS mark extra rows for removal
+    min_num=1,        # at least one service is required to sign up
+    validate_min=True,
+)
+
+
+def _push_chat_message(convo, message, recipient_user_id):
+    """
+    Broadcast a freshly-created Message over the channel layer the same
+    way ChatConsumer.receive() does: instantly to anyone with the thread
+    open (chat_<id> group), and as a badge/inbox update to the recipient
+    even if they don't (user_<id> group).
+
+    Wrapped defensively — if the channel layer / Redis is unreachable
+    (e.g. Redis isn't running locally), the message still saves to the
+    DB and shows up next time the widget polls; it just won't arrive
+    instantly over the socket.
+    """
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
+
+    sender_name = message.sender.get_full_name() or message.sender.username
+    unread_count = convo.unread_count_for(convo.other_participant(message.sender))
+    total_unread = Message.objects.filter(
+        conversation__seeker_id=recipient_user_id, is_read=False
+    ).exclude(sender_id=recipient_user_id).count() if convo.seeker_id == recipient_user_id else \
+        Message.objects.filter(
+            conversation__provider__user_id=recipient_user_id, is_read=False
+        ).exclude(sender_id=recipient_user_id).count()
+
+    try:
+        async_to_sync(channel_layer.group_send)(f"chat_{convo.id}", {
+            'type': 'chat.message',
+            'id': message.id,
+            'sender_id': message.sender_id,
+            'sender_name': sender_name,
+            'content': message.content,
+            'created_at': message.created_at.isoformat(),
+        })
+        async_to_sync(channel_layer.group_send)(f"user_{recipient_user_id}", {
+            'type': 'chat.notify',
+            'conversation_id': convo.id,
+            'sender_name': sender_name,
+            'preview': message.content[:120],
+            'unread_count': unread_count,
+            'total_unread': total_unread,
+            'created_at': message.created_at.isoformat(),
+        })
+    except Exception:
+        logger.warning(
+            "Couldn't push chat message %s over the channel layer "
+            "(is Redis running?) — it was still saved to the DB.",
+            message.id, exc_info=True,
+        )
 
 
 def view_document(request, doc_id):
@@ -61,7 +133,11 @@ def landing_page(request):
 def get_started(request):
     return render(request, 'Match/get_started.html')
 
+def about_page(request):
+    return render(request, 'Match/about.html')
 
+def services(request):
+    return render(request, 'Match/services.html')
 # =========================
 # Normal User Registration
 # =========================
@@ -89,6 +165,46 @@ def register_user(request):
         return redirect('login')
 
     return render(request, 'Match/register_user.html')
+
+@csrf_exempt
+def api_register(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "Only POST requests are allowed"},
+            status=405
+        )
+
+    try:
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        password = request.POST.get("password")
+        location = request.POST.get("location")
+
+        if User.objects.filter(username=username).exists():
+            return JsonResponse(
+                {"success": False, "error": "Username already exists"},
+                status=400
+            )
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            location=location,
+            role="user"
+        )
+
+        return JsonResponse({
+            "success": True,
+            "message": "Registration successful",
+            "user_id": user.id
+        })
+
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)},
+            status=500
+        )
 
 # =========================
 # AUTH
@@ -132,14 +248,106 @@ def login_view(request):
 
     return render(request, 'Match/login.html')
 
+@csrf_exempt
+def api_login(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"success": False, "error": "Only POST requests allowed"},
+            status=405
+        )
+
+    try:
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(
+            request,
+            username=username,
+            password=password
+        )
+
+        if user is None:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Invalid username or password"
+                },
+                status=401
+            )
+
+        login(request, user)
+
+        provider_completed = False
+
+        if user.role == "company":
+            provider = ServiceProvider.objects.filter(
+                user=user
+            ).first()
+
+            if provider:
+                provider_completed = provider.profile_completed
+
+        return JsonResponse({
+            "success": True,
+            "message": "Login successful",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+            },
+            "profile_completed": provider_completed
+        })
+
+    except Exception as e:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e)
+            },
+            status=500
+        )
+
 def logout_view(request):
     logout(request)
     return redirect('login')
 
 # =========================
+# Step 0: Choose a Package (Pro Signup)
+# =========================
+
+def provider_signup_choose_package(request):
+    """
+    Entry point for 'Sign up as Pro'. The user picks a package BEFORE
+    creating their account. The chosen plan id is stashed in the
+    session and applied once their ServiceProvider profile exists
+    (end of Step 2).
+    """
+    plans = SubscriptionPlan.objects.filter(is_active=True)
+
+    plan_id = request.GET.get('plan') or request.POST.get('plan')
+    if plan_id:
+        plan = get_object_or_404(SubscriptionPlan, id=plan_id, is_active=True)
+        request.session['signup_plan_id'] = plan.id
+        return redirect('provider_signup_step1')
+
+    return render(request, 'Match/choose_signup_package.html', {
+        'plans': plans,
+    })
+
+
+# =========================
 # Step 1: Provider Account
 # =========================
 def provider_signup_step1(request):
+    # A package must be chosen first.
+    if 'signup_plan_id' not in request.session:
+        return redirect('provider_signup_choose_package')
+
+    selected_plan = get_object_or_404(
+        SubscriptionPlan, id=request.session['signup_plan_id'], is_active=True
+    )
+
     if request.method == 'POST':
         user_form = UserRegistrationForm(request.POST)
         if user_form.is_valid():
@@ -149,6 +357,10 @@ def provider_signup_step1(request):
             user.save()
 
             # Auto-login the new user
+            # Explicitly set the backend since this user was created manually
+            # (not via authenticate()), and multiple AUTHENTICATION_BACKENDS
+            # are configured in settings.py.
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
             login(request, user)
 
             # Redirect to Step 2
@@ -158,7 +370,10 @@ def provider_signup_step1(request):
     else:
         user_form = UserRegistrationForm()
 
-    return render(request, 'Match/step1_signup.html', {'user_form': user_form})
+    return render(request, 'Match/step1_signup.html', {
+        'user_form': user_form,
+        'selected_plan': selected_plan,
+    })
 
 
 # =========================
@@ -177,6 +392,12 @@ def provider_signup_step2(request):
     if provider.profile_completed:
         return redirect('provider_dashboard')
 
+    # The plan chosen back in Step 0, if any.
+    selected_plan = None
+    plan_id = request.session.get('signup_plan_id')
+    if plan_id:
+        selected_plan = SubscriptionPlan.objects.filter(id=plan_id, is_active=True).first()
+
     if request.method == 'POST':
         provider_form = ServiceProviderForm(
             request.POST,
@@ -184,40 +405,73 @@ def provider_signup_step2(request):
             prefix='provider'
         )
 
-        service_form = ServiceForm(
+        service_formset = ServiceFormSet(
             request.POST,
-            prefix='service'
+            prefix='service',
+            queryset=Service.objects.none(),
         )
 
-        document_form = CompanyDocumentForm(
+        documents_form = CompanyDocumentsForm(
             request.POST,
             request.FILES,
             prefix='doc'
         )
 
-        if provider_form.is_valid() and service_form.is_valid():
+        if provider_form.is_valid() and service_formset.is_valid() and documents_form.is_valid():
 
             # Save provider
             provider = provider_form.save(commit=False)
             provider.profile_completed = True
             provider.save()
 
-            # Save service (IMPORTANT for Option 3 category logic)
-            service = service_form.save(commit=False)
-            service.provider = provider
-            service.category = service_form.cleaned_data['category']
-            service.save()
+            # Save every service the provider listed (skipping blank
+            # extra rows and any marked for removal via the "Remove"
+            # button). IMPORTANT: keep the category resolution logic
+            # from Option 3 for each row.
+            new_services = []
+            for form in service_formset:
+                if not form.cleaned_data or form.cleaned_data.get('DELETE'):
+                    continue
+                service = form.save(commit=False)
+                service.provider = provider
+                service.category = form.cleaned_data['category']
+                new_services.append(service)
 
-            # Save document ONLY if file uploaded
-            if (
-                document_form.is_valid()
-                and document_form.cleaned_data.get('document_file')
-            ):
-                document = document_form.save(commit=False)
-                document.service_provider = provider
-                document.save()
+            # Respect the chosen package's listing limit (if it has one —
+            # Freelancer/Premium are unlimited, Starter/Growth are capped).
+            if selected_plan and selected_plan.max_services is not None:
+                new_services = new_services[:selected_plan.max_services]
 
-            messages.success(request, "Profile completed successfully!")
+            for service in new_services:
+                service.save()
+
+            # Save each verification document as its own CompanyDocument
+            # row, labeled from the fixed set (Business Cert / KRA PIN / ID)
+            # rather than a free-text name.
+            for field_name, label in CompanyDocumentsForm.DOCUMENT_LABELS.items():
+                uploaded_file = documents_form.cleaned_data.get(field_name)
+                if uploaded_file:
+                    CompanyDocument.objects.create(
+                        service_provider=provider,
+                        document_name=label,
+                        document_file=uploaded_file,
+                    )
+
+            # Activate the package chosen back in Step 0
+            if selected_plan:
+                ProviderSubscription.objects.create(
+                    provider=provider,
+                    plan=selected_plan,
+                    status='active',
+                )
+                request.session.pop('signup_plan_id', None)
+                messages.success(
+                    request,
+                    f"Profile completed and you're now on the {selected_plan.name} package!"
+                )
+            else:
+                messages.success(request, "Profile completed successfully!")
+
             return redirect('provider_dashboard')
 
         else:
@@ -228,13 +482,14 @@ def provider_signup_step2(request):
             instance=provider,
             prefix='provider'
         )
-        service_form = ServiceForm(prefix='service')
-        document_form = CompanyDocumentForm(prefix='doc')
+        service_formset = ServiceFormSet(prefix='service', queryset=Service.objects.none())
+        documents_form = CompanyDocumentsForm(prefix='doc')
 
     context = {
         'provider_form': provider_form,
-        'service_form': service_form,
-        'document_form': document_form,
+        'service_formset': service_formset,
+        'documents_form': documents_form,
+        'selected_plan': selected_plan,
     }
 
     return render(request, 'Match/step2_signup.html', context)
@@ -250,8 +505,24 @@ def add_service(request):
 
     provider = get_object_or_404(ServiceProvider, user=request.user)
     categories = ServiceCategory.objects.all()
+    subscription = provider.active_subscription
+
+    # ---- Package usage info (for the template's limit banner/progress bar) ----
+    services_used = provider.services.filter(is_active=True).count()
+    services_limit = subscription.plan.max_services if subscription else None
+    limit_reached = bool(subscription and not subscription.can_add_service())
+    no_package = subscription is None
 
     if request.method == 'POST':
+        # Re-check right before saving in case usage changed since the page loaded.
+        if limit_reached:
+            messages.error(
+                request,
+                f"You've reached the service listing limit ({subscription.plan.max_services}) "
+                f"for your '{subscription.plan.name}' package. Upgrade your package to list more services."
+            )
+            return redirect('subscription_plans')
+
         form = ServiceForm(request.POST)
 
         if form.is_valid():
@@ -292,7 +563,14 @@ Please log in to the admin panel to verify it.
                 except Exception as e:
                     print("Email error:", e)
 
-            messages.success(request, f"{service.title} has been added successfully and is awaiting admin verification.")
+            if service.min_price is None:
+                messages.warning(
+                    request,
+                    f"{service.title} was added, but you haven't set a rate card (minimum price) for it yet. "
+                    f"Add one from My Services so customers know your starting rate."
+                )
+            else:
+                messages.success(request, f"{service.title} has been added successfully and is awaiting admin verification.")
             return redirect('manage_services')
 
         else:
@@ -304,8 +582,14 @@ Please log in to the admin panel to verify it.
     return render(request, 'Match/add_service.html', {
         'form': form,
         'provider': provider,
-        'categories': categories
+        'categories': categories,
+        'subscription': subscription,
+        'services_used': services_used,
+        'services_limit': services_limit,
+        'limit_reached': limit_reached,
+        'no_package': no_package,
     })
+
 
 @login_required
 def edit_service(request, service_id):
@@ -385,7 +669,7 @@ def user_dashboard(request):
     # =============================
     # RECENT REQUESTS
     # =============================
-    recent_requests = requests_qs.order_by('-created_at')[:5]
+    recent_requests = requests_qs.order_by('-created_at')[:10]
 
     # =============================
     # MONTHLY REQUEST TREND
@@ -442,7 +726,7 @@ def provider_dashboard(request):
     # BASE QUERYSET
     # =========================================
     requests_qs = ServiceRequest.objects.filter(
-        service__provider=provider
+        provider=provider
     )
 
     # =========================================
@@ -479,7 +763,7 @@ def provider_dashboard(request):
     ).select_related(
         'service',
         'user'
-    ).order_by('-created_at')[:5]
+    ).order_by('-created_at')[:10]
 
     # =========================================
     # RATINGS
@@ -492,7 +776,7 @@ def provider_dashboard(request):
 
     recent_reviews = provider.reviews.order_by(
         '-created_at'
-    )[:5]
+    )[:10]
 
     # =========================================
     # MONTHLY TREND (LAST 6 MONTHS)
@@ -526,6 +810,17 @@ def provider_dashboard(request):
         monthly_requests.append(count)
 
     # =========================================
+    # PACKAGE / SUBSCRIPTION SUMMARY
+    # =========================================
+    subscription = provider.active_subscription
+    subscription_warning = bool(subscription and subscription.days_remaining <= 3)
+
+    # =========================================
+    # RATE CARD (MINIMUM PRICE) REMINDER
+    # =========================================
+    services_missing_rate_card = provider.services_missing_rate_card
+
+    # =========================================
     # CONTEXT
     # =========================================
     context = {
@@ -534,6 +829,10 @@ def provider_dashboard(request):
 
         # Dashboard Requests
         'latest_requests': latest_requests,
+
+        # Rate card reminder
+        'services_missing_rate_card': services_missing_rate_card,
+        'missing_rate_card_count': services_missing_rate_card.count(),
 
         # Stats
         'total_requests': total_requests,
@@ -547,6 +846,10 @@ def provider_dashboard(request):
         'avg_rating': avg_rating,
         'recent_reviews': recent_reviews,
 
+        # Package / Subscription
+        'subscription': subscription,
+        'subscription_warning': subscription_warning,
+
         # Charts
         'months': json.dumps(months),
         'monthly_requests': json.dumps(monthly_requests),
@@ -558,58 +861,258 @@ def provider_dashboard(request):
         context
     )
 # =========================
+# PREMIUM LISTING / SUBSCRIPTION PACKAGES
+# =========================
+
+@login_required
+def subscription_plans(request):
+    """
+    Lets a company browse the available premium packages and see which
+    one (if any) it's currently on.
+    """
+    if request.user.role != 'company':
+        return redirect('login')
+
+    provider = get_object_or_404(ServiceProvider, user=request.user)
+    plans = SubscriptionPlan.objects.filter(is_active=True)
+    current_subscription = provider.active_subscription
+
+    return render(request, 'Match/subscription_plans.html', {
+        'provider': provider,
+        'plans': plans,
+        'current_subscription': current_subscription,
+    })
+
+
+@login_required
+def subscribe_to_plan(request, plan_id):
+    """
+    Subscribes the provider to a chosen plan. If they already have an
+    active subscription, it's marked expired and replaced (i.e. this
+    doubles as an upgrade/downgrade action).
+
+    NOTE: this creates the subscription record directly. If you take
+    payments, hook your payment gateway (e.g. M-Pesa/Stripe) in before
+    this and only call it once payment is confirmed.
+    """
+    if request.user.role != 'company':
+        return redirect('login')
+
+    provider = get_object_or_404(ServiceProvider, user=request.user)
+    plan = get_object_or_404(SubscriptionPlan, id=plan_id, is_active=True)
+
+    if request.method == 'POST':
+        existing = provider.active_subscription
+        if existing:
+            existing.status = 'expired'
+            existing.save(update_fields=['status'])
+
+        ProviderSubscription.objects.create(
+            provider=provider,
+            plan=plan,
+            status='active',
+        )
+
+        messages.success(request, f"You're now subscribed to the {plan.name} package!")
+        return redirect('my_subscription')
+
+    return render(request, 'Match/confirm_subscription.html', {
+        'provider': provider,
+        'plan': plan,
+    })
+
+
+@login_required
+def my_subscription(request):
+    """
+    Shows the provider their current package, usage against its limits,
+    and a renewal reminder as the period runs down.
+    """
+    if request.user.role != 'company':
+        return redirect('login')
+
+    provider = get_object_or_404(ServiceProvider, user=request.user)
+    subscription = provider.active_subscription
+
+    renewal_warning = None
+    if subscription:
+        if subscription.days_remaining <= 3:
+            renewal_warning = (
+                f"Your '{subscription.plan.name}' package expires in "
+                f"{subscription.days_remaining} day(s). Renew now to avoid losing your listing limits."
+            )
+
+    history = provider.subscriptions.order_by('-created_at')[:10]
+
+    return render(request, 'Match/my_subscription.html', {
+        'provider': provider,
+        'subscription': subscription,
+        'renewal_warning': renewal_warning,
+        'history': history,
+    })
+
+
+@login_required
+def renew_subscription(request, subscription_id):
+    """
+    Renews a (usually expired, or about-to-expire) subscription into a
+    fresh billing period on the same plan.
+    """
+    if request.user.role != 'company':
+        return redirect('login')
+
+    provider = get_object_or_404(ServiceProvider, user=request.user)
+    subscription = get_object_or_404(ProviderSubscription, id=subscription_id, provider=provider)
+
+    if request.method == 'POST':
+        subscription.renew()
+        messages.success(request, f"Your '{subscription.plan.name}' package has been renewed!")
+        return redirect('my_subscription')
+
+    return render(request, 'Match/confirm_renewal.html', {
+        'provider': provider,
+        'subscription': subscription,
+    })
+
+
+# =========================
 # SERVICE REQUEST
 # =========================
+
 @login_required
 def search_services(request):
-    query = request.GET.get('q')
-    user_lat = request.GET.get("lat")
-    user_lon = request.GET.get("lon")
-
-    # Only fetch active services
-    services = Service.objects.filter(is_active=True, is_verified=True)
-
-    # Optional: filter only providers with completed profiles
-    # services = services.filter(provider__profile_completed=True)
-
-    # Search filter
-    if query:
-        services = services.filter(title__icontains=query)
-
-    results = []
-
-    for service in services:
-        provider = service.provider
-        distance = None
-
-        try:
-            if user_lat and user_lon and provider.latitude and provider.longitude:
-                distance = haversine_distance(
-                    float(user_lat),
-                    float(user_lon),
-                    float(provider.latitude),
-                    float(provider.longitude)
-                )
-        except ValueError:
-            distance = None
-
-        results.append({
-            "service": service,
-            "distance": round(distance, 2) if distance else None
-        })
-
-    # Sort by distance if available
-    results = sorted(
-        results,
-        key=lambda x: x["distance"] if x["distance"] is not None else 9999
-    )
+    """
+    Renders the page with:
+    - a dropdown of all active+verified services (no more text-search cards)
+    - the map modal, which the user opens after picking a service
+    The actual "find nearby providers" step now happens via an AJAX call
+    to provider_locations_for_service() below, once the user has picked
+    both a service and a location.
+    """
+    services = Service.objects.filter(
+        is_active=True,
+        is_verified=True
+    ).select_related('provider', 'category').order_by('title')
 
     context = {
-        "services": results,
-        "query": query
+        "services": services,
     }
 
     return render(request, "Match/service_results.html", context)
+
+
+@login_required
+def provider_locations_for_service(request, service_id):
+    """
+    AJAX endpoint: given a service and a lat/lng (query params), returns
+    JSON with providers offering services in that SAME CATEGORY, within
+    20km, including rating data.
+
+    Note: Service.provider is a single FK — one Service row belongs to
+    exactly one provider. So matching `services=service` directly would
+    only ever return that one provider. Instead we match by category,
+    the same way the original create_request view did, so every
+    provider offering similar work in the area shows up as a pin.
+    """
+    service = get_object_or_404(Service, id=service_id, is_active=True, is_verified=True)
+
+    user_lat = request.GET.get("lat")
+    user_lng = request.GET.get("lng")
+
+    providers = ServiceProvider.objects.filter(
+        services__category=service.category,
+        services__is_active=True,
+        is_active=True,
+        latitude__isnull=False,
+        longitude__isnull=False
+    ).distinct().annotate(
+        avg_rating=Avg('reviews__rating'),
+        review_count=Count('reviews'),
+        min_price=Min(
+            'services__min_price',
+            filter=Q(services__category=service.category, services__is_active=True)
+        ),
+    )
+
+    nearby_providers = []
+
+    if user_lat and user_lng:
+        try:
+            user_lat = float(user_lat)
+            user_lng = float(user_lng)
+        except ValueError:
+            return JsonResponse({"error": "Invalid coordinates"}, status=400)
+
+        for provider in providers:
+            distance = haversine_distance(
+                user_lat,
+                user_lng,
+                provider.latitude,
+                provider.longitude
+            )
+            if distance <= 20:
+                nearby_providers.append((provider, round(distance, 2)))
+    else:
+        nearby_providers = [(p, None) for p in providers]
+
+    # Premium (featured-plan) providers are boosted to the top of results.
+    nearby_providers.sort(key=lambda pair: (not pair[0].is_premium, pair[1] if pair[1] is not None else 0))
+
+    providers_data = [
+        {
+            "id": p.id,
+            "name": p.company_name,
+            "lat": float(p.latitude),
+            "lng": float(p.longitude),
+            "address": p.address,
+            "rating": round(float(p.avg_rating), 1) if p.avg_rating is not None else None,
+            "reviewCount": p.review_count,
+            "distanceKm": dist,
+            "isPremium": p.is_premium,
+            "minPrice": float(p.min_price) if p.min_price is not None else None,
+            # Every provider in this response was matched via
+            # services__category=service.category, so this is the
+            # category driving the map/list icon on the frontend.
+            "category": service.category.name,
+            "categorySlug": service.category.slug,
+        }
+        for p, dist in nearby_providers
+    ]
+
+    return JsonResponse({"providers": providers_data, "service_title": service.title})
+
+
+@login_required
+def provider_reviews(request, provider_id):
+    """
+    AJAX endpoint: returns the reviews left for a specific provider,
+    most recent first, for display in the map's provider panel.
+    """
+    provider = get_object_or_404(ServiceProvider, id=provider_id)
+
+    reviews_qs = Review.objects.filter(
+        provider=provider
+    ).select_related('user').order_by('-created_at')
+
+    reviews_data = [
+        {
+            "id": r.id,
+            "rating": r.rating,
+            "comment": r.comment,
+            "username": r.user.get_full_name() or r.user.username,
+            "createdAt": r.created_at.strftime("%d %b %Y"),
+        }
+        for r in reviews_qs
+    ]
+
+    avg_rating = reviews_qs.aggregate(avg=Avg('rating'))['avg']
+
+    return JsonResponse({
+        "provider_id": provider.id,
+        "reviews": reviews_data,
+        "count": reviews_qs.count(),
+        "avg_rating": round(avg_rating, 1) if avg_rating else None,
+    })
 
 
 @login_required
@@ -617,66 +1120,72 @@ def create_request(request, service_id):
 
     service = get_object_or_404(Service, id=service_id)
 
-    # Get all providers offering the same category
-    providers = ServiceProvider.objects.filter(
-        services__category=service.category,
-        services__is_active=True,
-        is_active=True,
-        latitude__isnull=False,
-        longitude__isnull=False
-    ).distinct()
-
-    nearby_providers = []
-
-    user_lat = request.GET.get("lat")
-    user_lng = request.GET.get("lng")
-
-    # Filter providers within 20km
-    if user_lat and user_lng:
-
-        user_lat = float(user_lat)
-        user_lng = float(user_lng)
-
-        for provider in providers:
-
-            distance = haversine_distance(
-                user_lat,
-                user_lng,
-                provider.latitude,
-                provider.longitude
-            )
-
-            if distance <= 20:
-                nearby_providers.append(provider)
-
-    else:
-        nearby_providers = providers
-
-
     if request.method == "POST":
 
         location = request.POST.get('location')
         description = request.POST.get('description')
         latitude = request.POST.get('latitude')
         longitude = request.POST.get('longitude')
+        provider_id = request.POST.get('provider_id')
 
-        ServiceRequest.objects.create(
+        if not provider_id:
+            messages.error(request, "Please select a provider before submitting your request.")
+            return redirect('search_services')
+
+        chosen_provider = get_object_or_404(ServiceProvider, id=provider_id)
+
+        # Enforce the provider's plan cap on incoming customer requests, if they have a plan.
+        chosen_subscription = chosen_provider.active_subscription
+        if chosen_subscription and not chosen_subscription.can_receive_request():
+            messages.error(
+                request,
+                f"{chosen_provider.company_name} has reached their request limit for this "
+                f"period and can't accept new requests right now. Please try another provider."
+            )
+            return redirect('search_services')
+
+        service_request = ServiceRequest.objects.create(
             user=request.user,
             service=service,
+            provider=chosen_provider,
             location=location,
             description=description,
             latitude=Decimal(latitude) if latitude else None,
             longitude=Decimal(longitude) if longitude else None
         )
 
-        provider_email = service.provider.user.email
+        if chosen_subscription:
+            chosen_subscription.register_request()
+
+        # ---- auto-open a chat thread with an automated welcome message ----
+        convo, _ = Conversation.objects.get_or_create(
+            seeker=request.user, provider=chosen_provider
+        )
+        if convo.service_request_id != service_request.id:
+            convo.service_request = service_request
+            convo.save(update_fields=['service_request'])
+
+        auto_message = Message.objects.create(
+            conversation=convo,
+            sender=chosen_provider.user,
+            content=(
+                f"Hi {request.user.get_full_name() or request.user.username}, thanks for "
+                f"requesting \"{service.title}\"! We've received your request and will be "
+                f"in touch shortly to confirm the details."
+            ),
+        )
+        convo.save(update_fields=[])  # bump updated_at so this thread sorts to the top
+
+        _push_chat_message(convo, auto_message, recipient_user_id=request.user.id)
+
+        provider_email = chosen_provider.user.email
 
         subject = f"New Service Request for {service.title}"
 
         message = f"""
-Hi {service.provider.user.username},
+Hi,
 
-You have received a new request for your service "{service.title}" from {request.user.username}.
+You have received a new request for "{service.title}" from {request.user.username}.
 
 Location: {location}
 Description: {description}
@@ -693,14 +1202,15 @@ Your Service Platform
 
         return redirect('user_dashboard')
 
-    return render(request, "Match/request.html", {
-        "service": service,
-        "providers": nearby_providers
-    })
-    
+    return redirect('search_services')
 @login_required
 def profile_view(request):
     user = request.user
+    if request.user.role == 'company':
+        base_template = 'Match/provider_base.html'
+        # ... build provider_form
+    else:
+        base_template = 'Match/user_base.html'
 
     provider = None
     user_form = None
@@ -731,6 +1241,7 @@ def profile_view(request):
             user_form = UserUpdateForm(instance=user)
 
     context = {
+        "base_template": base_template,
         "user_form": user_form,
         "provider_form": provider_form,
         "provider": provider,   # ✅ ADD THIS
@@ -750,7 +1261,7 @@ def provider_requests(request):
     provider = get_object_or_404(ServiceProvider, user=request.user)
 
     # Base queryset: all requests for this provider
-    requests_qs = ServiceRequest.objects.filter(service__provider=provider).order_by('-created_at')
+    requests_qs = ServiceRequest.objects.filter(provider=provider).order_by('-created_at')
 
     # Optional filter by status
     status_filter = request.GET.get('status')
@@ -771,7 +1282,7 @@ def my_requests(request):
         return redirect('provider_dashboard')
 
     requests_qs = ServiceRequest.objects.select_related(
-        'service', 'service__provider'
+        'service', 'provider'
     ).filter(user=request.user).order_by('-created_at')
 
     return render(request, 'Match/my_requests.html', {
@@ -783,7 +1294,7 @@ def accept_request(request, request_id):
     if request.user.role != 'company':
         return redirect('login')
 
-    service_request = get_object_or_404(ServiceRequest, id=request_id, service__provider__user=request.user)
+    service_request = get_object_or_404(ServiceRequest, id=request_id, provider__user=request.user)
 
     if service_request.status == 'pending':
         service_request.status = 'accepted'
@@ -796,7 +1307,7 @@ def accept_request(request, request_id):
         message = f"""
 Hi {service_request.user.username},
 
-Your request for {service_request.service.title} has been accepted by {service_request.service.provider.company_name}.
+Your request for {service_request.service.title} has been accepted by {service_request.provider.company_name}.
 
 Please log in to your dashboard for details.
 
@@ -821,7 +1332,7 @@ def complete_request(request, request_id):
     if request.user.role != 'company':
         return redirect('login')
 
-    service_request = get_object_or_404(ServiceRequest, id=request_id, service__provider__user=request.user)
+    service_request = get_object_or_404(ServiceRequest, id=request_id, provider__user=request.user)
 
     if service_request.status != 'completed':
         service_request.status = 'completed'
@@ -833,7 +1344,7 @@ def complete_request(request, request_id):
             send_mail(
                 f"Your service '{service_request.service.title}' is completed",
                 f"Hi {service_request.user.username},\n\n"
-                f"The service you requested from {service_request.service.provider.company_name} has been marked as completed.\n"
+                f"The service you requested from {service_request.provider.company_name} has been marked as completed.\n"
                 "Please log in to provide a review.\n\nThanks,\nYour Service Platform",
                 settings.DEFAULT_FROM_EMAIL,
                 [service_request.user.email],
@@ -850,7 +1361,7 @@ def reject_request(request, request_id):
     if request.user.role != 'company':
         return redirect('login')
 
-    service_request = get_object_or_404(ServiceRequest, id=request_id, service__provider__user=request.user)
+    service_request = get_object_or_404(ServiceRequest, id=request_id, provider__user=request.user)
 
     if service_request.status == 'pending':
         service_request.status = 'rejected'
@@ -880,7 +1391,7 @@ def submit_review(request, request_id):
         if form.is_valid():
             review = form.save(commit=False)
             review.service_request = service_request
-            review.provider = service_request.service.provider
+            review.provider = service_request.provider
             review.user = request.user
             review.save()
             messages.success(request, "Thank you for your review!")
@@ -910,7 +1421,7 @@ def get_report_data(provider):
 
     from .models import ServiceRequest, Review
 
-    requests_qs = ServiceRequest.objects.filter(service__provider=provider)
+    requests_qs = ServiceRequest.objects.filter(provider=provider)
     reviews_qs = Review.objects.filter(provider=provider)
 
     # ─────────────────────────────────────────────────────
@@ -1363,5 +1874,259 @@ def export_pdf(request, provider_id):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+@login_required
+def settings_view(request):
+    """
+    Unified settings page for both Service Seekers and Providers.
+    Tabs: Profile, Security, Notifications, Appearance, Privacy, Danger Zone.
+    Each tab posts to the same view with a hidden `form_name` field so we
+    know which sub-form to validate; the rest re-render with their current
+    (unsubmitted) values.
+    """
+    user = request.user
+    provider = None
+    if user.role == 'company':
+        provider, _ = ServiceProvider.objects.get_or_create(user=user)
  
-    
+    # Instantiate every form with current data by default
+    if user.role == 'company':
+        user_form = ServiceProviderUpdateForm(instance=provider)
+    else:
+        user_form = UserUpdateForm(instance=user)
+ 
+    password_form = PasswordChangeForm(user=user)
+    notif_form = NotificationSettingsForm(instance=user)
+    privacy_form = PrivacySettingsForm(instance=user)
+    appearance_form = AppearanceSettingsForm(instance=user)
+    avatar_form = AvatarUploadForm(instance=user)
+    deactivate_form = DeactivateAccountForm()
+ 
+    active_tab = request.POST.get('form_name', request.GET.get('tab', 'profile'))
+ 
+    if request.method == 'POST':
+        form_name = request.POST.get('form_name')
+ 
+        if form_name == 'profile':
+            if user.role == 'company':
+                user_form = ServiceProviderUpdateForm(request.POST, instance=provider)
+            else:
+                user_form = UserUpdateForm(request.POST, instance=user)
+            if user_form.is_valid():
+                user_form.save()
+                messages.success(request, "Profile updated successfully.")
+                return redirect(f"{request.path}?tab=profile")
+ 
+        elif form_name == 'avatar':
+            avatar_form = AvatarUploadForm(request.POST, request.FILES, instance=user)
+            if avatar_form.is_valid():
+                avatar_form.save()
+                messages.success(request, "Profile photo updated.")
+                return redirect(f"{request.path}?tab=profile")
+ 
+        elif form_name == 'password':
+            password_form = PasswordChangeForm(user=user, data=request.POST)
+            if password_form.is_valid():
+                password_form.save()
+                update_session_auth_hash(request, password_form.user)  # keep user logged in
+                messages.success(request, "Password changed successfully.")
+                return redirect(f"{request.path}?tab=security")
+ 
+        elif form_name == 'notifications':
+            notif_form = NotificationSettingsForm(request.POST, instance=user)
+            if notif_form.is_valid():
+                notif_form.save()
+                messages.success(request, "Notification preferences saved.")
+                return redirect(f"{request.path}?tab=notifications")
+ 
+        elif form_name == 'privacy':
+            privacy_form = PrivacySettingsForm(request.POST, instance=user)
+            if privacy_form.is_valid():
+                privacy_form.save()
+                messages.success(request, "Privacy settings saved.")
+                return redirect(f"{request.path}?tab=privacy")
+ 
+        elif form_name == 'appearance':
+            appearance_form = AppearanceSettingsForm(request.POST, instance=user)
+            if appearance_form.is_valid():
+                appearance_form.save()
+                messages.success(request, "Appearance settings saved.")
+                return redirect(f"{request.path}?tab=appearance")
+ 
+        elif form_name == 'deactivate':
+            deactivate_form = DeactivateAccountForm(request.POST)
+            if deactivate_form.is_valid():
+                if user.check_password(deactivate_form.cleaned_data['password']):
+                    user.is_active = False
+                    user.save(update_fields=['is_active'])
+                    logout(request)
+                    messages.success(request, "Your account has been deactivated.")
+                    return redirect('landing_page')
+                else:
+                    deactivate_form.add_error('password', 'Incorrect password.')
+ 
+        active_tab = form_name or active_tab
+ 
+    context = {
+        'base_template': 'Match/provider_base.html' if user.role == 'company' else 'Match/user_base.html',
+        'provider': provider,
+        'user_form': user_form,
+        'avatar_form': avatar_form,
+        'password_form': password_form,
+        'notif_form': notif_form,
+        'privacy_form': privacy_form,
+        'appearance_form': appearance_form,
+        'deactivate_form': deactivate_form,
+        'active_tab': active_tab,
+    }
+    return render(request, 'Match/settings.html', context)
+ 
+ 
+@login_required
+@require_POST
+def update_theme_ajax(request):
+    """
+    Instant theme switch (no full page reload). Called from the toggle in
+    the settings page (and optionally a quick-toggle in the sidebar).
+    Persists the choice on the User model so it follows them across devices,
+    while the client also mirrors it into localStorage for a flash-free load.
+    """
+    theme = request.POST.get('theme')
+    if theme not in dict(User.THEME_CHOICES):
+        return JsonResponse({'success': False, 'error': 'Invalid theme'}, status=400)
+ 
+    request.user.theme_preference = theme
+    request.user.save(update_fields=['theme_preference'])
+    return JsonResponse({'success': True, 'theme': theme})
+
+@login_required
+@require_POST
+def upload_avatar_ajax(request):
+    """
+    Lets a user swap their profile photo from anywhere in the app (the
+    sidebar avatar, in this case) without a full page reload. Reuses
+    the same AvatarUploadForm as the settings page so validation stays
+    consistent between the two entry points.
+    """
+    form = AvatarUploadForm(request.POST, request.FILES, instance=request.user)
+
+    if form.is_valid():
+        form.save()
+        return JsonResponse({
+            'success': True,
+            'avatar_url': request.user.avatar_url,
+        })
+
+    # Surface the first validation error (e.g. bad file type / too large)
+    first_error = next(iter(form.errors.get('avatar', [])), 'Could not upload that image.')
+    return JsonResponse({'success': False, 'error': first_error}, status=400)
+
+
+#======================================
+# CHATBOT SECTION
+#======================================
+def _avatar_url(user):
+    return user.avatar_url
+ 
+ 
+def _conversation_payload(convo, for_user):
+    other = convo.other_participant(for_user)
+    last = convo.last_message
+    is_provider_side = for_user.id == convo.provider.user_id
+    other_label = convo.seeker.get_full_name() or convo.seeker.username if is_provider_side \
+        else convo.provider.company_name
+ 
+    return {
+        'id': convo.id,
+        'other_user_id': other.id,
+        'other_name': other_label,
+        'other_avatar': _avatar_url(other),
+        'last_message': last.content if last else '',
+        'last_message_at': timesince(last.created_at) + ' ago' if last else '',
+        'last_message_ts': last.created_at.isoformat() if last else convo.created_at.isoformat(),
+        'unread_count': convo.unread_count_for(for_user),
+        'service_request_id': convo.service_request_id,
+        'service_title': convo.service_request.service.title if convo.service_request else None,
+    }
+ 
+ 
+@login_required
+@require_GET
+def conversation_list(request):
+    user = request.user
+    if user.role == 'company':
+        provider = ServiceProvider.objects.filter(user=user).first()
+        convos = Conversation.objects.filter(provider=provider) if provider else Conversation.objects.none()
+    else:
+        convos = Conversation.objects.filter(seeker=user)
+ 
+    convos = convos.select_related('seeker', 'provider', 'provider__user', 'service_request__service')
+ 
+    data = [_conversation_payload(c, user) for c in convos]
+    total_unread = sum(c['unread_count'] for c in data)
+ 
+    return JsonResponse({'conversations': data, 'total_unread': total_unread})
+ 
+ 
+@login_required
+@require_GET
+def conversation_messages(request, conversation_id):
+    user = request.user
+    convo = get_object_or_404(Conversation, id=conversation_id)
+ 
+    if user.id != convo.seeker_id and user.id != convo.provider.user_id:
+        return JsonResponse({'error': 'Not allowed'}, status=403)
+ 
+    convo.messages.exclude(sender=user).filter(is_read=False).update(is_read=True)
+ 
+    messages = [
+        {
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'content': m.content,
+            'created_at': m.created_at.isoformat(),
+            'is_own': m.sender_id == user.id,
+        }
+        for m in convo.messages.select_related('sender').order_by('created_at')
+    ]
+ 
+    return JsonResponse({
+        'conversation': _conversation_payload(convo, user),
+        'messages': messages,
+    })
+ 
+ 
+@login_required
+@require_POST
+def start_conversation(request):
+    """
+    Get-or-create a conversation.
+ 
+    Seekers POST provider_id (and optionally request_id).
+    Providers POST seeker_id (and optionally request_id) — e.g. replying
+    to a pending request from their dashboard.
+    """
+    user = request.user
+    request_id = request.POST.get('request_id')
+    service_request = None
+    if request_id:
+        service_request = ServiceRequest.objects.filter(id=request_id).first()
+ 
+    if user.role == 'company':
+        provider = get_object_or_404(ServiceProvider, user=user)
+        seeker_id = request.POST.get('seeker_id') or (service_request.user_id if service_request else None)
+        if not seeker_id:
+            return JsonResponse({'error': 'seeker_id required'}, status=400)
+        convo, _ = Conversation.objects.get_or_create(seeker_id=seeker_id, provider=provider)
+    else:
+        provider_id = request.POST.get('provider_id') or (service_request.provider_id if service_request else None)
+        if not provider_id:
+            return JsonResponse({'error': 'provider_id required'}, status=400)
+        provider = get_object_or_404(ServiceProvider, id=provider_id)
+        convo, _ = Conversation.objects.get_or_create(seeker=user, provider=provider)
+ 
+    if service_request and convo.service_request_id != service_request.id:
+        convo.service_request = service_request
+        convo.save(update_fields=['service_request'])
+ 
+    return JsonResponse({'conversation_id': convo.id})
