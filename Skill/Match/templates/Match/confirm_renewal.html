@@ -1,0 +1,119 @@
+{% extends "Match/base.html" %}
+
+{% block title %}Renew Package{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+.premium-page {
+    --ink:        #0B0E14;
+    --panel:      #1A1F2B;
+    --panel-line: rgba(255,255,255,0.08);
+    --signal:     #FF4D2E;
+    --signal-dim: #C23A21;
+    --live:       #39FF6A;
+    --text-muted: #7C8591;
+    --white:      #FFFFFF;
+
+    background-color: var(--ink);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    padding: 110px 0;
+}
+.premium-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--signal);
+    display: block;
+    margin-bottom: 14px;
+}
+.premium-page .alert {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--panel-line);
+    color: #C9D2DC;
+    border-radius: 4px;
+    font-size: 0.86rem;
+}
+.premium-page .alert-info    { border-left: 3px solid var(--live); }
+.premium-page .alert-warning { border-left: 3px solid var(--signal); }
+
+.premium-confirm-card {
+    max-width: 520px; margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 46px 44px;
+}
+.premium-confirm-card h4 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white);
+    margin-bottom: 22px;
+}
+.premium-confirm-card p { color: var(--text-muted); }
+.premium-confirm-card strong { color: var(--white); }
+.premium-confirm-card a.text-link { color: var(--signal); text-decoration: none; }
+.premium-confirm-card a.text-link:hover { text-decoration: underline; }
+
+.premium-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--signal); color: var(--ink) !important;
+    border: none; border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8rem;
+    padding: 14px 26px; text-decoration: none;
+    transition: background 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+.premium-btn:hover { background: #FF6A4D; color: var(--ink); transform: translateY(-2px); }
+.premium-btn.is-outline {
+    background: transparent; color: var(--white) !important;
+    border: 1px solid var(--panel-line);
+}
+.premium-btn.is-outline:hover { border-color: var(--white); background: rgba(255,255,255,0.05); transform: none; }
+</style>
+
+<div class="premium-page">
+    <div class="container">
+        <div class="premium-confirm-card">
+            <span class="premium-eyebrow">Renew Package</span>
+            <h4>Renew your package</h4>
+
+            <p>
+                You're renewing <strong>{{ subscription.plan.name }}</strong> for another
+                {{ subscription.plan.duration_days }} days at KES {{ subscription.plan.price }}.
+            </p>
+
+            <div class="alert alert-info">
+                Renewing starts a fresh billing period: your customer-request count and
+                service-listing usage will reset to zero, and your new expiry date will be
+                {{ subscription.plan.duration_days }} days from today.
+            </div>
+
+            {% if subscription.status == 'active' and subscription.days_remaining > 0 %}
+                <div class="alert alert-warning">
+                    Heads up: your current package still has {{ subscription.days_remaining }}
+                    day(s) left. Renewing now will end that remaining time and start the new
+                    period immediately.
+                </div>
+            {% endif %}
+
+            <form method="post" class="mt-4">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <button type="submit" class="premium-btn">Confirm Renewal</button>
+                    <a href="{% url 'my_subscription' %}" class="premium-btn is-outline">Cancel</a>
+                </div>
+            </form>
+
+            <p class="small mt-4 mb-0">
+                Want a different package instead?
+                <a href="{% url 'subscription_plans' %}" class="text-link">Browse packages</a>.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

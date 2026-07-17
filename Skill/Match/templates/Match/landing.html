@@ -1,146 +1,2855 @@
 {% extends 'Match/base.html' %}
+{% load static %}
 
 {% block title %}Welcome | Home Improvement Made Easy{% endblock %}
+{% block body_class %}hero-page{% endblock %}
 
 {% block content %}
-<div class="hero-container">
-    <h1 class="hero-title">Home improvement.<br>made easy.</h1>
-
-    <div class="search-wrapper">
-        <form action="{% url 'search_services' %}" method="GET" class="search-bar">
-            <input type="text" name="q" placeholder="Describe your project or problem — be as detailed as you'd like!" class="search-input">
-            <div class="location-box">
-                <span class="location-icon">📍</span>
-            </div>
-            <button type="submit" class="search-button">Search</button>
-        </form>
-
-    </div>
-
-    <div class="image-mask">
-        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000" alt="Beautiful homes">
-    </div>
-</div>
-
-<footer class="site-footer">
-    <div class="footer-content">
-        <p>&copy; 2026 Intelligent Service Matching System. All rights reserved.</p>
-        <div class="footer-links">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Contact Us</a>
-        </div>
-    </div>
-</footer>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preload" as="image" fetchpriority="high"
+      href="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop"
+      imagesrcset="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=800&auto=format&fit=crop 800w,
+                   https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop 1200w,
+                   https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop 1600w,
+                   https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2400&auto=format&fit=crop 2400w"
+      imagesizes="100vw">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-    /* Main Layout */
-    .hero-container {
-        text-align: center;
-        padding: 60px 20px;
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        max-width: 1000px;
-        margin: 0 auto;
-        min-height: calc(100vh - 200px); /* Keeps footer at bottom on short pages */
-    }
+/* ================================================================
+   DESIGN TOKENS
+   ================================================================ */
+.im, .im-footer {
+    --ink:        #0B0E14;
+    --panel:      #1A1F2B;
+    --panel-line: rgba(255,255,255,0.08);
+    --signal:     #FF4D2E;
+    --signal-dim: #C23A21;
+    --live:       #39FF6A;
+    --text-muted: #7C8591;
+    --white:      #FFFFFF;
 
-    .hero-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        color: #2d2d2d;
-        line-height: 1.1;
-        margin-bottom: 40px;
-    }
+    background-color: var(--ink);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+}
 
-    /* Search Bar Styling */
-    .search-wrapper {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 50px;
-    }
+.im-display { font-family: 'Space Grotesk', sans-serif; }
+.im-mono    { font-family: 'JetBrains Mono', monospace; }
 
-    .search-bar {
-        display: flex;
-        width: 100%;
-        max-width: 800px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
+/* ================================================================
+   PRELOADER
+   ================================================================ */
+html.im-lock-scroll,
+html.im-lock-scroll body { overflow: hidden; height: 100%; }
 
-    .search-input {
-        flex: 1;
-        padding: 18px 20px;
-        border: none;
-        outline: none;
-        font-size: 1rem;
-    }
+.im-preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.im-preloader__panel {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 50%;
+    background: var(--ink);
+    transition: transform 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.im-preloader__panel--l { left: 0; }
+.im-preloader__panel--r { right: 0; }
+.im-preloader.is-ready { pointer-events: none; }
+.im-preloader.is-ready .im-preloader__panel--l { transform: translateX(-100%); }
+.im-preloader.is-ready .im-preloader__panel--r { transform: translateX(100%); }
 
-    .location-box {
-        width: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-left: 1px solid #eee;
-        background: #fff;
-    }
+.im-preloader__stage {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    perspective: 480px;
+    perspective-origin: 50% 62%;
+}
+.im-preloader.is-ready .im-preloader__stage {
+    opacity: 0;
+    transform: translateY(-8px);
+}
 
-    .search-button {
-        background-color: #0096d6;
-        color: white;
-        border: none;
-        padding: 0 35px;
-        font-weight: bold;
-        font-size: 1rem;
-        cursor: pointer;
-    }
+.im-preloader__scene { width: min(46vw, 168px); height: auto; overflow: visible; }
 
-    /* Arched Image */
-    .image-mask {
-        width: 100%;
-        max-width: 600px;
-        margin: 0 auto 60px auto; /* Added bottom margin */
-        height: 300px;
-        border-radius: 300px 300px 0 0;
-        overflow: hidden;
-    }
+.im-preloader__ring {
+    fill: none;
+    stroke: var(--panel-line);
+    stroke-width: 1.4;
+    stroke-dasharray: 2 8;
+    stroke-linecap: round;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: im-pl-ring-spin 7s linear infinite;
+}
+.im-preloader__ring--inner {
+    stroke: var(--panel-line);
+    stroke-dasharray: 1 6;
+    animation: im-pl-ring-spin-rev 5s linear infinite;
+}
 
-    .image-mask img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
+.im-preloader__house-fill {
+    fill: var(--signal);
+    opacity: 0;
+    animation: im-pl-fill 0.6s ease 1.5s forwards;
+}
+.im-preloader__house {
+    fill: none;
+    stroke: var(--signal);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 400;
+    stroke-dashoffset: 400;
+    filter: drop-shadow(0 0 5px rgba(255, 77, 46, 0.45));
+    animation: im-pl-draw 1.55s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards;
+}
 
-    /* Footer Styling */
-    .site-footer {
-        background-color: white;
-        /* The Blue Line separator */
-        border-top: 4px solid #03141b; 
-        padding: 40px 20px;
-        text-align: center;
-        color: #666;
-        font-family: sans-serif;
-    }
+.im-preloader__spark {
+    fill: var(--white);
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: im-pl-spark-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 1.7s forwards;
+}
 
-    .footer-content {
-        max-width: 1000px;
-        margin: 0 auto;
-    }
+.im-preloader__pulse {
+    fill: var(--signal);
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: im-pl-pulse 1.7s ease-out 1.9s infinite;
+}
 
-    .footer-links {
-        margin-top: 15px;
-    }
+.im-preloader__label {
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.im-preloader__dots span {
+    opacity: 0;
+    animation: im-pl-dot 1.2s infinite;
+}
+.im-preloader__dots span:nth-child(2) { animation-delay: 0.2s; }
+.im-preloader__dots span:nth-child(3) { animation-delay: 0.4s; }
 
-    .footer-links a {
-        color: #0096d6;
-        text-decoration: none;
-        margin: 0 15px;
-        font-size: 0.9rem;
-    }
+@keyframes im-pl-ring-spin     { to { transform: rotate(360deg); } }
+@keyframes im-pl-ring-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes im-pl-draw  { to { stroke-dashoffset: 0; } }
+@keyframes im-pl-fill  { to { opacity: 0.14; } }
+@keyframes im-pl-spark-in { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
+@keyframes im-pl-pulse  { from { transform: scale(0.4); opacity: 0.55; } to { transform: scale(2.6); opacity: 0; } }
+@keyframes im-pl-dot    { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
 
-    .footer-links a:hover {
-        text-decoration: underline;
+@media (prefers-reduced-motion: reduce) {
+    .im-preloader__ring,
+    .im-preloader__ring--inner,
+    .im-preloader__house,
+    .im-preloader__house-fill,
+    .im-preloader__spark,
+    .im-preloader__pulse,
+    .im-preloader__dots span { animation: none !important; }
+    .im-preloader__house { stroke-dashoffset: 0; }
+    .im-preloader__house-fill { opacity: 0.14; }
+    .im-preloader__spark { opacity: 1; transform: scale(1); }
+    .im-preloader__panel { transition: opacity 0.35s ease; }
+    .im-preloader.is-ready .im-preloader__panel--l,
+    .im-preloader.is-ready .im-preloader__panel--r { transform: none; opacity: 0; }
+}
+
+/* ================================================================
+   CTA PARTICLE SECTION
+   ================================================================ */
+.im-cta-particles {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#particleCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    display: block;
+}
+.im-cta-particles__inner {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 60px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.im-cta-particles__eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--lz-paper);
+    margin-bottom: 22px;
+    display: block;
+}
+.im-cta-particles__heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    color: var(--lz-paper-alt);
+    letter-spacing: -0.025em;
+    line-height: 1.07;
+    margin: 0 0 20px;
+}
+.im-cta-particles__sub {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.42);
+    letter-spacing: 0.04em;
+    margin: 0 0 38px;
+}
+.im-cta-particles__btn {
+    display: inline-block;
+    background: #fff;
+    color: #000;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 18px 54px;
+    border: 2px solid #fff;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+.im-cta-particles__btn:hover {
+    background: transparent;
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+/* ================================================================
+   RICH FOOTER
+   ================================================================ */
+.im-footer--rich {
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    color: var(--white, #fff);
+    font-family: 'Inter', sans-serif;
+    background-image:
+        linear-gradient(180deg,
+            var(--ink, #0B0E14) 0%,
+            rgba(11,14,20,0.55) 340px,
+            rgba(11,14,20,0.72) 65%,
+            rgba(11,14,20,0.92) 100%),
+        url('{% static 'images/footer.webp' %}');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+}
+/* The gradient above starts at a flat, fully-opaque --ink (matching the
+   section that sits above the footer) and only gradually reveals the
+   photo beneath it — that soft fade IS the separator, so no hard line
+   is needed at the seam between the two sections. */
+.im-footer__top {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 80px 0 60px;
+    position: relative;
+    z-index: 2;
+}
+.im-footer__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1.7fr;
+    gap: 48px;
+    align-items: start;
+}
+.im-footer__logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.01em;
+    margin-bottom: 18px;
+}
+.im-footer__logo-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--signal, #FF4D2E);
+    flex-shrink: 0;
+}
+.im-footer__tagline {
+    font-size: 0.84rem;
+    color: #fff;
+    line-height: 1.65;
+    margin: 0 0 26px;
+    max-width: 280px;
+}
+.im-footer__socials {
+    display: flex;
+    gap: 10px;
+}
+.im-footer__social-link {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.im-footer__social-link:hover {
+    background: var(--signal, #FF4D2E);
+    border-color: var(--signal, #FF4D2E);
+    color: #fff;
+}
+.im-footer__nav-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #fff;
+    margin: 0 0 20px;
+}
+.im-footer__nav-list {
+    list-style: none;
+    margin: 0; padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+.im-footer__nav-list a {
+    font-size: 0.86rem;
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.im-footer__nav-list a:hover { color: var(--signal, #FF4D2E); }
+.im-footer__newsletter-sub {
+    font-size: 0.83rem;
+    color: #fff;
+    line-height: 1.6;
+    margin: 0 0 16px;
+}
+.im-footer__newsletter-form {
+    display: flex;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+.im-footer__newsletter-input {
+    flex: 1; min-width: 0;
+    background: rgba(255,255,255,0.05);
+    border: none; outline: none;
+    padding: 11px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.84rem;
+    color: #fff;
+}
+.im-footer__newsletter-input::placeholder { color: rgba(255,255,255,0.28); }
+.im-footer__newsletter-btn {
+    background: var(--signal, #FF4D2E);
+    border: none;
+    color: #fff;
+    padding: 11px 18px;
+    font-size: 1.05rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.im-footer__newsletter-btn:hover { background: #FF6A4D; }
+.im-footer__newsletter-legal {
+    font-size: 0.73rem;
+    color: rgba(255,255,255,0.22);
+    margin: 0;
+}
+.im-footer__bottom {
+    position: relative;
+    z-index: 2;
+    padding: 24px 0;
+    background: linear-gradient(180deg, rgba(11,14,20,0) 0%, rgba(11,14,20,0.55) 100%);
+}
+.im-footer__bottom p,
+.im-footer__bottom a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color 0.2s;
+}
+.im-footer__bottom a:hover { color: #fff; }
+
+@media (max-width: 1100px) {
+    .im-footer__grid { grid-template-columns: 1fr 1fr 1fr; }
+    .im-footer__brand-col { grid-column: 1 / -1; }
+    .im-footer__newsletter-col { grid-column: span 2; }
+}
+@media (max-width: 640px) {
+    .im-footer__grid { grid-template-columns: 1fr 1fr; }
+    .im-footer__brand-col,
+    .im-footer__newsletter-col { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
+    .im-footer--rich { min-height: auto; }
+    .im-footer__top { padding: 64px 0 40px; align-items: flex-start; }
+    .im-footer__bottom .container { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+
+/* ================================================================
+   HERO
+   ================================================================ */
+.im-hero-cinematic {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: var(--ink);
+    padding: 140px 0 90px;
+    z-index: 1;
+}
+
+.im-hero-slideshow {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 2; pointer-events: none;
+    overflow: hidden;
+}
+
+.im-hero-slide {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0; visibility: hidden;
+    will-change: opacity;
+    backface-visibility: hidden;
+    overflow: hidden;
+    transition: opacity 1.8s cubic-bezier(0.25,1,0.5,1), visibility 1.8s;
+}
+.im-hero-slide.is-active { opacity: 1; visibility: visible; }
+.im-hero-slide img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: grayscale(35%) contrast(108%) brightness(0.75) saturate(1.05);
+    transform-origin: center center;
+    will-change: transform;
+}
+
+/* ----------------------------------------------------------------
+   Cinematic pan-and-zoom — each slide gets its own drift path so the
+   motion doesn't feel identical every loop. All share the same
+   duration/easing; only the destination framing differs. Replayed
+   each time a slide becomes active (see goToHeroSlide() in the
+   script, which forces the animation to restart from 0%).
+   ---------------------------------------------------------------- */
+.im-hero-slide.is-active img { animation-fill-mode: forwards; animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1); animation-duration: 8.4s; }
+
+.im-hero-slide:nth-child(1).is-active img { animation-name: im-cinema-pan-a; }
+.im-hero-slide:nth-child(2).is-active img { animation-name: im-cinema-pan-b; }
+.im-hero-slide:nth-child(3).is-active img { animation-name: im-cinema-pan-c; }
+.im-hero-slide:nth-child(4).is-active img { animation-name: im-cinema-pan-d; }
+.im-hero-slide:nth-child(5).is-active img { animation-name: im-cinema-pan-e; }
+
+/* slow diagonal push, top-left origin drift */
+@keyframes im-cinema-pan-a {
+    0%   { transform: scale(1.04) translate(1.5%, 1%)   rotate(0deg); }
+    50%  { transform: scale(1.12) translate(-1.5%, -0.5%) rotate(-0.3deg); }
+    100% { transform: scale(1.2)  translate(-2.5%, -1.5%) rotate(-0.5deg); }
+}
+/* slow pull-back to the right */
+@keyframes im-cinema-pan-b {
+    0%   { transform: scale(1.18) translate(-2%, 0.5%)  rotate(0deg); }
+    50%  { transform: scale(1.1)  translate(1%, -1%)    rotate(0.25deg); }
+    100% { transform: scale(1.02) translate(2.5%, -1.8%) rotate(0.4deg); }
+}
+/* vertical drift, gentle rise */
+@keyframes im-cinema-pan-c {
+    0%   { transform: scale(1.06) translate(0, 2%)      rotate(0deg); }
+    50%  { transform: scale(1.13) translate(-0.8%, -0.5%) rotate(-0.3deg); }
+    100% { transform: scale(1.2)  translate(-1.2%, -2.2%) rotate(-0.5deg); }
+}
+/* diagonal push toward lower-right */
+@keyframes im-cinema-pan-d {
+    0%   { transform: scale(1.02) translate(-1.8%, -1.5%) rotate(0deg); }
+    50%  { transform: scale(1.1)  translate(0.8%, 0.5%)   rotate(0.3deg); }
+    100% { transform: scale(1.18) translate(2.2%, 1.8%)   rotate(0.5deg); }
+}
+/* slow pull-out, settles wide */
+@keyframes im-cinema-pan-e {
+    0%   { transform: scale(1.2)  translate(1.5%, -1.2%) rotate(0deg); }
+    50%  { transform: scale(1.12) translate(-1%, 0.8%)   rotate(-0.25deg); }
+    100% { transform: scale(1.03) translate(-2%, 1.6%)   rotate(-0.4deg); }
+}
+
+/* Cinematic vignette — darkens the corners so the frame reads like
+   photography rather than a flat crop, independent of the readability
+   gradient below it */
+.im-hero-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.5) 100%);
+}
+
+/* Subtle light-blue color wash over the hero photography, sits above the
+   images but below the dark readability gradient (::after, z-index: 3) */
+.im-hero-color-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(145deg, rgba(135,206,235,0.12) 0%, rgba(173,216,230,0.08) 100%);
+    pointer-events: none;
+}
+
+/* Fine film-grain texture for a photographic, non-digital feel.
+   Pure CSS/SVG, no image request. */
+.im-hero-grain {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 180px 180px;
+}
+
+.im-hero-cinematic::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(11,14,20,0.55) 0%, rgba(11,14,20,0.55) 55%, var(--ink) 96%);
+    z-index: 3; pointer-events: none;
+}
+
+.im-hero-cinematic__inner {
+    position: relative;
+    z-index: 4; width: 100%;
+    display: flex; flex-direction: column;
+}
+
+/* ================================================================
+   TYPOGRAPHY
+   ================================================================ */
+.im-title-kinetic {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.02;
+    color: var(--white);
+}
+.im-title-kinetic .accent { color: var(--signal); }
+.im-word-wrapper { display: inline-block; overflow: hidden; vertical-align: top; }
+.im-char { display: inline-block; transform: translateY(105%); will-change: transform; }
+
+.im-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ================================================================
+   HERO TEXT STAGE — headline/tag/desc crossfades in sync with slides
+   ================================================================ */
+.im-hero-text-stage {
+    position: relative;
+    min-height: 232px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+.im-hero-text-slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity 0.8s ease, transform 0.9s cubic-bezier(0.16,1,0.3,1), visibility 0.8s;
+    pointer-events: none;
+}
+.im-hero-text-slide.is-active {
+    position: relative;
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 0.25s;
+}
+.im-hero-text-slide__tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--signal);
+    margin-bottom: 14px;
+    display: block;
+}
+.im-hero-text-slide__desc {
+    font-size: 1.05rem;
+    max-width: 580px;
+    margin: 0 auto;
+    color: #C9D2DC;
+}
+@media (max-width: 767px) {
+    .im-hero-text-stage { min-height: 300px; }
+}
+
+/* ================================================================
+   DISPATCH STRIP
+   ================================================================ */
+.im-dispatch-strip {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; letter-spacing: 0.04em;
+    color: #C9D2DC;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--panel-line); border-radius: 100px;
+    padding: 8px 18px 8px 14px; margin-bottom: 28px;
+}
+.im-dispatch-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--live);
+    box-shadow: 0 0 0 0 rgba(57,255,106,0.6);
+    animation: dispatch-pulse 1.8s infinite; flex-shrink: 0;
+}
+@keyframes dispatch-pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(57,255,106,0.55); }
+    70%  { box-shadow: 0 0 0 6px rgba(57,255,106,0);    }
+    100% { box-shadow: 0 0 0 0   rgba(57,255,106,0);    }
+}
+.im-dispatch-strip .sep      { color: var(--panel-line); }
+.im-dispatch-strip .stat-val { color: var(--white); font-weight: 500; }
+
+/* ================================================================
+   SEARCH BOX
+   ================================================================ */
+.im-search-box {
+    background: var(--panel);
+    border: 1px solid var(--panel-line); border-radius: 4px;
+    padding: 8px 8px 8px 22px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.45);
+    transition: border-color 0.3s ease;
+}
+.im-search-box:focus-within { border-color: var(--signal); }
+.im-search__input {
+    background: transparent; border: none; outline: none;
+    color: var(--white); font-family: 'Inter', sans-serif; font-size: 1.02rem; width: 100%;
+}
+.im-search__input::placeholder { color: var(--text-muted); }
+.im-search__submit {
+    background: var(--signal); color: var(--ink); border: none; border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8rem; padding: 15px 32px;
+    cursor: pointer; transition: background 0.2s ease;
+}
+.im-search__submit:hover { background: #FF6A4D; }
+
+/* ================================================================
+   HERO CAROUSEL (centered coverflow)
+   ================================================================ */
+.im-hero-carousel { margin-top: 70px; width: 100%; position: relative; }
+.im-hero-carousel-stage {
+    position: relative; height: 420px;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 1400px;
+}
+
+.im-hero-service-card {
+    position: absolute;
+    width: 480px; height: 380px;
+    background: var(--panel);
+    overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+    text-decoration: none !important;
+    border: 1px solid var(--panel-line); border-radius: 6px;
+    transition: transform 0.7s cubic-bezier(0.16,1,0.3,1),
+                opacity   0.7s cubic-bezier(0.16,1,0.3,1),
+                filter    0.7s cubic-bezier(0.16,1,0.3,1),
+                border-color 0.4s ease;
+    pointer-events: none;
+}
+.im-hero-service-card[data-state="center"] {
+    transform: translateX(0) scale(1); opacity: 1; filter: blur(0); z-index: 5; pointer-events: auto;
+}
+.im-hero-service-card[data-state="prev"] {
+    transform: translateX(-340px) scale(0.82); opacity: 0.45; filter: blur(2px); z-index: 3;
+}
+.im-hero-service-card[data-state="next"] {
+    transform: translateX(340px) scale(0.82); opacity: 0.45; filter: blur(2px); z-index: 3;
+}
+.im-hero-service-card[data-state="far"] {
+    transform: translateX(0) scale(0.7); opacity: 0; filter: blur(4px); z-index: 1;
+}
+.im-hero-service-card[data-state="center"]:hover { border-color: var(--signal); }
+.im-hero-service-card__img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(40%) contrast(105%) brightness(0.85);
+    transition: transform 0.9s cubic-bezier(0.16,1,0.3,1);
+}
+.im-hero-service-card[data-state="center"]:hover .im-hero-service-card__img { transform: scale(1.06); }
+.im-hero-service-card__meta {
+    position: relative; z-index: 4; padding: 30px;
+    background: linear-gradient(0deg, rgba(11,14,20,0.95) 0%, rgba(11,14,20,0.5) 65%, rgba(11,14,20,0) 100%);
+    width: 100%;
+}
+.im-hero-service-card__tag {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    color: var(--signal); letter-spacing: 0.1em; text-transform: uppercase;
+    display: block; margin-bottom: 6px;
+}
+.im-hero-service-card__title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    color: var(--white); font-size: 1.15rem; margin-bottom: 4px;
+}
+.im-hero-service-card__desc { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+
+.im-carousel-controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 18px; margin-top: 28px;
+}
+.im-carousel-btn {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--white); color: var(--ink); border: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem; cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+.im-carousel-btn:hover { background: var(--signal); transform: scale(1.06); }
+.im-carousel-btn:active { transform: scale(0.96); }
+.im-carousel-dots { display: flex; gap: 8px; }
+.im-carousel-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--panel-line); cursor: pointer;
+    transition: background 0.3s ease, width 0.3s ease;
+}
+.im-carousel-dot.is-active { background: var(--signal); width: 20px; border-radius: 3px; }
+
+@media (max-width: 768px) {
+    .im-hero-carousel-stage { height: 340px; }
+    .im-hero-service-card { width: 300px; height: 300px; }
+    .im-hero-service-card[data-state="prev"] { transform: translateX(-200px) scale(0.78); }
+    .im-hero-service-card[data-state="next"] { transform: translateX(200px) scale(0.78); }
+}
+
+/* ================================================================
+   SECTIONS (shared)
+   ================================================================ */
+.im-section {
+    padding: 130px 0;
+    background-color: var(--ink);
+    border-top: 1px solid var(--panel-line);
+    position: relative; z-index: 5;
+}
+.im-section-heading {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    color: var(--white); letter-spacing: -0.02em;
+}
+.im-step-card { border-top: 2px solid var(--signal); padding-top: 24px; }
+.im-step-card .im-eyebrow { color: var(--signal); }
+.im-step-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
+.im-step-card p  { color: var(--text-muted); line-height: 1.7; }
+
+.im-stat-row {
+    border-top: 1px solid var(--panel-line);
+    border-bottom: 1px solid var(--panel-line);
+    background: var(--ink);
+    position: relative;
+    z-index: 2;
+}
+.im-stat-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--white); }
+.im-stat-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.im-section.im-section--bridge-bottom {
+    padding-bottom: 80px;
+    position: relative;
+    overflow: visible;
+}
+.im-section.im-section--bridge-bottom::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    pointer-events: none;
+    z-index: 6;
+}
+
+/* ================================================================
+   LIGHT ZONE
+   ================================================================ */
+:root {
+    --lz-paper:       #F5F2ED;
+    --lz-paper-alt:   #EDE9E2;
+    --lz-ink:         #0B0E14;
+    --lz-ink-60:      rgba(11, 14, 20, 0.55);
+    --lz-ink-08:      rgba(11, 14, 20, 0.08);
+    --lz-muted:       #6B7280;
+    --lz-signal:      #FF4D2E;
+    --lz-border:      rgba(11, 14, 20, 0.1);
+    --lz-dark-end:    #0B0E14;
+}
+
+/* ================================================================
+   SECTION A — FEATURE SHOWCASE SLIDESHOW
+   ================================================================ */
+.im-showcase {
+    position: relative;
+    width: 100%;
+    background: var(--lz-paper);
+    overflow: hidden;
+    z-index: 5;
+    border-top: none;
+}
+
+.im-showcase__nav {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 0;
+    padding: 60px 0 0;
+    position: relative;
+    z-index: 10;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--lz-border);
+}
+
+.im-showcase__tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--lz-muted);
+    background: none; border: none;
+    padding: 14px 28px 16px;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.25s ease;
+}
+
+.im-showcase__tab::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 28px; right: 28px;
+    height: 2px;
+    background: var(--lz-signal);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+
+.im-showcase__tab.is-active { color: var(--lz-ink); font-weight: 600; }
+.im-showcase__tab.is-active::after { transform: scaleX(1); }
+.im-showcase__tab:hover { color: var(--lz-ink); }
+
+.im-showcase__header {
+    text-align: center;
+    padding: 48px 20px 44px;
+    position: relative; z-index: 10;
+}
+
+.im-showcase__title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: clamp(2rem, 4vw, 3rem);
+    color: var(--lz-ink);
+    letter-spacing: -0.025em; margin: 12px 0 8px;
+}
+
+.im-showcase__subtitle {
+    font-size: 0.9rem;
+    color: var(--lz-muted);
+    margin: 0;
+}
+
+.im-showcase__header .im-eyebrow {
+    color: var(--lz-signal);
+}
+
+.im-showcase__stage {
+    position: relative;
+    width: 100%;
+    height: clamp(400px, 55vw, 680px);
+    overflow: hidden;
+}
+
+.im-showcase__slide {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: 42% 58%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.85s cubic-bezier(0.25,1,0.5,1), visibility 0.85s;
+    will-change: opacity;
+}
+
+.im-showcase__slide.is-active { opacity: 1; visibility: visible; }
+
+.im-showcase__slide-text {
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 60px clamp(32px, 5vw, 80px) 60px clamp(24px, 6vw, 100px);
+    background: var(--lz-paper);
+    position: relative; z-index: 2;
+}
+
+.im-showcase__slide-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--lz-signal); margin-bottom: 16px;
+}
+
+.im-showcase__slide-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+    color: var(--lz-ink);
+    letter-spacing: -0.02em; line-height: 1.12; margin-bottom: 14px;
+}
+
+.im-showcase__slide-body {
+    font-size: 0.9rem; line-height: 1.75;
+    color: var(--lz-muted);
+    max-width: 360px; margin-bottom: 32px;
+}
+
+.im-showcase__slide-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 0.85rem; letter-spacing: 0.04em;
+    color: var(--lz-ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--lz-ink-08);
+    padding-bottom: 3px;
+    transition: color 0.2s ease, border-color 0.2s ease;
+    width: fit-content;
+}
+.im-showcase__slide-link:hover { color: var(--lz-signal); border-color: var(--lz-signal); }
+.im-showcase__slide-link i { transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
+.im-showcase__slide-link:hover i { transform: translateX(4px); }
+
+.im-showcase__slide-image { position: relative; overflow: hidden; }
+
+.im-showcase__slide-image img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: grayscale(15%) contrast(102%) brightness(0.92);
+    transform: translateX(30px) scale(1.04);
+    transition: transform 1.1s cubic-bezier(0.16,1,0.3,1), filter 0.6s ease;
+    will-change: transform;
+}
+.im-showcase__slide.is-active .im-showcase__slide-image img {
+    transform: translateX(0) scale(1);
+}
+
+.im-showcase__slide-image::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 60px;
+    z-index: 2; pointer-events: none;
+}
+
+.im-showcase__slide-tag,
+.im-showcase__slide-heading,
+.im-showcase__slide-body,
+.im-showcase__slide-link {
+    opacity: 0; transform: translateY(14px);
+    transition: opacity 0.6s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.im-showcase__slide.is-active .im-showcase__slide-tag     { opacity:1; transform:none; transition-delay:0.05s; }
+.im-showcase__slide.is-active .im-showcase__slide-heading { opacity:1; transform:none; transition-delay:0.15s; }
+.im-showcase__slide.is-active .im-showcase__slide-body    { opacity:1; transform:none; transition-delay:0.25s; }
+.im-showcase__slide.is-active .im-showcase__slide-link    { opacity:1; transform:none; transition-delay:0.35s; }
+
+.im-showcase__progress {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: var(--lz-ink-08); z-index: 20; pointer-events: none;
+}
+.im-showcase__progress-bar {
+    height: 100%; background: var(--lz-signal);
+    transform-origin: left; transform: scaleX(0);
+    will-change: transform;
+}
+
+@media (max-width: 767px) {
+    /* Absolute-stacked slides collapse an "auto" height parent to 0, which
+       was hiding this whole section on phones. On mobile we take the
+       slide out of absolute positioning entirely so it flows normally
+       and the stage sizes itself around it; only the active slide is
+       rendered (display swap) instead of opacity-crossfading in place. */
+    .im-showcase__stage { height: auto; min-height: 0; }
+    .im-showcase__slide {
+        position: relative;
+        inset: auto;
+        display: none;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 240px;
+        opacity: 1;
+        visibility: visible;
     }
+    
+    .im-showcase__slide.is-active { display: grid; }
+    .im-showcase__slide-image { height: 240px; }
+    .im-showcase__slide-text { padding: 36px 24px; }
+    .im-showcase__nav {
+        padding-top: 40px;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .im-showcase__nav::-webkit-scrollbar { display: none; }
+    .im-showcase__tab { padding: 10px 16px; font-size: 0.65rem; white-space: nowrap; flex: 0 0 auto; }
+    /* Content still fades/slides in on the active slide */
+    .im-showcase__tab::after {
+        left: 16px;
+        right: 16px;
+    }
+    .im-showcase__slide-tag,
+    .im-showcase__slide-heading,
+    .im-showcase__slide-body,
+    .im-showcase__slide-link { opacity: 0; transform: translateY(14px); }
+    .im-showcase__slide.is-active .im-showcase__slide-tag     { opacity:1; transform:none; transition-delay:0.05s; }
+    .im-showcase__slide.is-active .im-showcase__slide-heading { opacity:1; transform:none; transition-delay:0.15s; }
+    .im-showcase__slide.is-active .im-showcase__slide-body    { opacity:1; transform:none; transition-delay:0.25s; }
+    .im-showcase__slide.is-active .im-showcase__slide-link    { opacity:1; transform:none; transition-delay:0.35s; }
+    .im-showcase__progress { position: static; margin-top: 4px; }
+}
+
+/* ================================================================
+   SECTION B — SPLIT PANEL
+   ================================================================ */
+.im-split {
+    position: relative;
+    background: linear-gradient(
+        to bottom,
+        #F5F2ED              0%,
+        #EDE8DF             5%,
+        #D9C9B4             25%,
+        #5e5852             42%,
+        #383330             60%,
+        #05070e             70%,
+        #0B0E14            100%
+    );
+    padding: 90px 0 140px;
+    overflow: hidden;
+    z-index: 5;
+    border-top: none;
+}
+
+.im-split::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, transparent, #0B0E14);
+    z-index: 1; pointer-events: none;
+}
+
+.im-split__inner { position: relative; z-index: 2; }
+
+.im-split__eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--lz-signal);
+    text-align: center; margin-bottom: 16px;
+}
+
+.im-split__title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    color: var(--lz-ink);
+    letter-spacing: -0.025em; line-height: 1.1;
+    text-align: center; margin-bottom: 10px;
+}
+
+.im-split__sub {
+    font-size: 0.85rem;
+    color: var(--lz-muted);
+    text-align: center; margin-bottom: 56px;
+}
+
+.im-split__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.im-split__panel {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    overflow: visible;
+    position: relative;
+}
+
+.im-split__panel-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 9 / 11;
+    overflow: hidden;
+}
+
+.im-split__panel--right .im-split__panel-image {
+    aspect-ratio: 9 / 11;
+}
+
+.im-split__panel-image img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.82) contrast(105%);
+    transition: transform 0.9s cubic-bezier(0.16,1,0.3,1);
+}
+.im-split__panel:hover .im-split__panel-image img {
+    transform: scale(1.04);
+}
+
+.im-split__panel-image::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 60%;
+    background: linear-gradient(0deg, rgba(11,14,20,0.92) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.im-split__panel-meta {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 28px 28px 24px;
+    z-index: 2;
+}
+
+.im-split__panel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 8px;
+}
+
+.im-split__panel-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1rem;
+    color: var(--white); text-decoration: none;
+    transition: color 0.2s ease;
+}
+.im-split__panel-cta:hover { color: var(--signal); }
+.im-split__panel-cta i { transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
+.im-split__panel-cta:hover i { transform: translateX(4px); }
+
+.im-split__badge {
+    position: absolute; top: 20px; left: 20px; z-index: 5;
+    background: var(--signal); color: var(--ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 3px;
+}
+
+/* Step-by-step "how to register" cyclers, one line visible at a time */
+.im-split__steps {
+    position: relative;
+    min-height: 40px;
+    margin-bottom: 10px;
+}
+.im-split__step {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.86rem;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.72);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1), visibility 0.5s;
+}
+.im-split__step.is-active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.im-split__step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--signal);
+    flex-shrink: 0;
+    padding-top: 1px;
+}
+
+.im-split__mosaic {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 3px;
+    height: 100%;
+    min-height: 420px;
+}
+.im-split__mosaic-cell {
+    overflow: hidden; position: relative;
+    background: rgba(255,255,255,0.03);
+}
+.im-split__mosaic-cell img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.75) grayscale(20%);
+    transition: filter 0.4s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+.im-split__mosaic-cell:nth-child(3),
+.im-split__mosaic-cell:nth-child(6) {
+    mask-image: linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.3) 100%);
+    -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.3) 100%);
+}
+.im-split__panel:hover .im-split__mosaic-cell img {
+    filter: brightness(0.9) grayscale(10%);
+}
+
+.im-split__panel-footer {
+    padding: 20px 24px 22px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+}
+.im-split__panel-footer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 6px;
+}
+.im-split__panel-footer-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.95rem;
+    color: var(--white); text-decoration: none;
+    transition: color 0.2s ease;
+}
+.im-split__panel-footer-cta:hover { color: var(--signal); }
+.im-split__panel-footer-cta i { transition: transform 0.3s cubic-bezier(0.16,1,0.3,1); }
+.im-split__panel-footer-cta:hover i { transform: translateX(4px); }
+
+@media (max-width: 767px) {
+    .im-split__grid { grid-template-columns: 1fr; }
+    .im-split { padding: 60px 0 60px; }
+}
+
+/* ── Left panel: animated phone mockup (login → request → rating) ── */
+.im-split__panel--left {
+    display: flex;
+    flex-direction: column;
+}
+
+.im-split__phone-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: 44px 20px 28px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,77,46,0.16), transparent 62%);
+}
+
+.im-phone {
+    width: 260px;
+    filter: drop-shadow(0 26px 50px rgba(0,0,0,0.55));
+}
+
+.im-phone__frame {
+    position: relative;
+    aspect-ratio: 9 / 19.5;
+    background: #05070a;
+    border: 3px solid #262b35;
+    border-radius: 26px;
+    padding: 7px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+.im-phone__notch {
+    position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
+    width: 58px; height: 15px;
+    background: #05070a; border-radius: 9px;
+    z-index: 10;
+}
+
+.im-phone__screen {
+    position: relative;
+    width: 100%; height: 100%;
+    background: #F5F2ED;
+    border-radius: 19px;
+    overflow: hidden;
+}
+
+.im-phone__statusbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 14px 2px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.52rem; font-weight: 700;
+    color: #0B0E14;
+}
+.im-phone__statusbar i { font-size: 0.5rem; margin-left: 3px; }
+
+.im-phone__views {
+    position: relative;
+    width: 100%; height: 100%;
+}
+
+.im-phone__view {
+    position: absolute; inset: 0;
+    padding: 6px 13px 16px;
+    display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden;
+    transform: translateX(14px);
+    transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1), visibility 0.5s;
+}
+.im-phone__view.is-active { opacity: 1; visibility: visible; transform: translateX(0); }
+
+.im-phone__tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--signal); margin: 10px 0 12px;
+}
+
+/* Login screen */
+.im-phone__login-mark {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--signal); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 0.7rem;
+    margin: 22px auto 16px;
+}
+.im-phone__field {
+    background: #fff; border: 1px solid rgba(11,14,20,0.12); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.58rem; color: #9297a0;
+    font-family: 'Inter', sans-serif; margin-bottom: 8px;
+}
+.im-phone__btn {
+    text-align: center; border-radius: 8px; padding: 9px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.6rem;
+    margin-top: 4px; background: #0B0E14; color: #fff;
+}
+.im-phone__btn--signal { background: var(--signal); }
+.im-phone__fineprint {
+    text-align: center; font-size: 0.5rem; color: #a7abb2;
+    margin-top: 10px; font-family: 'Inter', sans-serif;
+}
+
+/* Request screen */
+.im-phone__searchbar {
+    display: flex; align-items: center; gap: 6px;
+    background: #fff; border: 1.5px solid var(--signal); border-radius: 18px;
+    padding: 7px 10px; margin-bottom: 8px;
+    font-size: 0.56rem; color: #0B0E14; font-family: 'Inter', sans-serif; font-weight: 600;
+}
+.im-phone__searchbar i:first-child { color: #0B0E14; font-size: 0.5rem; }
+.im-phone__searchbar i:last-child { margin-left: auto; color: #b7bbc2; font-size: 0.5rem; }
+.im-phone__locbar {
+    display: flex; align-items: center; gap: 6px;
+    background: #fff; border: 1px solid rgba(11,14,20,0.08); border-radius: 18px;
+    padding: 7px 10px; margin-bottom: 10px;
+    font-size: 0.54rem; color: #6b6f76; font-family: 'Inter', sans-serif;
+}
+.im-phone__locbar i { color: var(--signal); font-size: 0.5rem; }
+.im-phone__section-label {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.52rem; font-weight: 700; color: #0B0E14;
+    font-family: 'Inter', sans-serif; margin-bottom: 6px;
+}
+.im-phone__section-label i { color: var(--signal); font-size: 0.5rem; }
+.im-phone__service-row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 2px; font-size: 0.55rem; color: #40444a;
+    font-family: 'Inter', sans-serif;
+    border-bottom: 1px solid rgba(11,14,20,0.06);
+}
+.im-phone__service-row i { color: #b7bbc2; font-size: 0.48rem; }
+
+/* Matched screen */
+.im-phone__pro-card {
+    display: flex; align-items: center; gap: 8px;
+    background: #fff; border-radius: 10px; padding: 7px 8px;
+    margin-bottom: 7px; box-shadow: 0 2px 8px rgba(11,14,20,0.06);
+}
+.im-phone__pro-avatar {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--signal), #ffb199);
+}
+.im-phone__pro-name { font-size: 0.56rem; font-weight: 700; color: #0B0E14; font-family: 'Space Grotesk', sans-serif; }
+.im-phone__pro-meta { font-size: 0.48rem; color: #9297a0; font-family: 'Inter', sans-serif; }
+.im-phone__pro-price { margin-left: auto; font-size: 0.54rem; font-weight: 700; color: var(--signal); font-family: 'Space Grotesk', sans-serif; }
+
+/* Rating screen */
+.im-phone__rating-wrap { margin: auto; text-align: center; }
+.im-phone__rating-avatar {
+    width: 42px; height: 42px; border-radius: 50%; margin: 0 auto 10px;
+    background: linear-gradient(135deg, var(--signal), #ffb199);
+}
+.im-phone__rating-name { font-size: 0.6rem; font-weight: 700; color: #0B0E14; font-family: 'Space Grotesk', sans-serif; margin-bottom: 2px; }
+.im-phone__rating-role { font-size: 0.5rem; color: #9297a0; font-family: 'Inter', sans-serif; margin-bottom: 10px; }
+.im-phone__stars { color: #FFB800; font-size: 0.9rem; letter-spacing: 3px; margin-bottom: 10px; }
+.im-phone__rating-note { font-size: 0.52rem; color: #6b6f76; font-family: 'Inter', sans-serif; line-height: 1.4; margin-bottom: 12px; }
+
+.im-phone__home-indicator {
+    position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+    width: 64px; height: 3px; border-radius: 3px;
+    background: rgba(11,14,20,0.45); z-index: 10;
+}
+
+/* ── Right panel: business-minded copy replacing the image mosaic ── */
+.im-split__panel--right {
+    display: flex;
+    flex-direction: column;
+}
+
+.im-split__biz {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 62px 26px 20px;
+}
+
+.im-split__biz-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: 2.0rem; color: var(--white);
+    line-height: 1.28; letter-spacing: -0.01em;
+    margin-bottom: 12px;
+}
+
+.im-split__biz-sub {
+    font-size: 0.85rem; line-height: 1.55;
+    color: rgba(255,255,255,0.58);
+    margin-bottom: 24px;
+    max-width: 34ch;
+}
+
+.im-split__biz-quote {
+    margin: 4px 0 0;
+    padding: 22px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    max-width: 36ch;
+}
+.im-split__biz-quote-mark {
+    display: block;
+    color: var(--signal);
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    opacity: 0.85;
+}
+.im-split__biz-quote-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500; font-size: 1.05rem; line-height: 1.45;
+    color: rgba(255,255,255,0.9);
+    margin-bottom: 16px;
+}
+.im-split__biz-quote-attr {
+    display: flex; flex-direction: column; gap: 2px;
+}
+.im-split__biz-quote-name {
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.82rem;
+    color: var(--white);
+}
+.im-split__biz-quote-role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.4);
+}
+
+@media (max-width: 767px) {
+    .im-phone { width: 200px; }
+    .im-split__biz { padding: 40px 22px 14px; }
+    .im-split__biz-title { font-size: 1.15rem; }
+}
+
+/* ================================================================
+   PRO BANNER
+   ================================================================ */
+.im-pro-banner {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 4px; padding: 80px 60px;
+}
+.im-pro-banner h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
+.im-pro-banner p  { color: var(--text-muted); }
+
+.im-btn-signal {
+    background: var(--signal); color: var(--ink) !important; border: none; border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: 0.04em;
+    transition: background 0.2s ease; cursor: pointer;
+}
+.im-btn-signal:hover { background: #FF6A4D; }
+
+/* ================================================================
+   REVIEWS SECTION — one review at a time, on the section background
+   ================================================================ */
+.im-reviews {
+    position: relative;
+    background: var(--ink);
+    overflow: hidden;
+    padding: 100px 0 120px;
+    border-top: 1px solid var(--panel-line);
+}
+
+.im-reviews__header {
+    text-align: center;
+    margin-bottom: 56px;
+    position: relative;
+    z-index: 10;
+}
+
+/* Stage: fixed-height window; each slide is absolutely stacked inside it
+   and takes its turn fading/sliding into view, one at a time */
+.im-reviews__stage {
+    position: relative;
+    max-width: 680px;
+    margin: 0 auto;
+    min-height: 260px;
+}
+
+.im-reviews__slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    opacity: 0;
+    animation: im-reviews-cycle 48s linear infinite;
+}
+/* Each slide starts at a different point in the shared cycle, so only
+   one is ever in its "visible" window at a time */
+.im-reviews__slide:nth-of-type(1) { animation-delay: 0s;   }
+.im-reviews__slide:nth-of-type(2) { animation-delay: -6s;  }
+.im-reviews__slide:nth-of-type(3) { animation-delay: -12s; }
+.im-reviews__slide:nth-of-type(4) { animation-delay: -18s; }
+.im-reviews__slide:nth-of-type(5) { animation-delay: -24s; }
+.im-reviews__slide:nth-of-type(6) { animation-delay: -30s; }
+.im-reviews__slide:nth-of-type(7) { animation-delay: -36s; }
+.im-reviews__slide:nth-of-type(8) { animation-delay: -42s; }
+
+/* 8 slides sharing one 48s loop = 6s each (fade/slide in, hold, fade/slide out) */
+@keyframes im-reviews-cycle {
+    0%    { opacity: 0; transform: translateX(28px); }
+    2%    { opacity: 1; transform: translateX(0); }
+    11%   { opacity: 1; transform: translateX(0); }
+    12.5% { opacity: 0; transform: translateX(-28px); }
+    100%  { opacity: 0; transform: translateX(-28px); }
+}
+
+.im-reviews__stage:hover .im-reviews__slide { animation-play-state: paused; }
+
+.im-reviews__quote-mark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 3.6rem;
+    line-height: 1;
+    color: var(--signal);
+    opacity: 0.35;
+    margin-bottom: 4px;
+}
+
+.im-reviews__stars {
+    color: var(--signal);
+    font-size: 1rem;
+    letter-spacing: 0.14em;
+    margin-bottom: 18px;
+}
+.im-reviews__stars .dim { color: var(--panel-line); }
+
+.im-reviews__quote {
+    color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    max-width: 600px;
+    margin: 0 0 26px;
+}
+
+.im-reviews__person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.im-reviews__avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,77,46,0.14);
+    color: var(--signal);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600; font-size: 0.84rem;
+    flex-shrink: 0;
+}
+
+.im-reviews__person-meta { line-height: 1.3; text-align: left; }
+
+.im-reviews__name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--white);
+    display: block;
+}
+
+.im-reviews__sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+/* Decorative progress dots — lit one at a time, synced to the same cycle */
+.im-reviews__dots {
+    display: flex;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 44px;
+    list-style: none;
+    padding: 0;
+}
+.im-reviews__dots li {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--panel-line);
+    animation: im-reviews-dot 48s linear infinite;
+}
+.im-reviews__dots li:nth-child(1) { animation-delay: 0s;   }
+.im-reviews__dots li:nth-child(2) { animation-delay: -6s;  }
+.im-reviews__dots li:nth-child(3) { animation-delay: -12s; }
+.im-reviews__dots li:nth-child(4) { animation-delay: -18s; }
+.im-reviews__dots li:nth-child(5) { animation-delay: -24s; }
+.im-reviews__dots li:nth-child(6) { animation-delay: -30s; }
+.im-reviews__dots li:nth-child(7) { animation-delay: -36s; }
+.im-reviews__dots li:nth-child(8) { animation-delay: -42s; }
+
+@keyframes im-reviews-dot {
+    0%    { background: var(--panel-line); transform: scale(1); }
+    2%    { background: var(--signal); transform: scale(1.4); }
+    11%   { background: var(--signal); transform: scale(1.4); }
+    12.5% { background: var(--panel-line); transform: scale(1); }
+    100%  { background: var(--panel-line); transform: scale(1); }
+}
+
+.im-reviews__cta {
+    text-align: center;
+    margin-top: 52px;
+    position: relative;
+    z-index: 10;
+}
+
+.im-reviews__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 2px;
+    color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 32px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.im-reviews__btn:hover {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: var(--ink);
+}
+
+@media (max-width: 767px) {
+    .im-reviews__stage { min-height: 320px; }
+    .im-reviews__quote { font-size: 1.08rem; }
+    .im-reviews__quote-mark { font-size: 3rem; }
+}
+
+@media (min-width: 1800px) {
+    .im-reviews__stage { max-width: 760px; }
+    .im-reviews__quote { font-size: 1.4rem; }
+}
+
+/* Reduced motion: drop the animation and stack every review statically
+   so nothing is lost, it just no longer auto-advances */
+@media (prefers-reduced-motion: reduce) {
+    .im-reviews__stage { min-height: auto; }
+    .im-reviews__slide {
+        position: relative;
+        opacity: 1;
+        transform: none;
+        animation: none;
+        margin-bottom: 48px;
+    }
+    .im-reviews__dots { display: none; }
+}
+
+/* ================================================================
+   FOOTER
+   (Note: this used to hold a global rule forcing every .im-footer p/a
+   back to grey with !important, which overrode the white colors set
+   on .im-footer__tagline, .im-footer__nav-list a, etc. below. Removed
+   — those elements' own color declarations now apply as intended.)
+   ================================================================ */
+
+/* ================================================================
+   REDUCED MOTION
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .im-showcase__slide,
+    .im-showcase__slide-image img,
+    .im-showcase__slide-tag,
+    .im-showcase__slide-heading,
+    .im-showcase__slide-body,
+    .im-showcase__slide-link { transition: none !important; }
+    .im-hero-slide.is-active img { animation: none !important; transform: scale(1.08) !important; }
+    .im-dispatch-dot { animation: none; }
+}
 </style>
+
+<div class="im">
+
+    <!-- ============================================================
+         PRELOADER — a blueprint sketch of a house draws itself inside
+         a slow-turning compass ring, then sparks to life. Runs from a
+         plain inline script (no gsap/lenis dependency) so it starts
+         as early as possible.
+         ============================================================ -->
+    <div class="im-preloader" id="imPreloader" role="status" aria-live="polite">
+        <div class="im-preloader__panel im-preloader__panel--l"></div>
+        <div class="im-preloader__panel im-preloader__panel--r"></div>
+        <div class="im-preloader__stage">
+            <svg class="im-preloader__scene" viewBox="0 0 160 160" aria-hidden="true" focusable="false">
+                <circle class="im-preloader__ring" cx="80" cy="86" r="66"></circle>
+                <circle class="im-preloader__ring im-preloader__ring--inner" cx="80" cy="86" r="56"></circle>
+                <ellipse class="im-preloader__pulse" cx="80" cy="40" rx="7" ry="7"></ellipse>
+                <path class="im-preloader__house-fill" d="M38,86 L80,50 L122,86 L122,122 L38,122 Z"></path>
+                <path class="im-preloader__house"
+                      d="M32,122 L32,80 L80,38 L128,80 L128,122 Z M66,122 L66,96 L94,96 L94,122"></path>
+                <circle class="im-preloader__spark" cx="80" cy="38" r="3.4"></circle>
+            </svg>
+            <div class="im-preloader__label im-mono">
+                Locating pros near you<span class="im-preloader__dots"><span>.</span><span>.</span><span>.</span></span>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var pre = document.getElementById('imPreloader');
+        if (!pre) return;
+
+        var MIN_VISIBLE = 2200;  // floor — long enough for the blueprint draw + spark-in to play out
+        var MAX_WAIT    = 4000;  // ceiling, so it never blocks the page
+        var start = (window.performance && performance.now) ? performance.now() : Date.now();
+        var released = false;
+
+        document.documentElement.classList.add('im-lock-scroll');
+
+        function release() {
+            if (released) return;
+            released = true;
+            pre.classList.add('is-ready');
+            document.documentElement.classList.remove('im-lock-scroll');
+            setTimeout(function () {
+                if (pre && pre.parentNode) pre.parentNode.removeChild(pre);
+            }, 1000);
+        }
+
+        function armRelease() {
+            var now = (window.performance && performance.now) ? performance.now() : Date.now();
+            var elapsed = now - start;
+            setTimeout(release, Math.max(MIN_VISIBLE - elapsed, 0));
+        }
+
+        if (document.readyState === 'complete') {
+            armRelease();
+        } else {
+            window.addEventListener('load', armRelease, { once: true });
+        }
+        // Safety net: never let a slow subresource hold the page hostage.
+        setTimeout(release, MAX_WAIT);
+
+        // Piggyback the deferred hero-image loading on the same
+        // "page is actually ready" signal used to release the preloader.
+        function loadHeroSlides() {
+            var imgs = document.querySelectorAll('.im-hero-slide img[data-src]');
+            imgs.forEach(function (img, i) {
+                setTimeout(function () {
+                    var srcset = img.getAttribute('data-srcset');
+                    if (srcset) {
+                        img.srcset = srcset;
+                        img.removeAttribute('data-srcset');
+                    }
+                    img.src = img.getAttribute('data-src');
+                    img.removeAttribute('data-src');
+                }, i * 250);
+            });
+        }
+        if (document.readyState === 'complete') {
+            loadHeroSlides();
+        } else {
+            window.addEventListener('load', loadHeroSlides, { once: true });
+        }
+    })();
+    </script>
+
+    <!-- ============================================================
+         HERO
+         ============================================================ -->
+    <section class="im-hero-cinematic">
+        <div class="im-hero-slideshow" aria-hidden="true" id="heroSlideshow">
+            <div class="im-hero-slide is-active" data-index="0">
+                <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop"
+                     srcset="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=800&auto=format&fit=crop 800w,
+                             https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop 1200w,
+                             https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop 1600w,
+                             https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2400&auto=format&fit=crop 2400w"
+                     sizes="100vw"
+                     alt="" fetchpriority="high" decoding="async">
+            </div>
+            <div class="im-hero-slide" data-index="1">
+                <img data-src="https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1600&auto=format&fit=crop"
+                     data-srcset="https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=800&auto=format&fit=crop 800w,
+                                  https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1200&auto=format&fit=crop 1200w,
+                                  https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1600&auto=format&fit=crop 1600w,
+                                  https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=2400&auto=format&fit=crop 2400w"
+                     sizes="100vw" alt="" decoding="async">
+            </div>
+            <div class="im-hero-slide" data-index="2">
+                <img data-src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1600&auto=format&fit=crop"
+                     data-srcset="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop 800w,
+                                  https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1200&auto=format&fit=crop 1200w,
+                                  https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1600&auto=format&fit=crop 1600w,
+                                  https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=2400&auto=format&fit=crop 2400w"
+                     sizes="100vw" alt="" decoding="async">
+            </div>
+            <div class="im-hero-slide" data-index="3">
+                <img data-src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1600&auto=format&fit=crop"
+                     data-srcset="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=800&auto=format&fit=crop 800w,
+                                  https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1200&auto=format&fit=crop 1200w,
+                                  https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1600&auto=format&fit=crop 1600w,
+                                  https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=2400&auto=format&fit=crop 2400w"
+                     sizes="100vw" alt="" decoding="async">
+            </div>
+            <div class="im-hero-slide" data-index="4">
+                <img data-src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1600&auto=format&fit=crop"
+                     data-srcset="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=800&auto=format&fit=crop 800w,
+                                  https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1200&auto=format&fit=crop 1200w,
+                                  https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1600&auto=format&fit=crop 1600w,
+                                  https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=2400&auto=format&fit=crop 2400w"
+                     sizes="100vw" alt="" decoding="async">
+            </div>
+        </div>
+
+        <div class="im-hero-vignette" aria-hidden="true"></div>
+        <div class="im-hero-color-overlay" aria-hidden="true"></div>
+        <div class="im-hero-grain" aria-hidden="true"></div>
+
+        <div class="im-hero-cinematic__inner">
+            <div class="container text-center">
+
+                <div class="im-dispatch-strip">
+                    <span class="im-dispatch-dot"></span>
+                    <span>MATCHING LIVE</span>
+                    <span class="sep">·</span>
+                    <span><span class="stat-val">9,200+</span> pros nearby</span>
+                    <span class="sep">·</span>
+                    <span>avg response <span class="stat-val">38m</span></span>
+                </div>
+
+                <div class="im-hero-text-stage mb-4" id="heroTextStage">
+                    <div class="im-hero-text-slide is-active" data-index="0">
+                        <span class="im-hero-text-slide__tag">Cleaning &amp; Deep Care</span>
+                        <h1 class="im-title-kinetic display-2 mb-3">A spotless home,<br><span class="accent">on your schedule.</span></h1>
+                        <p class="im-hero-text-slide__desc">Deep cleans, move-outs and recurring visits from vetted local cleaners.</p>
+                    </div>
+                    <div class="im-hero-text-slide" data-index="1">
+                        <span class="im-hero-text-slide__tag">Plumbing &amp; Repairs</span>
+                        <h1 class="im-title-kinetic display-2 mb-3">Leaks fixed<br><span class="accent">before they spread.</span></h1>
+                        <p class="im-hero-text-slide__desc">Fast-response plumbers for clogs, leaks and fixture installs.</p>
+                    </div>
+                    <div class="im-hero-text-slide" data-index="2">
+                        <span class="im-hero-text-slide__tag">Licensed Electricians</span>
+                        <h1 class="im-title-kinetic display-2 mb-3">Wired safely,<br><span class="accent">done right.</span></h1>
+                        <p class="im-hero-text-slide__desc">Panel upgrades, new circuits and fault diagnosis from checked pros.</p>
+                    </div>
+                    <div class="im-hero-text-slide" data-index="3">
+                        <span class="im-hero-text-slide__tag">Interior Styling</span>
+                        <h1 class="im-title-kinetic display-2 mb-3">Spaces that<br><span class="accent">feel like home.</span></h1>
+                        <p class="im-hero-text-slide__desc">Designers who stage, refresh and transform every room.</p>
+                    </div>
+                    <div class="im-hero-text-slide" data-index="4">
+                        <span class="im-hero-text-slide__tag">Painting &amp; Finish</span>
+                        <h1 class="im-title-kinetic display-2 mb-3">Colour that<br><span class="accent">transforms a room.</span></h1>
+                        <p class="im-hero-text-slide__desc">Interior, exterior and trim work with a flawless finish.</p>
+                    </div>
+                </div>
+
+                <div class="mx-auto" style="max-width:700px;">
+                    <form action="{% url 'search_services' %}" method="GET"
+                          class="im-search-box d-flex align-items-center">
+                        <i class="fa-solid fa-magnifying-glass me-3 fs-5"
+                           style="color:var(--text-muted);" aria-hidden="true"></i>
+                        <input type="text" name="q"
+                               placeholder="Describe your project — repaint living room, leaky faucet..."
+                               class="im-search__input"
+                               aria-label="Describe your project or problem" required>
+                        <button type="submit" class="im-search__submit">Find Pros</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Coverflow carousel -->
+            <div class="im-hero-carousel" id="heroCarousel">
+                <div class="im-hero-carousel-stage" id="carouselStage">
+                    <a href="{% url 'search_services' %}?q=cleaning"
+                       class="im-hero-service-card" data-index="0">
+                        <img class="im-hero-service-card__img" loading="lazy"
+                             src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=600&auto=format&fit=crop"
+                             alt="Cleaning">
+                        <div class="im-hero-service-card__meta">
+                            <span class="im-hero-service-card__tag">340 pros active</span>
+                            <h3 class="im-hero-service-card__title">Cleaning</h3>
+                            <p class="im-hero-service-card__desc">Deep cleans &amp; move-outs</p>
+                        </div>
+                    </a>
+                    <a href="{% url 'search_services' %}?q=plumbing"
+                       class="im-hero-service-card" data-index="1">
+                        <img class="im-hero-service-card__img" loading="lazy"
+                             src="https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=600&auto=format&fit=crop"
+                             alt="Plumbing">
+                        <div class="im-hero-service-card__meta">
+                            <span class="im-hero-service-card__tag">812 pros active</span>
+                            <h3 class="im-hero-service-card__title">Plumbing</h3>
+                            <p class="im-hero-service-card__desc">Leaks, clogs &amp; fixture installs</p>
+                        </div>
+                    </a>
+                    <a href="{% url 'search_services' %}?q=electrical"
+                       class="im-hero-service-card" data-index="2">
+                        <img class="im-hero-service-card__img" loading="lazy"
+                             src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=600&auto=format&fit=crop"
+                             alt="Electrical">
+                        <div class="im-hero-service-card__meta">
+                            <span class="im-hero-service-card__tag">605 pros active</span>
+                            <h3 class="im-hero-service-card__title">Electrical</h3>
+                            <p class="im-hero-service-card__desc">Wiring, panels &amp; fixture swaps</p>
+                        </div>
+                    </a>
+                    <a href="{% url 'search_services' %}?q=interior+decor"
+                       class="im-hero-service-card" data-index="3">
+                        <img class="im-hero-service-card__img" loading="lazy"
+                             src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=600&auto=format&fit=crop"
+                             alt="Interior Decor">
+                        <div class="im-hero-service-card__meta">
+                            <span class="im-hero-service-card__tag">298 pros active</span>
+                            <h3 class="im-hero-service-card__title">Interior Decor</h3>
+                            <p class="im-hero-service-card__desc">Styling, staging &amp; room refreshes</p>
+                        </div>
+                    </a>
+                    <a href="{% url 'search_services' %}?q=painting"
+                       class="im-hero-service-card" data-index="4">
+                        <img class="im-hero-service-card__img" loading="lazy"
+                             src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=600&auto=format&fit=crop"
+                             alt="Painting">
+                        <div class="im-hero-service-card__meta">
+                            <span class="im-hero-service-card__tag">714 pros active</span>
+                            <h3 class="im-hero-service-card__title">Painting &amp; Finish</h3>
+                            <p class="im-hero-service-card__desc">Interior, exterior &amp; trim work</p>
+                        </div>
+                    </a>
+                    <a href="{% url 'search_services' %}?q=carpentry"
+                       class="im-hero-service-card" data-index="5">
+                        <img class="im-hero-service-card__img" loading="lazy"
+                             src="https://images.unsplash.com/photo-1534224039826-c7a0dea0e66a?q=80&w=600&auto=format&fit=crop"
+                             alt="Carpentry">
+                        <div class="im-hero-service-card__meta">
+                            <span class="im-hero-service-card__tag">456 pros active</span>
+                            <h3 class="im-hero-service-card__title">Carpentry</h3>
+                            <p class="im-hero-service-card__desc">Built-ins &amp; custom structural fits</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="im-carousel-controls">
+                    <button type="button" class="im-carousel-btn" id="carouselPrev" aria-label="Previous">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div class="im-carousel-dots" id="carouselDots"></div>
+                    <button type="button" class="im-carousel-btn" id="carouselNext" aria-label="Next">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         HOW IT WORKS
+         ============================================================ -->
+    <section class="im-section">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-12 text-center">
+                    <p class="im-eyebrow">How it works</p>
+                    <h2 class="im-section-heading display-5">Three steps, zero guesswork</h2>
+                </div>
+            </div>
+            <div class="row g-5 mt-2">
+                <div class="col-lg-4 gs-reveal-node">
+                    <div class="im-step-card">
+                        <span class="im-eyebrow mb-2 d-block">Capture</span>
+                        <h3 class="h4 mb-2">Describe the job</h3>
+                        <p>Tell us what's going on, in your own words. No rigid categories to guess at.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 gs-reveal-node">
+                    <div class="im-step-card">
+                        <span class="im-eyebrow mb-2 d-block">Match</span>
+                        <h3 class="h4 mb-2">Get matched</h3>
+                        <p>We surface licensed, reviewed pros who do this exact work, near you.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 gs-reveal-node">
+                    <div class="im-step-card">
+                        <span class="im-eyebrow mb-2 d-block">Lock</span>
+                        <h3 class="h4 mb-2">Book with confidence</h3>
+                        <p>Compare quotes, check past project reviews, and book the right pro.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         STATS
+         ============================================================ -->
+    <section class="im-section border-0 pt-0 im-section--bridge-bottom">
+        <div class="container">
+            <div class="row im-stat-row py-5 g-4 text-center justify-content-center">
+                <div class="col-md-4">
+                    <span class="display-4 im-stat-value d-block count-stat" data-target="9200">0</span>
+                    <span class="im-stat-label mt-2 d-block">Vetted network professionals</span>
+                </div>
+                <div class="col-md-4">
+                    <span class="display-4 im-stat-value d-block">
+                        <span class="count-stat" data-target="38">0</span> min
+                    </span>
+                    <span class="im-stat-label mt-2 d-block">Average matching velocity</span>
+                </div>
+                <div class="col-md-4">
+                    <span class="display-4 im-stat-value d-block">4.8 / 5</span>
+                    <span class="im-stat-label mt-2 d-block">Average fulfilled job rating</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         SECTION A — FEATURE SHOWCASE SLIDESHOW
+         ============================================================ -->
+    <section class="im-showcase" aria-labelledby="showcase-heading" id="imShowcase">
+
+        <nav class="im-showcase__nav" role="tablist" aria-label="Service categories" id="showcaseTabs">
+            <button class="im-showcase__tab is-active" data-slide="0" role="tab" aria-selected="true">Repairs</button>
+            <button class="im-showcase__tab" data-slide="1" role="tab" aria-selected="false">Renovation</button>
+            <button class="im-showcase__tab" data-slide="2" role="tab" aria-selected="false">Electrical</button>
+            <button class="im-showcase__tab" data-slide="3" role="tab" aria-selected="false">Interiors</button>
+            <button class="im-showcase__tab" data-slide="4" role="tab" aria-selected="false">Landscaping</button>
+        </nav>
+
+        <div class="im-showcase__header" style="padding-top:36px;">
+            <p class="im-eyebrow" style="color:var(--text-muted);">Everything your home project needs</p>
+            <h2 class="im-showcase__title" id="showcase-heading">
+                The right pro,<br>for every job.
+            </h2>
+            <p class="im-showcase__subtitle">Matched by skill, available now.</p>
+        </div>
+
+        <div class="im-showcase__stage" id="showcaseStage" role="tabpanel">
+
+            <div class="im-showcase__slide is-active" data-slide="0" aria-label="Repairs">
+                <div class="im-showcase__slide-text">
+                    <span class="im-showcase__slide-tag">Repairs &amp; Maintenance</span>
+                    <h3 class="im-showcase__slide-heading">Fix it fast,<br>fix it right.</h3>
+                    <p class="im-showcase__slide-body">
+                        Plumbing leaks, broken fixtures, cracked walls — our network pros respond in under 38 minutes on average and guarantee their work.
+                    </p>
+                    <a href="{% url 'search_services' %}?q=repairs" class="im-showcase__slide-link">
+                        Find repair pros
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="im-showcase__slide-image">
+                    <img loading="lazy"
+                         src="https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1200&auto=format&fit=crop"
+                         alt="Plumber fixing a pipe">
+                </div>
+            </div>
+
+            <div class="im-showcase__slide" data-slide="1" aria-label="Renovation">
+                <div class="im-showcase__slide-text">
+                    <span class="im-showcase__slide-tag">Full Renovations</span>
+                    <h3 class="im-showcase__slide-heading">Transform your space,<br>on your terms.</h3>
+                    <p class="im-showcase__slide-body">
+                        From kitchen overhauls to full bathroom renovations — quote multiple pros, compare timelines, and pick who fits your vision and budget.
+                    </p>
+                    <a href="{% url 'search_services' %}?q=renovation" class="im-showcase__slide-link">
+                        Browse renovation pros
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="im-showcase__slide-image">
+                    <img loading="lazy"
+                         src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=1200&auto=format&fit=crop"
+                         alt="Kitchen renovation in progress">
+                </div>
+            </div>
+
+            <div class="im-showcase__slide" data-slide="2" aria-label="Electrical">
+                <div class="im-showcase__slide-text">
+                    <span class="im-showcase__slide-tag">Electrical</span>
+                    <h3 class="im-showcase__slide-heading">Licensed electricians,<br>wired in.</h3>
+                    <p class="im-showcase__slide-body">
+                        Panel upgrades, new circuits, outdoor lighting or fault diagnosis — every electrician on eFundi is licensed and background-checked.
+                    </p>
+                    <a href="{% url 'search_services' %}?q=electrical" class="im-showcase__slide-link">
+                        Find electricians
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="im-showcase__slide-image">
+                    <img loading="lazy"
+                         src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1200&auto=format&fit=crop"
+                         alt="Electrician working on a panel">
+                </div>
+            </div>
+
+            <div class="im-showcase__slide" data-slide="3" aria-label="Interiors">
+                <div class="im-showcase__slide-text">
+                    <span class="im-showcase__slide-tag">Interior Design</span>
+                    <h3 class="im-showcase__slide-heading">Style that<br>feels like you.</h3>
+                    <p class="im-showcase__slide-body">
+                        Browse verified interior designers and decorators who stage, refresh, and transform rooms into spaces you'll actually want to live in.
+                    </p>
+                    <a href="{% url 'search_services' %}?q=interior+design" class="im-showcase__slide-link">
+                        Explore designers
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="im-showcase__slide-image">
+                    <img loading="lazy"
+                         src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1200&auto=format&fit=crop"
+                         alt="Modern interior design">
+                </div>
+            </div>
+
+            <div class="im-showcase__slide" data-slide="4" aria-label="Landscaping">
+                <div class="im-showcase__slide-text">
+                    <span class="im-showcase__slide-tag">Landscaping &amp; Gardens</span>
+                    <h3 class="im-showcase__slide-heading">Curb appeal,<br>cultivated.</h3>
+                    <p class="im-showcase__slide-body">
+                        Garden design, lawn care, irrigation installs or tree surgery — connect with landscape pros who know your local soil and climate.
+                    </p>
+                    <a href="{% url 'search_services' %}?q=landscaping" class="im-showcase__slide-link">
+                        Find landscapers
+                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+                <div class="im-showcase__slide-image">
+                    <img loading="lazy"
+                         src="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?q=80&w=1200&auto=format&fit=crop"
+                         alt="Landscaped garden">
+                </div>
+            </div>
+
+            <div class="im-showcase__progress" aria-hidden="true">
+                <div class="im-showcase__progress-bar" id="showcaseProgressBar"></div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ============================================================
+         SECTION B — SPLIT PANEL
+         ============================================================ -->
+    <section class="im-split" aria-labelledby="split-heading">
+        <div class="im-split__inner">
+
+            <div class="container">
+                <p class="im-split__eyebrow">Post a job · Find a pro</p>
+                <h2 class="im-split__title" id="split-heading">
+                    Getting started has<br>never been this easy.
+                </h2>
+                <p class="im-split__sub">No account needed. Describe the job, we handle the rest.</p>
+            </div>
+
+            <div class="im-split__grid">
+
+                <div class="im-split__panel im-split__panel--left gs-reveal-node">
+                    
+
+                    <div class="im-split__phone-stage">
+                        <div class="im-phone">
+                            <div class="im-phone__frame">
+                                <div class="im-phone__notch"></div>
+                                <div class="im-phone__screen">
+                                    <div class="im-phone__statusbar">
+                                        <span>9:41</span>
+                                        <span><i class="fa-solid fa-signal" aria-hidden="true"></i><i class="fa-solid fa-wifi" aria-hidden="true"></i><i class="fa-solid fa-battery-full" aria-hidden="true"></i></span>
+                                    </div>
+
+                                    <div class="im-phone__views" id="seekerPhoneScreens">
+
+                                        <!-- 01 — Login -->
+                                        <div class="im-phone__view is-active" data-view="0">
+                                            <p class="im-phone__tag">Sign in</p>
+                                            <div class="im-phone__login-mark">eF</div>
+                                            <div class="im-phone__field">you@email.com</div>
+                                            <div class="im-phone__field">••••••••</div>
+                                            <div class="im-phone__btn im-phone__btn--signal">Sign In</div>
+                                            <p class="im-phone__fineprint">or continue as guest</p>
+                                        </div>
+
+                                        <!-- 02 — Request -->
+                                        <div class="im-phone__view" data-view="1">
+                                            <p class="im-phone__tag">New request</p>
+                                            <div class="im-phone__searchbar">
+                                                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                                                <span>My s...</span>
+                                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="im-phone__locbar">
+                                                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                                                <span>97215</span>
+                                            </div>
+                                            <div class="im-phone__section-label">
+                                                <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i> Popular services
+                                            </div>
+                                            <div class="im-phone__service-row"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> House cleaning</div>
+                                            <div class="im-phone__service-row"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Local moving</div>
+                                            <div class="im-phone__service-row"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Interior painting</div>
+                                            <div class="im-phone__service-row"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Lawn mowing</div>
+                                        </div>
+
+                                        <!-- 03 — Matched -->
+                                        <div class="im-phone__view" data-view="2">
+                                            <p class="im-phone__tag">3 pros nearby</p>
+                                            <div class="im-phone__pro-card">
+                                                <div class="im-phone__pro-avatar"></div>
+                                                <div>
+                                                    <div class="im-phone__pro-name">Maria's Cleaning Co.</div>
+                                                    <div class="im-phone__pro-meta">★ 4.9 · 2.1 mi</div>
+                                                </div>
+                                                <div class="im-phone__pro-price">$85</div>
+                                            </div>
+                                            <div class="im-phone__pro-card">
+                                                <div class="im-phone__pro-avatar"></div>
+                                                <div>
+                                                    <div class="im-phone__pro-name">Bright Home Crew</div>
+                                                    <div class="im-phone__pro-meta">★ 4.8 · 3.4 mi</div>
+                                                </div>
+                                                <div class="im-phone__pro-price">$92</div>
+                                            </div>
+                                            <div class="im-phone__pro-card">
+                                                <div class="im-phone__pro-avatar"></div>
+                                                <div>
+                                                    <div class="im-phone__pro-name">ShineRight Pros</div>
+                                                    <div class="im-phone__pro-meta">★ 4.9 · 1.6 mi</div>
+                                                </div>
+                                                <div class="im-phone__pro-price">$78</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 04 — Rating -->
+                                        <div class="im-phone__view" data-view="3">
+                                            <p class="im-phone__tag">Job complete</p>
+                                            <div class="im-phone__rating-wrap">
+                                                <div class="im-phone__rating-avatar"></div>
+                                                <div class="im-phone__rating-name">Maria's Cleaning Co.</div>
+                                                <div class="im-phone__rating-role">House cleaning · 2 hrs</div>
+                                                <div class="im-phone__stars">★★★★★</div>
+                                                <p class="im-phone__rating-note">"Spotless work, right on time. Booking again!"</p>
+                                                <div class="im-phone__btn im-phone__btn--signal">Submit Rating</div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                                <div class="im-phone__home-indicator"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="im-split__panel im-split__panel--right gs-reveal-node">
+                    <div class="im-split__biz">
+                        <h3 class="im-split__biz-title">Connect with verified professionals. Get quality work done—fast, safely, and hassle-free with FixKona.</h3>
+
+                        <blockquote class="im-split__biz-quote">
+                            <i class="fa-solid fa-quote-left im-split__biz-quote-mark" aria-hidden="true"></i>
+                            <p class="im-split__biz-quote-text">Since switching over, my calendar stays full without me chasing a single lead. It just runs itself.</p>
+                        </blockquote>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ============================================================
+         CUSTOMER REVIEWS — one at a time, plain on the section background
+         (swap the text inside each im-reviews__slide for real reviews;
+         keep 8 slides, or update the nth-of-type delays in the CSS
+         and the dot list below if you change the count)
+         ============================================================ -->
+<section class="im-reviews" aria-labelledby="reviews-heading">
+
+    <div class="im-reviews__header">
+        <span class="im-eyebrow d-block mb-3" style="color:var(--signal);">Real projects · Real pros</span>
+        <h2 class="im-section-heading display-5 mb-3" id="reviews-heading">
+            What homeowners<br>are saying
+        </h2>
+        <p style="color:var(--text-muted);font-size:0.92rem;margin:0;">
+            Real feedback from homeowners who hired through eFundi.
+        </p>
+    </div>
+
+    <div class="im-reviews__stage" role="region" aria-label="Customer reviews" aria-live="off">
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="5 out of 5 stars">★★★★★</span>
+            <p class="im-reviews__quote">"The whole kitchen renovation finished a week ahead of schedule and the finish quality blew us away."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">SM</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">Sarah M.</span>
+                    <span class="im-reviews__sub">Cape Town · Kitchen Remodel</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="5 out of 5 stars">★★★★★</span>
+            <p class="im-reviews__quote">"Our electrician was upfront about pricing, tidy on site, and fixed the fault on the first visit."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">JK</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">James K.</span>
+                    <span class="im-reviews__sub">Johannesburg · Electrical</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="4 out of 5 stars">★★★★<span class="dim">★</span></span>
+            <p class="im-reviews__quote">"Our backyard finally looks the way we imagined it. Communication could've been a bit faster, but the result speaks for itself."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">NP</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">Naledi P.</span>
+                    <span class="im-reviews__sub">Durban · Landscaping</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="5 out of 5 stars">★★★★★</span>
+            <p class="im-reviews__quote">"Booked a pro within minutes, got three quotes by the next morning, and the bathroom redo was flawless."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">TR</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">Thabo R.</span>
+                    <span class="im-reviews__sub">Pretoria · Bathroom Remodel</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="5 out of 5 stars">★★★★★</span>
+            <p class="im-reviews__quote">"Painting crew protected every surface, worked fast, and the colour match was perfect."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">AB</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">Aisha B.</span>
+                    <span class="im-reviews__sub">Cape Town · Painting</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="4 out of 5 stars">★★★★<span class="dim">★</span></span>
+            <p class="im-reviews__quote">"Custom shelving came out better than the sketch we sent over. Would book this pro again."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">MO</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">Michael O.</span>
+                    <span class="im-reviews__sub">Sandton · Carpentry</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="5 out of 5 stars">★★★★★</span>
+            <p class="im-reviews__quote">"Deep clean before our move-in was spotless. They even caught a leak we hadn't noticed."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">GN</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">Grace N.</span>
+                    <span class="im-reviews__sub">Centurion · Deep Clean</span>
+                </div>
+            </div>
+        </article>
+
+        <article class="im-reviews__slide">
+            <span class="im-reviews__quote-mark" aria-hidden="true">"</span>
+            <span class="im-reviews__stars" aria-label="5 out of 5 stars">★★★★★</span>
+            <p class="im-reviews__quote">"Roof repair was sorted before the next storm hit. Fast quote, fair price, no surprises."</p>
+            <div class="im-reviews__person">
+                <div class="im-reviews__avatar">DL</div>
+                <div class="im-reviews__person-meta">
+                    <span class="im-reviews__name">David L.</span>
+                    <span class="im-reviews__sub">Gqeberha · Roof Repair</span>
+                </div>
+            </div>
+        </article>
+
+    </div>
+
+    <ul class="im-reviews__dots" aria-hidden="true">
+        <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+    </ul>
+
+    <div class="im-reviews__cta">
+        <a href="{% url 'search_services' %}" class="im-reviews__btn">
+            Browse all projects
+            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </a>
+    </div>
+
+</section>
+
+
+</div><!-- /.im -->
+
+<!-- ================================================================
+     CTA — PARTICLE SECTION
+     ================================================================ -->
+<section class="im-cta-particles">
+    <canvas id="particleCanvas"></canvas>
+    <div class="im-cta-particles__inner">
+        <span class="im-eyebrow im-cta-particles__eyebrow">For trades &amp; contractors</span>
+        <h2 class="im-cta-particles__heading im-display" style="max-width: 600px;">
+            Got a trade? We'll bring the jobs to you.
+        </h2>
+        <p class="im-cta-particles__eyebrow" style="max-width:520px;">
+            Join Fixkona and get matched with homeowners who already described exactly what they need.
+        </p>
+        <a href="{% url 'provider_signup_step1' %}"
+            class="btn im-btn-signal rounded-0 px-5 py-3 text-uppercase im-mono fs-7">
+              Sign up as a pro
+            <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
+        </a>
+    </div>
+</section>
+
+
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js" defer></script>
+<script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js" defer></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    /* ── Lenis smooth scroll ─────────────────────────────────── */
+    const lenis = new Lenis({
+        duration: 1.2,
+        easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+    });
+    function scrollLoop (time) { lenis.raf(time); requestAnimationFrame(scrollLoop); }
+    requestAnimationFrame(scrollLoop);
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ── Scroll-reveal nodes ─────────────────────────────────── */
+    gsap.utils.toArray('.gs-reveal-node').forEach(el => {
+        gsap.from(el, {
+            opacity: 0, y: 40, duration: 1.1,
+            scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none none' }
+        });
+    });
+
+    /* ── Stats counter ───────────────────────────────────────── */
+    document.querySelectorAll('.count-stat').forEach(stat => {
+        const target = parseInt(stat.getAttribute('data-target'), 10);
+        gsap.to(stat, {
+            innerText: target, duration: 2.6, snap: { innerText: 1 },
+            scrollTrigger: { trigger: stat, start: 'top 90%' }
+        });
+    });
+
+    /* ── Hero coverflow carousel ─────────────────────────────── */
+    const stage = document.getElementById('carouselStage');
+    const cards = stage ? Array.from(stage.querySelectorAll('.im-hero-service-card')) : [];
+    const dotsContainer = document.getElementById('carouselDots');
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+    const CAROUSEL_MS = 5000;
+    let carouselIdx = 0, carouselTimer = null;
+
+    if (cards.length) {
+        cards.forEach((_, i) => {
+            const dot = document.createElement('span');
+            dot.className = 'im-carousel-dot';
+            dot.addEventListener('click', () => goToCard(i));
+            dotsContainer.appendChild(dot);
+        });
+        const dots = Array.from(dotsContainer.querySelectorAll('.im-carousel-dot'));
+
+        function renderCarousel () {
+            const n = cards.length;
+            cards.forEach((card, i) => {
+                let state = 'far';
+                if (i === carouselIdx)                  state = 'center';
+                else if (i === (carouselIdx-1+n) % n)  state = 'prev';
+                else if (i === (carouselIdx+1) % n)     state = 'next';
+                card.setAttribute('data-state', state);
+            });
+            dots.forEach((d, i) => d.classList.toggle('is-active', i === carouselIdx));
+        }
+
+        function goToCard (idx) {
+            carouselIdx = ((idx % cards.length) + cards.length) % cards.length;
+            renderCarousel();
+            restartCarouselTimer();
+        }
+
+        function restartCarouselTimer () {
+            clearInterval(carouselTimer);
+            carouselTimer = setInterval(() => goToCard(carouselIdx + 1), CAROUSEL_MS);
+        }
+
+        prevBtn.addEventListener('click', () => goToCard(carouselIdx - 1));
+        nextBtn.addEventListener('click', () => goToCard(carouselIdx + 1));
+        stage.addEventListener('mouseenter', () => clearInterval(carouselTimer));
+        stage.addEventListener('mouseleave', restartCarouselTimer);
+        renderCarousel();
+        restartCarouselTimer();
+    }
+
+    /* ── Hero image + text slideshow (synced, cinematic pan/zoom) ── */
+    const heroImgSlides  = Array.from(document.querySelectorAll('.im-hero-slide'));
+    const heroTextSlides = Array.from(document.querySelectorAll('.im-hero-text-slide'));
+    const HERO_MS = 5600; // how long each slide holds before advancing
+    let heroIdx = 0;
+
+    function goToHeroSlide (idx) {
+        const next = ((idx % heroImgSlides.length) + heroImgSlides.length) % heroImgSlides.length;
+        heroImgSlides.forEach((s, i) => {
+            const wasActive = s.classList.contains('is-active');
+            s.classList.toggle('is-active', i === next);
+            if (i === next && !wasActive) {
+                // Force this slide's pan/zoom to restart from 0% each
+                // time it becomes active, instead of resuming wherever
+                // it left off (or being skipped by the browser). Each
+                // slide has its own keyframe animation-name set in CSS
+                // (nth-child selectors), so only animation-name needs
+                // to be cycled here — duration/easing stay put.
+                const img = s.querySelector('img');
+                img.style.animationName = 'none';
+                void img.offsetWidth; // reflow
+                img.style.animationName = '';
+            }
+        });
+        heroTextSlides.forEach((s, i) => s.classList.toggle('is-active', i === next));
+        heroIdx = next;
+    }
+
+    if (heroImgSlides.length) {
+        goToHeroSlide(0);
+        setInterval(() => goToHeroSlide(heroIdx + 1), HERO_MS);
+    }
+
+    /* ── Feature showcase slideshow ─────────────────────────── */
+    const showcaseTabs   = Array.from(document.querySelectorAll('.im-showcase__tab'));
+    const showcaseSlides = Array.from(document.querySelectorAll('.im-showcase__slide'));
+    const progressBar    = document.getElementById('showcaseProgressBar');
+    const SHOWCASE_MS    = 5500;
+
+    let scIdx = 0, scTimer = null, scRAF = null, scStart = null;
+
+    function renderShowcase (idx) {
+        scIdx = idx;
+        showcaseTabs.forEach((t, i) => {
+            t.classList.toggle('is-active', i === idx);
+            t.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+        });
+        showcaseSlides.forEach((s, i) => s.classList.toggle('is-active', i === idx));
+    }
+
+    function startProgressBar () {
+        cancelAnimationFrame(scRAF);
+        scStart = performance.now();
+        if (progressBar) {
+            progressBar.style.transition = 'none';
+            progressBar.style.transform  = 'scaleX(0)';
+        }
+        function tick (now) {
+            const pct = Math.min((now - scStart) / SHOWCASE_MS, 1);
+            if (progressBar) progressBar.style.transform = 'scaleX(' + pct + ')';
+            if (pct < 1) scRAF = requestAnimationFrame(tick);
+        }
+        scRAF = requestAnimationFrame(tick);
+    }
+
+    function advanceShowcase () {
+        renderShowcase((scIdx + 1) % showcaseSlides.length);
+        startProgressBar();
+    }
+
+    function restartShowcaseTimer () {
+        clearInterval(scTimer);
+        scTimer = setInterval(advanceShowcase, SHOWCASE_MS);
+        startProgressBar();
+    }
+
+    showcaseTabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => { renderShowcase(i); restartShowcaseTimer(); });
+    });
+
+    const showcaseSection = document.getElementById('imShowcase');
+    if (showcaseSection) {
+        showcaseSection.addEventListener('mouseenter', () => { clearInterval(scTimer); cancelAnimationFrame(scRAF); });
+        showcaseSection.addEventListener('mouseleave', restartShowcaseTimer);
+    }
+
+    renderShowcase(0);
+    restartShowcaseTimer();
+
+    gsap.from('.im-showcase__header', {
+        opacity: 0, y: 30, duration: 1.1,
+        scrollTrigger: { trigger: '#imShowcase', start: 'top 80%', once: true }
+    });
+
+    gsap.from('.im-split__title, .im-split__sub, .im-split__eyebrow', {
+        opacity: 0, y: 24, duration: 1, stagger: 0.1,
+        scrollTrigger: { trigger: '.im-split', start: 'top 82%', once: true }
+    });
+
+    /* Seeker panel: cycle the animated phone screens
+       (login → request → matched → rating) on their own beat. */
+    function initSeekerCycler (ms) {
+        const phoneContainer = document.getElementById('seekerPhoneScreens');
+        if (!phoneContainer) return;
+        const views = Array.from(phoneContainer.querySelectorAll('.im-phone__view'));
+        if (views.length < 2) return;
+        let idx = 0;
+        setInterval(() => {
+            idx = (idx + 1) % views.length;
+            views.forEach((v, i) => v.classList.toggle('is-active', i === idx));
+        }, ms);
+    }
+    initSeekerCycler(3200);
+
+
+});
+
+/* ── CTA Particle Canvas ─────────────────────────────────── */
+(function () {
+    const canvas  = document.getElementById('particleCanvas');
+    if (!canvas) return;
+    const ctx     = canvas.getContext('2d');
+    let W, H, particles = [], mouse = { x: -9999, y: -9999 };
+    let rafId = null, sectionVisible = false;
+
+    const PARTICLE_COUNT = 480; // was 1000 — connection-line cost scales ~O(n²)
+    const SPHERE_RADIUS  = () => Math.min(W, H) * 0.5;
+    const BASE_SPEED     = 0.5;
+    const CONNECT_DIST   = 72;
+    const MOUSE_REPEL    = 100;
+
+    function resize () {
+        W = canvas.offsetWidth;
+        H = canvas.offsetHeight;
+        canvas.width  = W;
+        canvas.height = H;
+    }
+
+    function randomSpherePoint (R) {
+        const u    = Math.random(), v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi   = Math.acos(2 * v - 1);
+        const r     = R * Math.cbrt(Math.random() * 0.55 + 0.45);
+        return {
+            x: r * Math.sin(phi) * Math.cos(theta),
+            y: r * Math.sin(phi) * Math.sin(theta),
+            z: r * Math.cos(phi)
+        };
+    }
+
+    function initParticles () {
+        particles = [];
+        const R = SPHERE_RADIUS();
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const p3 = randomSpherePoint(R);
+            particles.push({
+                ox: p3.x, oy: p3.y, oz: p3.z,
+                alpha: 0.5 + Math.random() * 0.5,
+                size: 0.8 + Math.random() * 1.4
+            });
+        }
+    }
+
+    let rotY = 0, rotX = 0.15;
+
+    function project (x, y, z) {
+        const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+        const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+        const x1 = x * cosY - z * sinY;
+        const z1 = x * sinY + z * cosY;
+        const y1 = y * cosX - z1 * sinX;
+        const z2 = y * sinX + z1 * cosX;
+        const fov = 900;
+        const scale = fov / (fov + z2);
+        return { sx: x1 * scale, sy: y1 * scale, depth: z2 };
+    }
+
+    function draw () {
+        ctx.clearRect(0, 0, W, H);
+        const cx = W / 2, cy = H / 2;
+
+        rotY += 0.0025;
+        rotX  = 0.15 + Math.sin(Date.now() * 0.0003) * 0.08;
+
+        const projected = particles.map(p => {
+            const pr = project(p.ox, p.oy, p.oz);
+            let sx = cx + pr.sx;
+            let sy = cy + pr.sy;
+
+            /* mouse repulsion */
+            const dx = sx - mouse.x, dy = sy - mouse.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < MOUSE_REPEL && dist > 0) {
+                const force = (1 - dist / MOUSE_REPEL) * 28;
+                sx += (dx / dist) * force;
+                sy += (dy / dist) * force;
+            }
+
+            return { x: sx, y: sy, depth: pr.depth, p };
+        });
+
+        /* connections */
+        for (let i = 0; i < projected.length; i++) {
+            for (let j = i + 1; j < projected.length; j++) {
+                const a = projected[i], b = projected[j];
+                const ddx = a.x - b.x, ddy = a.y - b.y;
+                const d = Math.sqrt(ddx*ddx + ddy*ddy);
+                if (d < CONNECT_DIST) {
+                    const alpha = (1 - d / CONNECT_DIST) * 0.16;
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+                    ctx.lineWidth = 0.4;
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        /* dots */
+        const R = SPHERE_RADIUS();
+        projected.forEach(({ x, y, depth, p }) => {
+            const normDepth = (depth + R) / (2 * R);
+            const alpha = 0.22 + normDepth * 0.78;
+            const size  = p.size * (0.45 + normDepth * 0.75);
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255,255,255,${alpha * p.alpha})`;
+            ctx.fill();
+        });
+
+        rafId = requestAnimationFrame(draw);
+    }
+
+    function start () {
+        if (rafId !== null) return;
+        draw();
+    }
+    function stop () {
+        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+
+    const section = canvas.closest('.im-cta-particles');
+    section.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+    });
+    section.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+    resize();
+    initParticles();
+
+    // This canvas is the single most expensive thing on the page (a
+    // near-O(n²) connection-line check every frame). Only run it while
+    // the section is actually on screen and the tab is visible, instead
+    // of animating forever from page load regardless of scroll position.
+    const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            sectionVisible = entry.isIntersecting;
+            if (sectionVisible && document.visibilityState === 'visible') start();
+            else stop();
+        });
+    }, { threshold: 0.01 });
+    io.observe(section);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && sectionVisible) start();
+        else stop();
+    });
+})();
+</script>
 {% endblock %}

@@ -1,168 +1,567 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Intelligent Service Matching System{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Account{% endblock %} | Fixkona</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+
+    <!-- Apply theme before first paint to avoid a light/dark flash -->
+    <script>
+        (function () {
+            var stored = localStorage.getItem('fixkona-theme') || '{{ user.theme_preference|default:"system" }}';
+            var resolved = stored === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : stored;
+            document.documentElement.setAttribute('data-theme', resolved);
+        })();
+    </script>
+
+    {% block extra_head %}{% endblock %}
+
     <style>
-    /* --- Navbar Styling --- */
-    .main-nav {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 40px;
-        background: white;
-        border-bottom: 1px solid #eee;
-        font-family: 'Segoe UI', sans-serif;
-    }
+        :root {
+            --lz-paper:     #F5F2ED;
+            --lz-paper-alt: #EDE9E2;
+            --lz-ink:       #0B0E14;
+            --lz-ink-60:    rgba(11, 14, 20, 0.55);
+            --lz-ink-08:    rgba(11, 14, 20, 0.08);
+            --lz-muted:     #6B7280;
+            --lz-signal:    #FF4D2E;
+            --lz-border:    rgba(11, 14, 20, 0.1);
+            --lz-dark-end:  #0B0E14;
 
-    .nav-links {
-        display: flex;
-        align-items: center;
-        gap: 25px;
-    }
+            --ink:        var(--lz-dark-end);
+            --panel:      var(--lz-paper);
+            --panel-2:    var(--lz-paper-alt);
+            --panel-line: var(--lz-border);
+            --signal:     var(--lz-signal);
+            --signal-dim: #C23A21;
+            --live:       #1F9D55;
+            --text-muted: var(--lz-muted);
+            --white:      var(--lz-ink);
 
-    .nav-link {
-        text-decoration: none;
-        color: #666;
-        font-weight: 500;
-        font-size: 0.95rem;
-    }
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 70px;
+        }
 
-    .brand-text {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #2d2d2d;
-    }
+        :root[data-theme="dark"] {
+            --lz-paper:     #12161F;
+            --lz-paper-alt: #191E29;
+            --lz-ink:       #F2F1ED;
+            --lz-ink-60:    rgba(242, 241, 237, 0.62);
+            --lz-ink-08:    rgba(242, 241, 237, 0.08);
+            --lz-muted:     #9AA3AF;
+            --lz-border:    rgba(242, 241, 237, 0.1);
+        }
 
-    .brand-icon {
-        background-color: #0096d6;
-        color: white;
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-    }
+        * { box-sizing: border-box; }
 
-    .btn-signup {
-        background-color: #0096d6;
-        color: white;
-        padding: 10px 24px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: bold;
-    }
+        body {
+            background-color: var(--lz-paper);
+            color: var(--lz-ink);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            transition: background-color .2s ease, color .2s ease;
+        }
 
-    /* --- User Profile Dropdown --- */
-    .user-profile {
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-    }
+        /* ============ SIDEBAR UTILITY ITEMS (Settings + theme toggle) ============
+           Grouped together just above Logout, but styled identically to the
+           regular .nav-link rows so the whole list reads as one consistent set. */
+        .theme-quick-toggle {
+            width: 100%;
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 25px;
+            border: none; border-left: 3px solid transparent; border-radius: 0;
+            background: transparent; cursor: pointer;
+            color: #9AA3AF; font-size: 0.88rem; font-family: 'Inter', sans-serif;
+            text-align: left; white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+        .theme-quick-toggle:hover { background: rgba(255,255,255,0.03); color: #FFFFFF; }
+        .theme-quick-toggle i { width: 16px; font-size: 0.85rem; text-align: center; }
+        .sidebar--collapsed .theme-quick-toggle span { display: none; }
+        .sidebar--collapsed .theme-quick-toggle { justify-content: center; padding: 14px 0; }
+        .sidebar--collapsed .theme-quick-toggle i { font-size: 0.95rem; width: auto; }
 
-    .avatar {
-        background-color: #e8f0fe;
-        color: #1a73e8;
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.8rem;
-        font-weight: bold;
-    }
+        .theme-quick-toggle.is-current {
+            background: rgba(255,77,46,0.08);
+            color: var(--lz-signal);
+            border-left-color: var(--lz-signal);
+        }
 
-    .dropdown-arrow {
-        font-size: 0.6rem;
-        color: #999;
-    }
+        .sidebar-utility-group { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
 
-    .dropdown-menu {
-        position: absolute;
-        top: 50px;
-        right: 0;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        display: none;
-        flex-direction: column;
-        min-width: 150px;
-        z-index: 100;
-    }
+        a { color: inherit; }
 
-    .dropdown-menu a {
-        padding: 10px 15px;
-        text-decoration: none;
-        color: #333;
-        font-size: 0.95rem;
-        transition: background 0.2s;
-    }
+        /* ============ FLOATING FLOATING TOGGLE BUTTON ============ */
+        .menu-toggle {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1100;
+            background: var(--lz-dark-end);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1.1rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .menu-toggle:hover {
+            background: #1A1F2B;
+            transform: scale(1.05);
+        }
+        .menu-toggle .fa-xmark { display: none; }
+        .menu-toggle.is-active .fa-bars { display: none; }
+        .menu-toggle.is-active .fa-xmark { display: inline-block; }
 
-    .dropdown-menu a:hover {
-        background-color: #f0f0f0;
-    }
+        /* Toggle stays fixed at left:15px (set above) so it always sits inside the
+           sidebar's left edge, whether the sidebar is expanded (260px) or collapsed (70px) */
 
-    .user-profile:hover .dropdown-menu {
-        display: flex;
-    }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(11, 14, 20, 0.5);
+            z-index: 999;
+        }
+        .sidebar-backdrop.is-visible { display: block; }
+
+        /* ============ SIDEBAR ============ */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--lz-dark-end);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            padding: 75px 0 24px 0;
+            z-index: 1000;
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: width 0.25s ease, transform 0.25s ease;
+        }
+
+        /* Collapsed State Layout */
+        .sidebar--collapsed .sidebar {
+            width: var(--sidebar-collapsed-width);
+        }
+        .sidebar--collapsed .sidebar__profile,
+        .sidebar--collapsed .sidebar .nav-link span,
+        .sidebar--collapsed .sidebar__logo {
+            display: none !important;
+        }
+        .sidebar--collapsed .sidebar .nav-link {
+            justify-content: center;
+            padding: 14px 0;
+        }
+        .sidebar--collapsed .sidebar .nav-link i {
+            font-size: 0.95rem;
+            width: auto;
+        }
+
+        .sidebar__logo {
+            display: flex; align-items: center; gap: 9px;
+            padding: 0 25px 24px;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.05rem;
+            color: #FFFFFF; text-decoration: none;
+        }
+        .sidebar__logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lz-signal); flex-shrink: 0; }
+        .sidebar__logo-img { height: 24px; width: auto; display: block; flex-shrink: 0; }
+
+        /* ============ MOBILE TOP BAR ============
+           Hidden on desktop (sidebar is always visible there). On small screens
+           this becomes a full-width dark strip behind the hamburger button,
+           with the brand logo pinned to the right. */
+        .mobile-topbar {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 70px;
+            background: var(--lz-dark-end);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 20px;
+            z-index: 1050;
+        }
+        .mobile-topbar__logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #FFFFFF;
+            text-decoration: none;
+        }
+        .mobile-topbar__logo .sidebar__logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lz-signal); flex-shrink: 0; }
+        .mobile-topbar__logo img {
+            height: 26px;
+            width: auto;
+            display: block;
+        }
+
+        .sidebar__profile {
+            text-align: center;
+            padding: 0 20px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 20px;
+        }
+        .sidebar__profile img {
+            width: 62px; height: 62px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.08);
+            object-fit: cover;
+        }
+        .sidebar__profile h6 {
+            font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+            color: #FFFFFF; margin: 12px 0 2px;
+        }
+        .sidebar__profile small { color: #9AA3AF; font-size: 0.78rem; }
+
+        /* ============ EDITABLE SIDEBAR AVATAR ============ */
+        .avatar-upload {
+            position: relative;
+            width: 62px; height: 62px;
+            margin: 0 auto;
+            cursor: pointer;
+        }
+        .avatar-upload img {
+            width: 100%; height: 100%;
+            transition: opacity .15s ease;
+        }
+        .avatar-upload__overlay {
+            position: absolute; inset: 0;
+            border-radius: 50%;
+            background: rgba(11,14,20,0.55);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 0.82rem;
+            opacity: 0; transition: opacity .15s ease;
+            pointer-events: none;
+        }
+        .avatar-upload:hover .avatar-upload__overlay,
+        .avatar-upload.is-uploading .avatar-upload__overlay { opacity: 1; }
+        .avatar-upload.is-uploading .avatar-upload__overlay i { animation: avatar-spin 0.8s linear infinite; }
+        .avatar-upload input[type="file"] {
+            position: absolute; inset: 0;
+            opacity: 0; cursor: pointer;
+        }
+        .sidebar--collapsed .avatar-upload { display: none; }
+        @keyframes avatar-spin { to { transform: rotate(360deg); } }
+        .avatar-upload-error {
+            color: var(--lz-signal); font-size: 0.7rem; margin-top: 8px;
+            display: none;
+        }
+        .avatar-upload-error.is-visible { display: block; }
+
+        .sidebar .nav-link {
+            color: #9AA3AF;
+            padding: 11px 25px;
+            display: flex; align-items: center; gap: 12px;
+            font-size: 0.88rem;
+            border-left: 3px solid transparent;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .sidebar .nav-link i { width: 16px; font-size: 0.85rem; text-align: center; }
+        .sidebar .nav-link:hover { background: rgba(255,255,255,0.03); color: #FFFFFF; }
+        .sidebar .nav-link.active {
+            background: rgba(255,77,46,0.08);
+            color: var(--lz-signal);
+            border-left-color: var(--lz-signal);
+        }
+
+        .sidebar__logout {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar__logout .nav-link { color: #FF8A72; }
+        .sidebar__logout .nav-link:hover { color: var(--lz-signal); background: rgba(255,77,46,0.06); }
+
+        /* ============ MAIN CONTENT ============ */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            width: calc(100% - var(--sidebar-width));
+            padding: 40px 40px 40px 40px;
+            transition: margin-left 0.25s ease, width 0.25s ease;
+        }
+
+        .sidebar--collapsed .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+            width: calc(100% - var(--sidebar-collapsed-width));
+        }
+
+        @media (max-width: 900px) {
+            .mobile-topbar { display: flex; }
+            .sidebar { transform: translateX(-100%); padding-top: 90px; top: 0; height: 100vh; width: var(--sidebar-width) !important; }
+            .sidebar.is-open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; width: 100% !important; padding: 90px 20px 20px 20px; }
+
+            .sidebar--collapsed .sidebar .nav-link { justify-content: flex-start; padding: 11px 25px; }
+            .sidebar--collapsed .sidebar .nav-link span, .sidebar--collapsed .sidebar__profile, .sidebar--collapsed .sidebar__logo { display: block !important; }
+            .sidebar--collapsed .sidebar .nav-link i { font-size: 0.85rem; width: 16px; }
+
+            /* Sidebar utility group (Settings / Dark mode) has its own copy of
+               the collapsed-desktop rules (icon-only, centered). Restore it to
+               the full nav-link treatment above so it reads as part of the
+               same list when the sidebar is open on mobile. */
+            .sidebar--collapsed .theme-quick-toggle { justify-content: flex-start; padding: 11px 25px; }
+            .sidebar--collapsed .theme-quick-toggle span { display: block !important; }
+            .sidebar--collapsed .theme-quick-toggle i { font-size: 0.85rem; width: 16px; }
+        }
+
+        /* Styling for design elements */
+        .premium-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--signal); display: block; margin-bottom: 14px; }
+        .premium-heading { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: clamp(1.7rem, 3vw, 2.4rem); letter-spacing: -0.02em; color: var(--white); margin-bottom: 12px; }
+        .premium-sub { color: var(--text-muted); font-size: 0.92rem; }
+        .alert { background: var(--panel); border: 1px solid var(--panel-line); color: var(--white); border-radius: 4px; font-size: 0.88rem; }
+        .alert-warning, .alert-danger, .alert-error { border-left: 3px solid var(--signal); }
+        .alert-info, .alert-success                 { border-left: 3px solid var(--live); }
+        .btn-close { filter: invert(1); }
+        .premium-banner { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        .premium-banner p { margin: 0; color: var(--lz-ink-60); font-size: 0.9rem; }
+        .premium-banner strong { color: var(--white); }
+        .premium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 22px; }
+        .premium-card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 32px 28px; display: flex; flex-direction: column; position: relative; transition: border-color 0.3s ease, transform 0.3s ease; }
+        .premium-card:hover { border-color: var(--lz-ink-60); transform: translateY(-4px); }
+        .premium-card.is-featured { border-color: var(--signal); box-shadow: 0 20px 50px rgba(255,77,46,0.14); }
+        .premium-card.is-current { border-color: var(--live); }
+        .premium-card__badge { position: absolute; top: -12px; left: 28px; background: var(--signal); color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 12px; border-radius: 3px; }
+        .premium-card__name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.3rem; color: var(--white); margin-bottom: 6px; }
+        .premium-card__desc { color: var(--text-muted); font-size: 0.84rem; line-height: 1.6; margin-bottom: 22px; min-height: 40px; }
+        .premium-card__price { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 2rem; color: var(--white); }
+        .premium-card__cycle { color: var(--text-muted); font-size: 0.78rem; margin-bottom: 24px; }
+        .premium-card__features { list-style: none; padding: 0; margin: 0 0 26px; flex-grow: 1; }
+        .premium-card__features li { font-size: 0.86rem; color: var(--lz-ink-60); padding: 10px 0; border-top: 1px solid var(--panel-line); display: flex; gap: 10px; align-items: flex-start; }
+        .premium-card__features li:first-child { border-top: none; }
+        .premium-card__features li strong { color: var(--white); }
+        .premium-card__features li.is-highlight { color: var(--signal); }
+        .premium-card__features li .dot { color: var(--signal); flex-shrink: 0; }
+        .premium-btn { display: inline-flex; align-items: center; justify-content: center; background: var(--signal); color: var(--ink) !important; border: none; border-radius: 2px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.78rem; padding: 13px 20px; text-decoration: none; transition: background 0.2s ease, transform 0.2s ease; cursor: pointer; }
+        .premium-btn:hover { background: #FF6A4D; color: var(--ink); transform: translateY(-2px); }
+        .premium-btn.is-disabled { background: var(--panel-2); color: var(--text-muted) !important; border: 1px solid var(--panel-line); cursor: default; }
+        .premium-btn.is-disabled:hover { background: var(--panel-2); transform: none; }
+        .premium-btn.is-outline { background: transparent; color: var(--lz-ink) !important; border: 1px solid var(--lz-border); }
+        .premium-btn.is-outline:hover { border-color: var(--lz-ink); background: var(--lz-ink-08); transform: none; }
+        .premium-btn.is-block { width: 100%; }
+        .progress { background: var(--panel-2); }
+        .dark-card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 8px; }
     </style>
 </head>
-<body>
+<body class="sidebar--collapsed">
 
-<header>
-    <nav class="main-nav">
-        
-        <!-- Brand -->
-        <div class="nav-brand">
-            <a href="{% url 'landing_page' %}">
-                {% if user.is_authenticated %}
-                    <div class="brand-icon">T</div>
-                {% else %}
-                    <span class="brand-text">eFundi</span>
-                {% endif %}
-            </a>
-        </div>
-
-        <!-- Navigation Links -->
-        <div class="nav-links">
-
-            {% if user.is_authenticated %}
-                <a href="#" class="nav-link">Plan</a>
-                <a href="#" class="nav-link">Team</a>
-                <a href="#" class="nav-link">Inbox</a>
-
-                <div class="user-profile">
-                    <div class="avatar">{{ user.first_name|slice:":1"|upper }}</div>
-                    <span class="username">{{ user.first_name }}</span>
-                    <i class="fas fa-chevron-down dropdown-arrow"></i>
-
-                    <!-- Dropdown Menu -->
-                    <div class="dropdown-menu">
-                        <a href="{% url 'profile' %}">Profile</a>
-                        <a href="{% url 'logout' %}">Logout</a>
-                    </div>
-                </div>
-
-            {% else %}
-                <a href="{% url 'provider_signup_step1' %}" class="nav-link">Join as a pro</a>
-                <a href="{% url 'register_user' %}" class="btn-signup">Sign up</a>
-                <a href="{% url 'login' %}" class="nav-link">Log in</a>
-            {% endif %}
-
-        </div>
-    </nav>
+<header class="mobile-topbar">
+    <a href="{% url 'landing_page' %}" class="mobile-topbar__logo">
+        <img src="{% static 'images/logo3.png' %}" alt="Fixkona logo">
+        Fixkona
+    </a>
 </header>
 
-<main>
-    {% block content %}{% endblock %}
-</main>
+<button type="button" class="menu-toggle" id="sidebarToggle" aria-label="Open menu" aria-expanded="false" aria-controls="appSidebar">
+    <i class="fa-solid fa-bars"></i>
+    <i class="fa-solid fa-xmark"></i>
+</button>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="d-flex">
+
+    <div class="sidebar d-flex flex-column" id="appSidebar">
+        <div class="sidebar__profile">
+            <label class="avatar-upload" id="avatarUpload" title="Change profile photo">
+                <img src="{{ user.avatar_url }}" id="avatarUploadImg" alt="Your profile photo">
+                <span class="avatar-upload__overlay"><i class="fa-solid fa-camera"></i></span>
+                <input type="file" id="avatarUploadInput" accept="image/png,image/jpeg,image/webp,image/gif">
+            </label>
+            <p class="avatar-upload-error" id="avatarUploadError"></p>
+            <h6>{{ user.get_full_name|default:user.username }}</h6>
+            <small>Service Seeker</small>
+        </div>
+
+        <ul class="nav flex-column gap-1">
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}" href="{% url 'user_dashboard' %}">
+                    <i class="fa-solid fa-house"></i> <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'search_services' %}active{% endif %}" href="{% url 'search_services' %}">
+                    <i class="fa-solid fa-magnifying-glass"></i> <span>Request Service</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'my_requests' %}active{% endif %}" href="{% url 'my_requests' %}">
+                    <i class="fa-solid fa-rectangle-list"></i> <span>My Requests</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}" href="{% url 'profile' %}">
+                    <i class="fa-solid fa-user-gear"></i> <span>Profile</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="mt-auto">
+            <div class="sidebar-utility-group">
+                <a href="{% url 'settings' %}" class="theme-quick-toggle {% if request.resolver_match.url_name == 'settings' %}is-current{% endif %}" aria-label="Settings">
+                    <i class="fa-solid fa-sliders"></i> <span>Settings</span>
+                </a>
+                <button type="button" class="theme-quick-toggle" id="quickThemeToggle" aria-label="Toggle dark mode">
+                    <i class="fa-solid fa-moon"></i> <span>Dark mode</span>
+                </button>
+            </div>
+            <div class="sidebar__logout">
+                <a class="nav-link" href="{% url 'logout' %}">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const body = document.body;
+        const sidebar = document.getElementById('appSidebar');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        const toggle = document.getElementById('sidebarToggle');
+
+        function toggleSidebar() {
+            if (window.innerWidth > 900) {
+                body.classList.toggle('sidebar--collapsed');
+            } else {
+                if (sidebar.classList.contains('is-open')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            }
+        }
+
+        function openSidebar() {
+            sidebar.classList.add('is-open');
+            backdrop.classList.add('is-visible');
+            toggle.classList.add('is-active');
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.setAttribute('aria-label', 'Close menu');
+        }
+        function closeSidebar() {
+            sidebar.classList.remove('is-open');
+            backdrop.classList.remove('is-visible');
+            toggle.classList.remove('is-active');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.setAttribute('aria-label', 'Open menu');
+        }
+
+        toggle.addEventListener('click', toggleSidebar);
+        backdrop.addEventListener('click', closeSidebar);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
+        sidebar.querySelectorAll('.nav-link, .sidebar-utility-group a.theme-quick-toggle').forEach(link => link.addEventListener('click', closeSidebar));
+        window.addEventListener('resize', () => { if (window.innerWidth > 900) closeSidebar(); });
+    })();
+
+    // ============ QUICK DARK MODE TOGGLE ============
+    (function () {
+        const btn = document.getElementById('quickThemeToggle');
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        const label = btn.querySelector('span');
+
+        function syncButton() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            label.textContent = isDark ? 'Light mode' : 'Dark mode';
+        }
+        syncButton();
+
+        btn.addEventListener('click', function () {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('fixkona-theme', next);
+            syncButton();
+
+            const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1];
+            fetch("{% url 'update_theme_ajax' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'theme=' + encodeURIComponent(next)
+            }).catch(() => {});
+        });
+    })();
+
+    // ============ SIDEBAR AVATAR UPLOAD ============
+    (function () {
+        const wrap = document.getElementById('avatarUpload');
+        const input = document.getElementById('avatarUploadInput');
+        const img = document.getElementById('avatarUploadImg');
+        const errorEl = document.getElementById('avatarUploadError');
+        if (!wrap || !input) return;
+
+        input.addEventListener('change', function () {
+            const file = input.files[0];
+            if (!file) return;
+
+            errorEl.classList.remove('is-visible');
+            errorEl.textContent = '';
+
+            // Instant local preview while the upload is in flight
+            const previewUrl = URL.createObjectURL(file);
+            const previousSrc = img.src;
+            img.src = previewUrl;
+            wrap.classList.add('is-uploading');
+
+            const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1];
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            fetch("{% url 'upload_avatar_ajax' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        img.src = data.avatar_url;
+                    } else {
+                        img.src = previousSrc;
+                        errorEl.textContent = data.error || 'Could not upload that image.';
+                        errorEl.classList.add('is-visible');
+                    }
+                })
+                .catch(() => {
+                    img.src = previousSrc;
+                    errorEl.textContent = 'Upload failed. Please try again.';
+                    errorEl.classList.add('is-visible');
+                })
+                .finally(() => {
+                    wrap.classList.remove('is-uploading');
+                    URL.revokeObjectURL(previewUrl);
+                    input.value = '';
+                });
+        });
+    })();
+</script>
+{% block extra_js %}{% endblock %}
 </body>
 </html>

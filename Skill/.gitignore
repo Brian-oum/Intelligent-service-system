@@ -1,0 +1,10 @@
+# Environment variables
+.env
+
+# Django
+*.log
+db.sqlite3
+media/
+
+# VS Code
+.vscode/

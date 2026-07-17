@@ -1,0 +1,135 @@
+{% extends "Match/provider_base.html" %}
+{% load static %}
+{% block title %}Edit Service{% endblock %}
+
+{% block extra_head %}
+<style>
+    .page-wrap { padding: 44px 44px 60px; width: 100%; }
+
+    .breadcrumb-mono {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+    }
+    .breadcrumb-mono a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb-mono a:hover { color: var(--signal); }
+
+    .page-header { margin-bottom: 28px; }
+
+    /* ============ FORM PANEL ============ */
+    .form-panel { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 32px; }
+
+    .field-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: block;
+    }
+    .field-error { color: #FF6A4D; font-size: 0.78rem; margin-top: 4px; }
+    .field-hint { color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; }
+
+    input, select, textarea {
+        display: block;
+        width: 100%;
+        padding: 11px 14px;
+        font-size: 0.92rem;
+        color: var(--white);
+        background: var(--panel-2);
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        font-family: 'Inter', sans-serif;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+        outline: 0;
+        border-color: var(--signal);
+        box-shadow: 0 0 0 3px rgba(255,77,46,0.12);
+    }
+
+    /* ============ PREVIEW / TIPS CARD ============ */
+    .preview-card {
+        background: linear-gradient(135deg, rgba(255,77,46,0.14), rgba(255,77,46,0.02));
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        padding: 28px;
+    }
+    .preview-card .icon-box {
+        width: 44px; height: 44px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255,77,46,0.16); color: var(--signal); font-size: 1.1rem; flex-shrink: 0;
+    }
+    .preview-card h5 { font-family: 'Space Grotesk', sans-serif; color: var(--white); font-weight: 600; margin: 0; }
+    .preview-card ul { color: var(--text-muted); line-height: 1.9; }
+
+    @media (max-width: 768px) {
+        .page-wrap { padding: 28px 20px 44px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrap">
+
+    <div class="breadcrumb-mono">
+        <a href="{% url 'provider_dashboard' %}">Dashboard</a> / <span style="color: var(--white);">Edit Service</span>
+    </div>
+
+    <div class="page-header">
+        <h2 class="premium-heading">Edit Service Detail</h2>
+        <p class="premium-sub">Modify the information for <strong style="color: var(--white);">{{ form.instance.title }}</strong></p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="form-panel">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="{% if field.name == 'description' %}col-12{% else %}col-md-6{% endif %} mb-3">
+                            <label class="field-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="field-error">{{ field.errors|striptags }}</div>
+                            {% endif %}
+                            {% if field.help_text %}
+                                <div class="field-hint">{{ field.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-3 mt-4">
+                        <button type="submit" class="premium-btn">
+                            <i class="fa-solid fa-circle-check me-2"></i>Update Service
+                        </button>
+                        <a href="{% url 'provider_dashboard' %}" class="premium-btn is-outline">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="preview-card mb-4">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="icon-box"><i class="fa-solid fa-circle-info"></i></div>
+                    <h5>Quick Tips</h5>
+                </div>
+                <ul class="list-unstyled small mb-0">
+                    <li class="mb-2">• High-quality titles attract 30% more clicks.</li>
+                    <li class="mb-2">• Be specific about what is included in the price.</li>
+                    <li>• Services can be paused/hidden in the My Services tab.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

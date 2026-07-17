@@ -1,353 +1,1347 @@
+{% extends "Match/user_base.html" %}
+{% block title %}Request a Service{% endblock %}
 
-{% block content %}
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% block extra_head %}
+<!-- Bootstrap, Font Awesome, and Inter are already loaded by user_base.html — only
+     page-specific assets (the map library + the display font) live here. -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
+    /*
+       This page keeps its own component-scoped variable names (--primary,
+       --surface, --text-main, etc.) so the component CSS below doesn't
+       need rewriting, but every one now points at a token already defined
+       in user_base.html's :root — so this page follows the same orange /
+       dark-navy brand and the same light/dark theme toggle as every other
+       screen instead of carrying its own separate blue theme.
+    */
     :root {
-        --sidebar-bg: #0f172a;
-        --sidebar-accent: #1e293b;
-        --primary: #0ea5e9;
-        --bg-soft: #f8fafc;
-        --text-main: #111827;
-        --text-muted: #94a3b8;
-        --border-color: #e5e7eb;
+        --ink: var(--lz-dark-end);
+        --ink-soft: var(--lz-dark-end);
+        --primary: var(--signal);
+        --primary-dark: var(--signal-dim);
+        --primary-soft: rgba(255, 77, 46, 0.10);
+        --accent: #E0A63C;
+        --surface: var(--panel);
+        --bg-soft: var(--panel-2);
+        --text-main: var(--white);
+        --text-faint: var(--text-muted);
+        --border-color: var(--panel-line);
+        --form-border-color: var(--panel-line);
+        --success: var(--live);
+        --success-bg: rgba(31, 157, 85, 0.12);
+        --success-border: rgba(31, 157, 85, 0.35);
+        --warning: var(--accent);
+        --warning-bg: rgba(224, 166, 60, 0.12);
+        --warning-border: rgba(224, 166, 60, 0.35);
+        --radius-lg: 12px;
+        --radius-md: 8px;
+        --radius-sm: 6px;
+        --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.16), 0 12px 32px -12px rgba(0, 0, 0, 0.35);
+        --shadow-pop: 0 20px 45px -12px rgba(0, 0, 0, 0.55);
     }
 
-    body { background: var(--bg-soft); font-family: 'Inter', sans-serif; }
+    h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Sora', 'Space Grotesk', sans-serif; }
 
-    /* --- SIDEBAR (Consistent with Dashboard) --- */
-    .sidebar {
-        width: 260px;
-        background: var(--sidebar-bg);
-        height: 100vh;
-        position: fixed;
-        top: 0;
-        left: 0;
-        padding: 20px 0;
-        z-index: 1000;
+    *:focus-visible { outline: 2.5px solid var(--primary); outline-offset: 2px; }
+
+    /* ============================================================
+       PAGE WRAP + STEPPER
+       ============================================================ */
+    .page-wrap { padding: 44px 44px 60px; width: 100%; max-width: 760px; margin: 0 auto; }
+    .page-wrap .premium-heading, .page-wrap .premium-sub { text-align: center; }
+
+    .stepper {
+        display: flex; align-items: center; max-width: 640px; margin: 0 auto 22px;
+        background: var(--surface); border: 1px solid var(--border-color); border-radius: 999px;
+        padding: 10px 20px; box-shadow: var(--shadow-card);
+    }
+    .step { display: flex; align-items: center; gap: 9px; flex: 1; position: relative; }
+    .step .step-dot {
+        width: 26px; height: 26px; border-radius: 50%; background: var(--bg-soft); color: var(--text-faint);
+        display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700;
+        border: 2px solid var(--border-color); transition: all 0.2s; flex-shrink: 0;
+    }
+    .step .step-label { font-size: 0.78rem; font-weight: 600; color: var(--text-faint); transition: color 0.2s; white-space: nowrap; }
+    .step .step-line {
+        flex: 1; height: 2px; background: var(--border-color); margin: 0 6px; transition: background 0.2s;
+    }
+    .step:last-child .step-line { display: none; }
+    .step.is-active .step-dot { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .step.is-active .step-label { color: var(--text-main); }
+    .step.is-complete .step-dot { background: var(--success); color: #fff; border-color: var(--success); }
+    .step.is-complete .step-dot::before { content: "\f00c"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 0.65rem; }
+    .step.is-complete .step-line { background: var(--success); }
+
+    /* ============================================================
+       REQUEST CARD / FORM
+       ============================================================ */
+    .request-card {
+        background: var(--surface); padding: 36px; border-radius: var(--radius-lg); width: 100%;
+        max-width: 700px; margin: 0 auto; border: 1px solid var(--border-color); box-shadow: var(--shadow-card);
     }
 
-    .sidebar .nav-link {
-        color: #94a3b8;
-        padding: 12px 25px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.2s;
-        border-left: 3px solid transparent;
-        text-decoration: none;
+    .field-block { margin-bottom: 22px; }
+    .form-label {
+        font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 7px;
+        color: var(--text-main); font-size: 0.88rem;
+    }
+    .form-label .fa-solid, .form-label .fa-regular { color: var(--primary); font-size: 0.82rem; }
+    .field-hint { font-size: 0.78rem; color: var(--text-faint); margin-top: 6px; }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+        content: "\f078"; font-family: "Font Awesome 6 Free"; font-weight: 900; font-size: 0.75rem;
+        color: var(--text-muted); position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+        pointer-events: none;
     }
 
-    .sidebar .nav-link i { width: 20px; font-size: 1.1rem; }
-
-    .sidebar .nav-link:hover {
-        background: var(--sidebar-accent);
-        color: #fff;
+    .form-control-pill {
+        width: 100%; padding: 13px 20px; border: 1.5px solid var(--form-border-color);
+        border-radius: var(--radius-sm) !important; background-color: var(--surface); font-size: 0.93rem;
+        transition: border-color 0.15s, box-shadow 0.15s; color: var(--text-main);
     }
-
-    .sidebar .nav-link.active {
-        background: rgba(14, 165, 233, 0.1);
-        color: var(--primary);
-        border-left-color: var(--primary);
+    .form-control-pill:focus {
+        border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); outline: none;
     }
+    select.form-control-pill { appearance: none; cursor: pointer; padding-right: 44px; }
+    textarea.form-control-pill { height: 120px; border-radius: var(--radius-sm) !important; resize: vertical; }
 
-    /* --- MAIN CONTENT AREA --- */
-    .main-content {
-        margin-left: 260px;
-        padding: 2.5rem;
-        width: calc(100% - 260px);
+    .map-trigger { cursor: pointer; background-color: var(--bg-soft) !important; border: 1.5px dashed var(--primary); padding-left: 46px; position: relative; }
+    .location-field-wrap { position: relative; }
+    .location-field-wrap .field-icon {
+        position: absolute; left: 17px; top: 50%; transform: translateY(-50%); color: var(--primary);
+        pointer-events: none; font-size: 0.9rem; z-index: 2;
     }
+    .map-trigger:disabled { opacity: 0.55; cursor: not-allowed; border-style: solid; background-color: var(--bg-soft) !important; }
+    .map-trigger:disabled ~ .field-icon { color: var(--text-faint); }
 
-    /* --- EXPLORE PAGE STYLES --- */
-    .services-header {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-main);
-        margin-bottom: 24px;
-        letter-spacing: -0.02em;
+    .btn-submit {
+        background-color: var(--ink); color: #fff; border: none; border-radius: var(--radius-sm);
+        padding: 15px; width: 100%; font-weight: 700; font-size: 0.95rem;
+        transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
     }
+    .btn-submit:hover:not(:disabled) { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 10px 22px -8px rgba(47,111,235,0.55); }
+    .btn-submit:disabled { background-color: #cbd3e1; color: #fff; cursor: not-allowed; }
 
-    .search-wrapper {
+    .selected-provider-chip {
+        display: none; align-items: center; justify-content: space-between; gap: 12px;
+        background: var(--primary-soft); border: 1.5px solid var(--primary); border-radius: var(--radius-sm);
+        padding: 14px 16px; margin-bottom: 22px;
+    }
+    .selected-provider-chip .chip-avatar {
+        width: 38px; height: 38px; border-radius: 10px; background: var(--primary); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem;
+        flex-shrink: 0; font-family: 'Sora', sans-serif;
+    }
+    .selected-provider-chip .chip-text { min-width: 0; }
+    .selected-provider-chip .chip-name { font-weight: 700; color: var(--text-main); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .selected-provider-chip .chip-meta { font-size: 0.76rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .selected-provider-chip .chip-change {
+        font-size: 0.78rem; color: var(--primary); font-weight: 700; cursor: pointer; background: var(--surface);
+        border: 1px solid var(--primary); border-radius: 999px; padding: 6px 14px; flex-shrink: 0;
+        transition: background 0.15s;
+    }
+    .selected-provider-chip .chip-change:hover { background: var(--primary); color: #fff; }
+
+    /* ============================================================
+       MAP MODAL
+       ============================================================ */
+    .modal-map-dialog { max-width: 980px; }
+    .map-modal-content, .reviews-modal-content {
+        background: var(--surface); color: var(--text-main);
+    }
+    .map-modal-content { border-radius: 24px; overflow: hidden; }
+    .map-modal-header {
+        padding: 22px 26px 16px; border-bottom: 1px solid var(--border-color);
+    }
+    .map-modal-header h5 { font-weight: 800; font-size: 1.18rem; margin-bottom: 2px; color: var(--text-main); }
+    .map-modal-header p { font-size: 0.83rem; color: var(--text-muted); margin: 0; }
+
+    .map-modal-body { padding: 20px 26px; }
+
+    .search-pill-container {
+        display: flex; align-items: center; border: 1.5px solid var(--form-border-color); border-radius: 999px;
+        overflow: hidden; padding: 5px 6px 5px 18px; background: var(--surface); transition: border-color .15s, box-shadow .15s;
+    }
+    .search-pill-container:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+    .search-pill-container i.fa-magnifying-glass { color: var(--text-faint); font-size: 0.85rem; margin-right: 10px; }
+    .search-pill-container input { border: none !important; flex-grow: 1; padding-left: 0; box-shadow: none !important; font-size: 0.92rem; background: transparent; color: var(--text-main); }
+    .search-pill-container .btn-find {
+        background: var(--ink); color: #fff; border: none; border-radius: 999px; padding: 9px 22px;
+        font-weight: 600; font-size: 0.85rem;
+    }
+    .search-pill-container .btn-find:hover { background: var(--primary-dark); }
+
+    .suggestion-box {
+        position: absolute; width: 100%; background: var(--surface); border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-pop); z-index: 2000; top: 54px; max-height: 220px; overflow-y: auto; display: none;
+        border: 1px solid var(--border-color);
+    }
+    .suggestion-item { padding: 12px 18px; cursor: pointer; border-bottom: 1px solid var(--border-color); font-size: 0.88rem; display: flex; gap: 10px; align-items: flex-start; color: var(--text-main); }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item i { color: var(--text-faint); margin-top: 3px; font-size: 0.8rem; }
+    .suggestion-item:hover { background: var(--bg-soft); }
+
+    .use-location-link {
+        display: inline-flex; align-items: center; gap: 6px; color: var(--primary); font-weight: 700;
+        font-size: 0.82rem; text-decoration: none; background: var(--primary-soft); border: none;
+        padding: 8px 16px; border-radius: 999px; transition: background 0.15s;
+    }
+    .use-location-link:hover { background: #dbe8ff; color: var(--primary-dark); }
+
+    .map-layout { display: flex; gap: 16px; margin-top: 16px; align-items: stretch; }
+    .provider-list-col {
+        width: 260px; flex-shrink: 0; display: flex; flex-direction: column;
+    }
+    .provider-list-header {
+        font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--text-faint); margin-bottom: 8px; padding: 0 2px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .provider-list {
+        flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md);
+        background: var(--bg-soft); padding: 8px; min-height: 200px;
+    }
+    .provider-list-item {
+        display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1.5px solid var(--border-color);
+        border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+        transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    .provider-list-item:last-child { margin-bottom: 0; }
+    .provider-list-item:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 6px 14px -6px rgba(47,111,235,0.3); }
+    .provider-list-item.is-active { border-color: var(--primary); background: var(--primary-soft); }
+    .provider-list-item .pl-badge {
+        width: 30px; height: 30px; border-radius: 9px; background: var(--pl-color, var(--ink)); color: #fff; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; font-family: 'Sora', sans-serif;
+    }
+    .provider-list-item.is-active .pl-badge { background: var(--primary); }
+    .provider-list-item .pl-text { min-width: 0; flex: 1; }
+    .provider-list-item .pl-name { font-weight: 700; font-size: 0.84rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .provider-list-item .pl-meta { font-size: 0.72rem; color: var(--text-muted); display: flex; gap: 6px; align-items: center; }
+    .provider-list-item .pl-meta .stars-mini { color: var(--accent); letter-spacing: 1px; }
+    .provider-list-item .pl-dist { font-size: 0.72rem; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+    .provider-list-item .pl-price { font-size: 0.68rem; font-weight: 600; color: var(--accent); margin-top: 1px; }
+    .provider-list-item .pl-price.is-unset { color: var(--text-faint); font-weight: 500; font-style: italic; }
+
+    .list-skeleton-item {
+        height: 54px; border-radius: var(--radius-sm);
+        background: linear-gradient(90deg, var(--panel-2) 25%, var(--panel) 37%, var(--panel-2) 63%);
+        background-size: 400% 100%; animation: shimmer 1.4s ease infinite; margin-bottom: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+    .list-empty-state { text-align: center; padding: 34px 14px; color: var(--text-muted); }
+    .list-empty-state i { font-size: 1.6rem; color: var(--text-faint); margin-bottom: 10px; display: block; }
+    .list-empty-state .title { font-weight: 700; font-size: 0.86rem; color: var(--text-main); margin-bottom: 4px; }
+    .list-empty-state .sub { font-size: 0.78rem; }
+
+    .map-col { flex: 1; min-width: 0; position: relative; }
+    .map-shell { position: relative; height: 100%; }
+    #map { height: 440px !important; width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border-color); }
+
+    .map-legend {
+        position: absolute; left: 14px; bottom: 14px; background: rgba(255,255,255,0.95); backdrop-filter: blur(4px);
+        border-radius: var(--radius-sm); padding: 8px 12px; font-size: 0.7rem; color: var(--text-muted);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.1); display: flex; gap: 12px; z-index: 800;
+    }
+    .map-legend span { display: flex; align-items: center; gap: 5px; }
+    .map-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .map-legend .dot.you { background: var(--accent); }
+    .map-legend .dot.provider { background: var(--ink); }
+
+    .map-status-banner {
+        background: var(--primary-soft); border: 1px solid var(--primary); border-radius: var(--radius-sm);
+        padding: 10px 14px; font-size: 0.8rem; color: var(--text-main); margin-top: 12px; display: none;
+        align-items: center; gap: 8px;
+    }
+    .map-status-banner::before { content: "\f05a"; font-family: "Font Awesome 6 Free"; font-weight: 900; }
+    .map-status-banner.warn { background: var(--warning-bg); border-color: var(--warning-border); color: var(--warning); }
+    .map-status-banner.warn::before { content: "\f071"; }
+
+    .provider-panel {
+        position: absolute; top: 15px; right: 15px; width: 270px; background: var(--surface);
+        border: 1px solid var(--border-color);
+        border-radius: 16px; box-shadow: var(--shadow-pop); z-index: 1500;
+        padding: 18px; display: none; animation: panelIn .18s ease-out;
+        max-height: calc(100% - 30px); overflow-y: auto;
+    }
+    @keyframes panelIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: translateY(0); } }
+    .provider-panel .close-panel { position: absolute; top: 10px; right: 12px; cursor: pointer; color: var(--text-muted); font-size: 0.9rem; background: none; border: none; }
+    .provider-panel .p-name { font-weight: 800; font-size: 1.05rem; color: var(--text-main); margin-bottom: 2px; padding-right: 18px; font-family: 'Sora', sans-serif; }
+    .provider-panel .p-category {
+        display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 700;
+        color: var(--pc-color, var(--ink)); background: color-mix(in srgb, var(--pc-color, var(--ink)) 12%, transparent);
+        padding: 3px 8px; border-radius: 999px; margin-bottom: 8px;
+    }
+    .provider-panel .p-rating { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .provider-panel .p-rating .stars { color: var(--accent); font-size: 0.85rem; letter-spacing: 1px; }
+    .provider-panel .p-rating .rating-text { font-size: 0.78rem; color: var(--text-muted); font-weight: 600; }
+    .provider-panel .p-rating .no-rating { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
+    .provider-panel .p-address { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; }
+    .provider-panel .p-price { font-size: 0.82rem; font-weight: 700; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .provider-panel .p-price.is-unset { color: var(--text-faint); font-weight: 500; font-style: italic; }
+    .provider-panel .p-price i { font-size: 0.78rem; }
+    .provider-panel .p-stat-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .provider-panel .p-stat { flex: 1; background: var(--bg-soft); border-radius: 10px; padding: 8px 6px; text-align: center; }
+    .provider-panel .p-stat .val { font-weight: 700; font-size: 0.95rem; color: var(--primary); }
+    .provider-panel .p-stat .lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .provider-panel .btn-request { width: 100%; background: var(--ink); color: #fff; border: none; border-radius: 10px; padding: 10px; font-weight: 700; font-size: 0.9rem; transition: background 0.15s; }
+    .provider-panel .btn-request:hover { background: var(--primary-dark); }
+    .provider-panel .route-status { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; min-height: 14px; }
+
+    .provider-panel .p-rating[role="button"] { cursor: pointer; border-radius: 6px; padding: 2px 4px; margin-left: -4px; transition: background 0.15s; }
+    .provider-panel .p-rating[role="button"]:hover { background: var(--bg-soft); }
+    .provider-panel .p-rating[role="button"]:hover .rating-text,
+    .provider-panel .p-rating[role="button"]:hover .no-rating { text-decoration: underline; }
+
+    .reviews-modal-content { border-radius: 16px; border: none; }
+    .reviews-modal-subtitle { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+    .p-review-item { border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px; }
+    .p-review-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+    .p-review-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+    .p-review-user { font-size: 0.85rem; font-weight: 700; color: var(--text-main); }
+    .p-review-date { font-size: 0.72rem; color: var(--text-muted); }
+    .p-review-stars { color: var(--accent); font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 4px; }
+    .p-review-comment { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+    .p-reviews-empty, .p-reviews-loading, .p-reviews-error { font-size: 0.85rem; color: var(--text-muted); text-align: center; padding: 20px 0; font-style: italic; }
+
+    .map-modal-footer { padding: 16px 26px 22px; border-top: 1px solid var(--border-color); }
+    .btn-confirm-location {
+        background: var(--ink); color: #fff; border: none; border-radius: 999px; padding: 13px; width: 100%;
+        font-weight: 700; transition: background 0.15s;
+    }
+    .btn-confirm-location:hover { background: var(--primary-dark); }
+
+    .leaflet-routing-container { display: none !important; }
+    .user-pin-icon { position: relative; }
+    .user-pin-icon .pulse {
+        width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 3px solid #fff;
+        box-shadow: 0 0 0 4px rgba(245,158,11,0.35), 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .provider-pin-icon {
         position: relative;
-        max-width: 800px;
-        margin-bottom: 40px;
-        border-radius: 25px;
+        width: 32px; height: 32px; border-radius: 50% 50% 50% 4px;
+        background: var(--pin-color, var(--ink)); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        border: 2px solid #fff; box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        transform: rotate(-45deg); transition: transform 0.15s, box-shadow 0.15s;
+    }
+    /* Category glyph — un-rotate it so the icon itself reads upright */
+    .provider-pin-icon i { transform: rotate(45deg); font-size: 0.8rem; }
+    /* Small count chip keeps the pin <-> list-item correlation the
+       numbers used to give us, now as a secondary detail on top of
+       the category icon rather than the icon itself. */
+    .provider-pin-icon .pin-count {
+        position: absolute; top: -6px; right: -7px; transform: rotate(45deg);
+        width: 15px; height: 15px; border-radius: 50%; background: #fff;
+        color: var(--text-main); font-size: 0.6rem; font-weight: 800; font-family: 'Sora', sans-serif;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+    .provider-pin-icon.is-premium { box-shadow: 0 0 0 3px rgba(224,166,60,0.45), 0 3px 8px rgba(0,0,0,0.3); }
+    .provider-pin-icon.is-active { transform: rotate(-45deg) scale(1.18); box-shadow: 0 5px 14px rgba(0,0,0,0.4); z-index: 2; }
+
+    @media (max-width: 991px) {
+        .modal-map-dialog { max-width: 96%; }
+        .map-layout { flex-direction: column-reverse; }
+        .provider-list-col { width: 100%; }
+        .provider-list { max-height: 190px; min-height: 0; }
     }
 
-    .search-bar input {
-        width: 100%;
-        padding: 14px 20px 14px 45px;
-        border-radius: 25px;
-        border: 1px solid var(--border-color);
-        font-size: 1rem;
-        transition: all 0.2s ease;
-        background: #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    @media (max-width: 768px) {
+        .mobile-topbar { display: flex; }
+        .sidebar { transform: translateX(-100%); box-shadow: var(--shadow-pop); }
+        .sidebar.is-open { transform: translateX(0); }
+        .main-content { margin-left: 0; width: 100%; padding: 26px 16px 40px; }
+        .request-card { padding: 24px 20px; border-radius: 18px; }
+        .stepper { padding: 10px 12px; }
+        .step .step-label { display: none; }
+        .step.is-active .step-label, .step.is-complete .step-label { display: none; }
+        #map { height: 320px !important; }
+        .provider-panel { width: calc(100% - 30px); left: 15px; right: 15px; }
     }
 
-    .search-bar input:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
-    }
-
-    .search-icon {
-        position: absolute;
-        left: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-muted);
-    }
-
-    .services-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-    }
-
-    .service-card {
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .service-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
-        border-color: var(--primary);
-    }
-
-    .category-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: var(--primary);
-        background: #eff6ff;
-        padding: 5px 12px;
-        border-radius: 6px;
-        margin-bottom: 16px;
-        text-transform: uppercase;
-    }
-
-    .service-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--text-main);
-        margin-bottom: 4px;
-    }
-
-    .provider-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #64748b;
-        font-size: 0.9rem;
-        margin-bottom: 16px;
-    }
-
-    .service-desc {
-        color: #4b5563;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin-bottom: 20px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .meta-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: 16px;
-        border-top: 1px solid var(--border-color);
-        margin-top: auto;
-        font-size: 0.85rem;
-        color: #64748b;
-        margin-bottom: 16px;
-    }
-
-    .rating-star { color: #f59e0b; }
-
-    .btn-request {
-        background: var(--sidebar-bg);
-        color: #fff;
-        text-align: center;
-        padding: 12px;
-        border-radius: 10px;
-        text-decoration: none;
-        font-weight: 600;
-        transition: background 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-    }
-
-    .btn-request:hover { background: var(--primary); color: #fff; }
-
-    .no-services {
-        text-align: center;
-        padding: 100px 20px;
-        background: #fff;
-        border-radius: 20px;
-        border: 2px dashed var(--border-color);
-    }
+    .empty-providers { text-align: center; padding: 30px 20px; color: var(--text-muted); font-size: 0.9rem; }
 </style>
+{% endblock %}
 
-<div class="d-flex">
-    <div class="sidebar text-white d-flex flex-column">
-        <div class="text-center mb-5 px-3">
-            <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
-                 class="rounded-circle mb-2 border border-2 border-secondary" width="65">
-            <h6 class="fw-bold mb-0 mt-2 text-white">{{ user.username }}</h6>
-            <small style="color: var(--text-muted)">Service Seeker</small>
+{% block content %}
+<div class="page-wrap">
+        <div class="premium-eyebrow" style="text-align:center;">New request</div>
+        <h2 class="premium-heading">Request a service</h2>
+        <p class="premium-sub" style="margin-bottom: 28px;">Tell us what you need, pin your location, and pick a provider nearby.</p>
+
+        <div class="stepper" id="requestStepper">
+            <div class="step is-active" data-step="1">
+                <div class="step-dot">1</div>
+                <div class="step-label">Service</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-dot">2</div>
+                <div class="step-label">Location &amp; provider</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-dot">3</div>
+                <div class="step-label">Details</div>
+            </div>
         </div>
 
-        <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'user_dashboard' %}">
-                    <i class="fa-solid fa-house"></i> Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link active" href="{% url 'search_services' %}">
-                    <i class="fa-solid fa-magnifying-glass"></i> Request Service
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'my_requests' %}">
-                    <i class="fa-solid fa-rectangle-list"></i> My Requests
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'profile' %}">
-                    <i class="fa-solid fa-user-gear"></i> Profile
-                </a>
-            </li>
-        </ul>
+        <div class="request-card">
+            <form method="POST" id="requestForm" action="">
+                {% csrf_token %}
 
-        <div class="mt-auto">
-            <a class="nav-link text-danger" href="{% url 'logout' %}">
-                <i class="fa-solid fa-right-from-bracket"></i> Logout
-            </a>
-        </div>
-    </div>
+                <!-- Step 1: pick the service -->
+                <div class="field-block">
+                    <label class="form-label" for="service_select"><i class="fa-solid fa-list-check"></i> What do you need help with?</label>
+                    <div class="select-wrap">
+                        <select name="service_id" id="service_select" class="form-control-pill" required>
+                            <option value="" disabled selected>Select a service...</option>
+                            {% for service in services %}
+                                <option value="{{ service.id }}" data-title="{{ service.title|escapejs }}">
+                                    {{ service.title }}{% if service.category %} — {{ service.category.name }}{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
 
-    <div class="main-content">
-        <h2 class="services-header">Explore Services</h2>
+                <!-- Step 2: pick the location (disabled until a service is chosen) -->
+                <div class="field-block">
+                    <label class="form-label" for="display_location"><i class="fa-solid fa-location-dot"></i> Service location</label>
+                    <div class="location-field-wrap">
+                        <i class="fa-solid fa-map-pin field-icon"></i>
+                        <input type="text" name="location" id="display_location" class="form-control-pill map-trigger"
+                               placeholder="Select a service first..." readonly disabled>
+                    </div>
+                    <div class="field-hint" id="locationHint">You'll pick a pin on the map and choose a nearby provider.</div>
+                </div>
 
-        <div class="search-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <form method="GET" class="search-bar" onsubmit="getUserLocation()">
-                <input type="text" name="q" placeholder="Search services or providers..." value="{{ query }}">
+                <!-- Step 3: the chosen provider shows here once picked on the map -->
+                <div class="selected-provider-chip" id="selectedProviderChip">
+                    <div class="chip-avatar" id="chipProviderAvatar">P</div>
+                    <div class="chip-text">
+                        <div class="chip-name" id="chipProviderName"></div>
+                        <div class="chip-meta" id="chipProviderMeta"></div>
+                    </div>
+                    <button type="button" class="chip-change" id="chipChangeProvider">Change</button>
+                </div>
 
-                <!-- hidden GPS coordinates -->
-                <input type="hidden" name="lat" id="lat">
-                <input type="hidden" name="lon" id="lon">
+                <div class="field-block">
+                    <label class="form-label" for="requestDescription"><i class="fa-regular fa-pen-to-square"></i> Describe your needs</label>
+                    <textarea name="description" id="requestDescription" class="form-control-pill" placeholder="How can we help you?" required></textarea>
+                </div>
+
+                <input type="hidden" name="latitude" id="id_latitude">
+                <input type="hidden" name="longitude" id="id_longitude">
+                <input type="hidden" name="provider_id" id="id_provider_id" required>
+
+                <button type="submit" class="btn-submit" id="submitBtn" disabled>Select a provider to continue</button>
             </form>
         </div>
+</div>
 
-        {% if services %}
-            <div class="services-grid">
-                {% for item in services %}
-                    <div class="service-card shadow-sm">
-                        <div>
-                            {% if item.service.category %}
-                                <span class="category-badge">
-                                    <i class="fa-solid fa-tag"></i>
-                                    {{ item.service.category.name }}
-                                </span>
-                            {% endif %}
-                            
-                            <div class="service-title">{{ item.service.title }}</div>
-                            
-                            <div class="provider-info">
-                                <i class="fa-solid fa-circle-check" style="color: #0ea5e9;"></i>
-                                <span>by {{ item.service.provider.company_name }}</span>
-                            </div>
-
-                            <p class="service-desc">{{ item.service.description }}</p>
-                        </div>
-
-                        <div class="meta-row">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fa-solid fa-location-dot"></i>
-                                {{ item.service.provider.address }}
-                            </div>
-                            {% if item.distance %}
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fa-solid fa-location-arrow"></i>
-                                {{ item.distance }} km away
-                            </div>
-                            {% else %}
-                            <div class="d-flex align-items-center gap-2 text-muted">
-                                <i class="fa-solid fa-location-arrow"></i>
-                                Distance unavailable
-                            </div>
-                            {% endif %}
-
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fa-solid fa-star rating-star"></i>
-                                <strong>{{ item.service.provider.reviews.all|length }}</strong> reviews
-                            </div>
-                        </div>
-
-                        <a href="{% url 'create_request' item.service.id %}" class="btn-request">
-                            Request Service
-                            <i class="fa-solid fa-arrow-right-long"></i>
-                        </a>
+<div class="modal fade" id="mapModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-map-dialog">
+        <div class="modal-content map-modal-content shadow-lg border-0">
+            <div class="map-modal-header d-flex justify-content-between align-items-start">
+                <div>
+                    <h5 class="m-0">Find location &amp; nearby providers</h5>
+                    <p>Tap the map or search below, then pick a provider from the list.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="map-modal-body">
+                <div class="search-group mb-2 position-relative">
+                    <div class="search-pill-container">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="map-search" class="form-control" placeholder="Search neighborhood, street, or city..." autocomplete="off">
+                        <button class="btn-find" type="button">Find</button>
                     </div>
-                {% endfor %}
+                    <div id="suggestions" class="suggestion-box"></div>
+                </div>
+
+                <div class="text-center mb-1">
+                    <button type="button" id="useCurrentLocation" class="use-location-link">
+                        <i class="fa-solid fa-location-crosshairs"></i> Use my current location
+                    </button>
+                </div>
+
+                <div class="map-layout">
+                    <div class="provider-list-col">
+                        <div class="provider-list-header">
+                            <span>Nearby providers</span>
+                            <span id="providerCountBadge"></span>
+                        </div>
+                        <div class="provider-list" id="providerList">
+                            <div class="list-empty-state" id="providerListIdle">
+                                <i class="fa-regular fa-map"></i>
+                                <div class="title">No pin yet</div>
+                                <div class="sub">Tap the map or search to get started.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="map-col">
+                        <div class="map-shell">
+                            <div id="map"></div>
+
+                            <div class="map-legend">
+                                <span><i class="dot you"></i> Your pin</span>
+                                <span><i class="dot provider"></i> Provider</span>
+                            </div>
+
+                            <div id="providerPanel" class="provider-panel">
+                                <button type="button" class="close-panel" id="closeProviderPanel" aria-label="Close details">&times;</button>
+                                <div class="p-name" id="pp-name">Provider</div>
+                                <div class="p-category" id="pp-category"></div>
+                                <div class="p-rating" id="pp-rating" role="button" tabindex="0" title="See all reviews"></div>
+                                <div class="p-address" id="pp-address">Address</div>
+                                <div class="p-price" id="pp-price"></div>
+                                <div class="route-status" id="pp-route-status"></div>
+                                <div class="p-stat-row">
+                                    <div class="p-stat"><div class="val" id="pp-distance">--</div><div class="lbl">Distance</div></div>
+                                    <div class="p-stat"><div class="val" id="pp-eta">--</div><div class="lbl">ETA</div></div>
+                                </div>
+                                <button type="button" class="btn-request" id="pp-request-btn">Select this provider</button>
+                            </div>
+                        </div>
+
+                        <div id="mapStatusBanner" class="map-status-banner"></div>
+                    </div>
+                </div>
             </div>
-        {% else %}
-            <div class="no-services">
-                <i class="fa-solid fa-box-open fa-3x mb-3" style="color: var(--text-muted);"></i>
-                <h4 class="fw-bold">No services found</h4>
-                <p class="text-muted">Try adjusting your keywords or filters.</p>
+            <div class="map-modal-footer">
+                <button type="button" class="btn-confirm-location" id="confirmLocation">Confirm this address</button>
             </div>
-        {% endif %}
+        </div>
     </div>
 </div>
+
+<div class="modal fade" id="reviewsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content reviews-modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="reviewsModalProviderName">Reviews</h5>
+                    <div class="reviews-modal-subtitle" id="reviewsModalSubtitle"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reviewsModalBody">
+                <div class="p-reviews-loading">Loading reviews...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    // Built from Django's actual URL patterns so these can never drift out of
+    // sync with urls.py. We generate each URL for a placeholder service id
+    // (0) and swap it for the real one client-side.
+    const PROVIDER_LOOKUP_URL_TEMPLATE = "{% url 'provider_locations_for_service' service_id=0 %}";
+    const PROVIDER_REVIEWS_URL_TEMPLATE = "{% url 'provider_reviews' provider_id=0 %}";
+    const CREATE_REQUEST_URL_TEMPLATE = "{% url 'create_request' service_id=0 %}";
+</script>
 
-function getUserLocation(){
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    const urlParams = new URLSearchParams(window.location.search);
+<script>
+/* ============================================================
+   NOTE: Mobile sidebar toggle is handled entirely by user_base.html
+   (id="sidebarToggle" / "appSidebar" / "sidebarBackdrop"). The old
+   duplicate block here referenced a non-existent "mobileMenuToggle"
+   element, which threw a TypeError on page load and silently stopped
+   the rest of this script from running — including the service-select
+   handler below. That's why the location field stayed inactive even
+   after choosing a service. Removed for good.
+   ============================================================ */
 
-    // If coordinates already exist, do nothing
-    if(urlParams.get("lat") && urlParams.get("lon")){
-        return;
-    }
+/* ============================================================
+   STEPPER
+   ============================================================ */
+const stepEls = {
+    1: document.querySelector('.step[data-step="1"]'),
+    2: document.querySelector('.step[data-step="2"]'),
+    3: document.querySelector('.step[data-step="3"]')
+};
+function setStep(activeStep, completedSteps = []) {
+    Object.entries(stepEls).forEach(([num, el]) => {
+        num = parseInt(num);
+        el.classList.toggle("is-complete", completedSteps.includes(num));
+        el.classList.toggle("is-active", num === activeStep);
+    });
+}
 
-    if(navigator.geolocation){
+/* ============================================================
+   STATE
+   ============================================================ */
+let map, marker, searchTimeout;
+let routingControl = null;
+let activeProviderId = null;
+let providers = [];                 // populated via AJAX once service+location are known
+const providerMarkers = {};
 
-        navigator.geolocation.getCurrentPosition(function(position){
+let selectedServiceId = null;
+let selectedServiceTitle = "";
 
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
+// There's no stored latitude/longitude for service-seeker users in the
+// database (only ServiceProvider/company rows have those fields), so
+// `user_profile.latitude/longitude` was never real data — it silently
+// resolved to nothing and fell through to the hardcoded fallback below
+// for every single user. We keep the fallback as a last resort, but as
+// soon as the browser can tell us the real position we use that instead.
+let userLat = -1.286389;   // Nairobi fallback, used until/unless geolocation resolves
+let userLng = 36.817223;
 
-            const url = new URL(window.location.href);
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        position => {
+            userLat = position.coords.latitude;
+            userLng = position.coords.longitude;
+            // If the map was already created (e.g. user opened the modal
+            // before this resolved) and no pin has been placed yet, recenter it.
+            if (map && !marker) {
+                map.setView([userLat, userLng], 13);
+            }
+        },
+        () => { /* permission denied or unavailable — keep the fallback */ },
+        { maximumAge: 5 * 60 * 1000, timeout: 5000 }
+    );
+}
 
-            url.searchParams.set("lat", lat);
-            url.searchParams.set("lon", lon);
+/* Inputs */
+const serviceSelect = document.getElementById("service_select");
+const latInput = document.getElementById("id_latitude");
+const lngInput = document.getElementById("id_longitude");
+const providerIdInput = document.getElementById("id_provider_id");
+const displayInput = document.getElementById("display_location");
+const submitBtn = document.getElementById("submitBtn");
+const requestForm = document.getElementById("requestForm");
 
-            window.location.href = url.toString();
+const selectedProviderChip = document.getElementById("selectedProviderChip");
+const chipProviderName = document.getElementById("chipProviderName");
+const chipProviderMeta = document.getElementById("chipProviderMeta");
+const chipProviderAvatar = document.getElementById("chipProviderAvatar");
 
-        });
+const modalElement = document.getElementById('mapModal');
+const searchInput = document.getElementById("map-search");
+const suggestionBox = document.getElementById("suggestions");
+const mapStatusBanner = document.getElementById("mapStatusBanner");
 
+const providerPanel = document.getElementById("providerPanel");
+const ppName = document.getElementById("pp-name");
+const ppCategory = document.getElementById("pp-category");
+const ppRating = document.getElementById("pp-rating");
+const ppAddress = document.getElementById("pp-address");
+const ppPrice = document.getElementById("pp-price");
+const ppDistance = document.getElementById("pp-distance");
+const ppEta = document.getElementById("pp-eta");
+const ppRouteStatus = document.getElementById("pp-route-status");
+const ppRequestBtn = document.getElementById("pp-request-btn");
+const reviewsModalEl = document.getElementById("reviewsModal");
+const reviewsModalProviderName = document.getElementById("reviewsModalProviderName");
+const reviewsModalSubtitle = document.getElementById("reviewsModalSubtitle");
+const reviewsModalBody = document.getElementById("reviewsModalBody");
+let reviewsModalInstance = null;
+const reviewsCache = {}; // providerId -> reviews response, avoids re-fetching on repeat opens
+
+const providerListEl = document.getElementById("providerList");
+const providerCountBadge = document.getElementById("providerCountBadge");
+
+/* ============================================================
+   ROBUST MODAL CLOSE
+   Bootstrap's own hide() + backdrop cleanup can fail to complete
+   (e.g. two modals were briefly open at once, via the reviews
+   modal being opened on top of the map modal), leaving a stray
+   .modal-backdrop element covering the whole page and making it
+   look "frozen". This wraps .hide() with a short safety-net that
+   force-removes any leftover backdrop / body classes afterward.
+   ============================================================ */
+function forceCloseModal(el) {
+    const instance = bootstrap.Modal.getInstance(el) || bootstrap.Modal.getOrCreateInstance(el);
+    instance.hide();
+
+    setTimeout(() => {
+        if (!document.querySelector('.modal.show')) {
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+            document.querySelectorAll('.modal-backdrop').forEach(bd => bd.remove());
+        }
+    }, 350);
+}
+
+/* ============================================================
+   STEP 1 — SERVICE SELECTION unlocks the location field
+   ============================================================ */
+serviceSelect.addEventListener("change", function () {
+    selectedServiceId = this.value;
+    selectedServiceTitle = this.options[this.selectedIndex].dataset.title || "";
+
+    requestForm.action = CREATE_REQUEST_URL_TEMPLATE.replace("/0/", `/${selectedServiceId}/`);
+
+    displayInput.disabled = false;
+    displayInput.placeholder = "Tap to search or pin location...";
+    displayInput.setAttribute("data-bs-toggle", "modal");
+    displayInput.setAttribute("data-bs-target", "#mapModal");
+    document.getElementById("locationHint").textContent = "Tap the field above to open the map and drop a pin.";
+
+    // Changing the service invalidates any previously chosen provider/location
+    resetProviderSelection();
+    displayInput.value = "";
+    latInput.value = "";
+    lngInput.value = "";
+    setStep(2, [1]);
+});
+
+function resetProviderSelection() {
+    providerIdInput.value = "";
+    selectedProviderChip.style.display = "none";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Select a provider to continue";
+}
+
+/* ============================================================
+   ADDRESS LOOKUP
+   ============================================================ */
+async function fetchAddress(lat, lng) {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+        const data = await response.json();
+        return data.display_name || "Selected Location";
+    } catch (e) {
+        return "Selected Location";
     }
 }
 
-getUserLocation();
+/* ============================================================
+   USER MARKER
+   ============================================================ */
+function setMarker(lat, lng, address = null) {
+    const pos = [lat, lng];
+    if (!map) {
+        // Map isn't ready yet (e.g. modal is still opening) — queue this
+        // location instead of dropping it. shown.bs.modal will replay it.
+        pendingLocation = { lat, lng, address };
+        return;
+    }
 
+    const userIcon = L.divIcon({
+        className: "user-pin-icon",
+        html: '<div class="pulse"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    if (!marker) {
+        marker = L.marker(pos, { draggable: true, icon: userIcon }).addTo(map);
+        marker.on("dragend", async function () {
+            const newPos = marker.getLatLng();
+            latInput.value = newPos.lat;
+            lngInput.value = newPos.lng;
+            searchInput.value = await fetchAddress(newPos.lat, newPos.lng);
+            loadProvidersForCurrentPin();
+        });
+    } else {
+        marker.setLatLng(pos);
+    }
+
+    map.setView(pos, 14);
+    latInput.value = lat;
+    lngInput.value = lng;
+    if (address) searchInput.value = address;
+
+    loadProvidersForCurrentPin();
+}
+
+/* ============================================================
+   STEP 2 — once a location is set, fetch nearby providers
+   for the selected service via AJAX
+   ============================================================ */
+function showMapStatus(message, isWarning = false) {
+    mapStatusBanner.textContent = message;
+    mapStatusBanner.classList.toggle("warn", isWarning);
+    mapStatusBanner.style.display = message ? "flex" : "none";
+}
+
+function showProviderListSkeleton() {
+    providerCountBadge.textContent = "";
+    providerListEl.innerHTML = `
+        <div class="list-skeleton-item"></div>
+        <div class="list-skeleton-item"></div>
+        <div class="list-skeleton-item"></div>
+    `;
+}
+
+function showProviderListEmpty(message) {
+    providerCountBadge.textContent = "";
+    providerListEl.innerHTML = `
+        <div class="list-empty-state">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <div class="title">No providers found</div>
+            <div class="sub">${message}</div>
+        </div>
+    `;
+}
+
+async function loadProvidersForCurrentPin() {
+    if (!selectedServiceId || !latInput.value || !lngInput.value) return;
+
+    showMapStatus("Searching for providers near this location...");
+    showProviderListSkeleton();
+    clearProviderMarkers();
+
+    const url = PROVIDER_LOOKUP_URL_TEMPLATE.replace("/0/", `/${selectedServiceId}/`)
+        + `?lat=${latInput.value}&lng=${lngInput.value}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Lookup failed");
+        const data = await res.json();
+        providers = data.providers || [];
+
+        if (providers.length === 0) {
+            showMapStatus("No providers found within 20km for this location. Try a different spot.", true);
+            showProviderListEmpty("Try a different location or search a wider area.");
+        } else {
+            showMapStatus(`${providers.length} provider${providers.length === 1 ? '' : 's'} found nearby.`);
+            providerCountBadge.textContent = providers.length;
+        }
+
+        renderProviderMarkers();
+        renderProviderList();
+    } catch (e) {
+        showMapStatus("Couldn't load providers. Please try again.", true);
+        showProviderListEmpty("Something went wrong loading providers.");
+    }
+}
+
+function clearProviderMarkers() {
+    Object.values(providerMarkers).forEach(m => map.removeLayer(m));
+    for (const k in providerMarkers) delete providerMarkers[k];
+    providerPanel.style.display = "none";
+    activeProviderId = null;
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+}
+
+function providerInitial(name) {
+    return (name || "?").trim().charAt(0).toUpperCase();
+}
+
+/* ============================================================
+   CATEGORY ICONS — maps a provider's service category to a
+   Font Awesome glyph + colour so pins/badges show *what* the
+   provider offers at a glance, instead of a plain generic marker.
+   Matched against the category name (admin-managed free text),
+   so this is keyword-based with a sensible fallback rather than
+   a fixed enum.
+   ============================================================ */
+const CATEGORY_ICON_RULES = [
+    { match: /plumb/i,                          icon: "fa-solid fa-wrench",            color: "#2563EB" },
+    { match: /electric/i,                       icon: "fa-solid fa-bolt",              color: "#F59E0B" },
+    { match: /clean/i,                          icon: "fa-solid fa-broom",             color: "#10B981" },
+    { match: /paint/i,                          icon: "fa-solid fa-paint-roller",      color: "#8B5CF6" },
+    { match: /carpen|furniture|wood/i,          icon: "fa-solid fa-hammer",            color: "#92400E" },
+    { match: /garden|landscap/i,                icon: "fa-solid fa-seedling",          color: "#16A34A" },
+    { match: /mov(e|ing)|logistic|transport/i,  icon: "fa-solid fa-truck",             color: "#0891B2" },
+    { match: /mechanic|auto|car ?repair/i,      icon: "fa-solid fa-car",               color: "#374151" },
+    { match: /cater|chef|food/i,                icon: "fa-solid fa-utensils",          color: "#DC2626" },
+    { match: /photo|video/i,                    icon: "fa-solid fa-camera",            color: "#6D28D9" },
+    { match: /beauty|salon|hair|spa|makeup/i,   icon: "fa-solid fa-scissors",          color: "#DB2777" },
+    { match: /tutor|teach|education/i,          icon: "fa-solid fa-graduation-cap",    color: "#1D4ED8" },
+    { match: /security|guard/i,                 icon: "fa-solid fa-shield-halved",     color: "#4B5563" },
+    { match: /\bit\b|computer|tech|software/i,  icon: "fa-solid fa-laptop-code",       color: "#0EA5E9" },
+    { match: /laundry|dry ?clean/i,              icon: "fa-solid fa-shirt",             color: "#0D9488" },
+    { match: /pest/i,                           icon: "fa-solid fa-bug",               color: "#65A30D" },
+    { match: /roof/i,                           icon: "fa-solid fa-house-chimney",     color: "#B45309" },
+    { match: /hvac|air ?con|refrigerat/i,       icon: "fa-solid fa-fan",               color: "#0284C7" },
+    { match: /event|decor/i,                    icon: "fa-solid fa-champagne-glasses", color: "#BE185D" },
+    { match: /fitness|gym|personal train/i,     icon: "fa-solid fa-dumbbell",          color: "#EA580C" },
+    { match: /repair|handyman|fix/i,            icon: "fa-solid fa-screwdriver-wrench",color: "#4338CA" },
+];
+const DEFAULT_CATEGORY_VISUAL = { icon: "fa-solid fa-briefcase", color: "#1A1F2B" };
+
+function getCategoryVisual(categoryName) {
+    if (!categoryName) return DEFAULT_CATEGORY_VISUAL;
+    const rule = CATEGORY_ICON_RULES.find(r => r.match.test(categoryName));
+    return rule || DEFAULT_CATEGORY_VISUAL;
+}
+
+function renderProviderMarkers() {
+    const boundsPoints = [[parseFloat(latInput.value), parseFloat(lngInput.value)]];
+
+    providers.forEach((provider, idx) => {
+        const visual = getCategoryVisual(provider.category);
+        const icon = L.divIcon({
+            className: "provider-pin-icon-wrap",
+            html: `
+                <div class="provider-pin-icon${provider.isPremium ? ' is-premium' : ''}"
+                     id="pin-${provider.id}" style="--pin-color:${visual.color}"
+                     title="${provider.category || ''}">
+                    <i class="${visual.icon}"></i>
+                    <span class="pin-count">${idx + 1}</span>
+                </div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 30]
+        });
+
+        const providerMarker = L.marker([provider.lat, provider.lng], { icon: icon }).addTo(map);
+
+        providerMarker.on("click", () => {
+            openProviderPanel(provider);
+            drawRouteToProvider(provider.id);
+            highlightProvider(provider.id);
+        });
+
+        providerMarkers[provider.id] = providerMarker;
+        boundsPoints.push([provider.lat, provider.lng]);
+    });
+
+    if (boundsPoints.length > 1) {
+        map.fitBounds(L.latLngBounds(boundsPoints), { padding: [40, 40], maxZoom: 14 });
+    }
+}
+
+function renderProviderList() {
+    if (!providers.length) return; // empty state already shown by caller
+
+    providerListEl.innerHTML = "";
+    providers.forEach((provider, idx) => {
+        const item = document.createElement("div");
+        item.className = "provider-list-item";
+        item.id = `list-item-${provider.id}`;
+
+        const ratingHtml = provider.rating != null
+            ? `<span class="stars-mini">${'★'.repeat(Math.round(provider.rating))}${'☆'.repeat(5 - Math.round(provider.rating))}</span>`
+            : `<span>No reviews</span>`;
+
+        const priceInfo = formatPrice(provider.minPrice);
+        const visual = getCategoryVisual(provider.category);
+
+        item.innerHTML = `
+            <div class="pl-badge" style="--pl-color:${visual.color}" title="${provider.category || ''}">
+                <i class="${visual.icon}"></i>
+            </div>
+            <div class="pl-text">
+                <div class="pl-name">${provider.name}</div>
+                <div class="pl-meta">${ratingHtml}</div>
+                <div class="pl-price${priceInfo.isUnset ? ' is-unset' : ''}">${priceInfo.html}</div>
+            </div>
+            <div class="pl-dist">${provider.distanceKm != null ? provider.distanceKm + ' km' : ''}</div>
+        `;
+
+        item.addEventListener("click", () => {
+            openProviderPanel(provider);
+            drawRouteToProvider(provider.id);
+            highlightProvider(provider.id);
+            map.panTo([provider.lat, provider.lng]);
+        });
+
+        providerListEl.appendChild(item);
+    });
+}
+
+function highlightProvider(providerId) {
+    document.querySelectorAll(".provider-list-item").forEach(el => {
+        el.classList.toggle("is-active", el.id === `list-item-${providerId}`);
+    });
+    document.querySelectorAll(".provider-pin-icon").forEach(el => {
+        el.classList.toggle("is-active", el.id === `pin-${providerId}`);
+    });
+    const activeItem = document.getElementById(`list-item-${providerId}`);
+    if (activeItem) activeItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+/* ============================================================
+   PROVIDER INFO PANEL
+   ============================================================ */
+function findProvider(id) {
+    return providers.find(p => p.id === id);
+}
+
+function formatPrice(minPrice) {
+    if (minPrice === null || minPrice === undefined) {
+        return { html: 'Rate not listed', isUnset: true };
+    }
+    const amount = Number(minPrice).toLocaleString('en-KE', { maximumFractionDigits: 0 });
+    return { html: `From KES ${amount}`, isUnset: false };
+}
+
+function renderRatingStars(rating, reviewCount) {
+    if (rating === null || rating === undefined) {
+        return '<span class="no-rating">No reviews yet</span>';
+    }
+    const rounded = Math.round(rating);
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) starsHtml += i <= rounded ? '★' : '☆';
+    const countLabel = reviewCount === 1 ? '1 review' : `${reviewCount} reviews`;
+    return `<span class="stars">${starsHtml}</span><span class="rating-text">${rating.toFixed(1)} (${countLabel})</span>`;
+}
+
+function openProviderPanel(provider) {
+    activeProviderId = provider.id;
+
+    ppName.textContent = provider.name;
+    const visual = getCategoryVisual(provider.category);
+    ppCategory.style.setProperty('--pc-color', visual.color);
+    ppCategory.innerHTML = provider.category
+        ? `<i class="${visual.icon}"></i> ${provider.category}`
+        : '';
+    ppRating.innerHTML = renderRatingStars(provider.rating, provider.reviewCount);
+    ppAddress.textContent = provider.address;
+    const priceInfo = formatPrice(provider.minPrice);
+    ppPrice.innerHTML = `<i class="fa-solid fa-tag"></i> ${priceInfo.html}`;
+    ppPrice.classList.toggle('is-unset', priceInfo.isUnset);
+    ppDistance.textContent = provider.distanceKm != null ? `${provider.distanceKm} km` : "--";
+    ppEta.textContent = "--";
+    ppRouteStatus.textContent = "Calculating route...";
+
+    // Clicking (or Enter/Space on) the rating opens the full reviews modal
+    // for whichever provider is currently open in the panel.
+    ppRating.onclick = () => openReviewsModal(provider);
+    ppRating.onkeydown = (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openReviewsModal(provider);
+        }
+    };
+
+    providerPanel.style.display = "block";
+
+    ppRequestBtn.onclick = () => {
+        providerIdInput.value = provider.id;
+        chipProviderAvatar.textContent = providerInitial(provider.name);
+        chipProviderName.textContent = provider.name;
+        chipProviderMeta.textContent = `${selectedServiceTitle} · ${provider.address}`;
+        selectedProviderChip.style.display = "flex";
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit request";
+
+        displayInput.value = searchInput.value || "Location Selected";
+
+        setStep(3, [1, 2]);
+
+        forceCloseModal(modalElement);
+    };
+}
+
+/* ============================================================
+   REVIEWS — opened in a modal from the rating on the provider card,
+   fetched per-provider on demand, cached per session
+   ============================================================ */
+function renderReviewsList(reviews) {
+    if (!reviews.length) {
+        reviewsModalBody.innerHTML = `<div class="p-reviews-empty">No reviews yet for this provider.</div>`;
+        return;
+    }
+
+    reviewsModalBody.innerHTML = reviews.map(r => {
+        const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+        const comment = r.comment
+            ? `<div class="p-review-comment">${escapeHtml(r.comment)}</div>`
+            : `<div class="p-review-comment"><em>No written comment.</em></div>`;
+        return `
+            <div class="p-review-item">
+                <div class="p-review-head">
+                    <span class="p-review-user">${escapeHtml(r.username)}</span>
+                    <span class="p-review-date">${r.createdAt}</span>
+                </div>
+                <div class="p-review-stars">${stars}</div>
+                ${comment}
+            </div>
+        `;
+    }).join("");
+}
+
+function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function loadReviewsForProvider(providerId) {
+    if (reviewsCache[providerId]) {
+        renderReviewsList(reviewsCache[providerId].reviews);
+        return;
+    }
+
+    reviewsModalBody.innerHTML = `<div class="p-reviews-loading">Loading reviews...</div>`;
+
+    const url = PROVIDER_REVIEWS_URL_TEMPLATE.replace("/0/", `/${providerId}/`);
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Reviews lookup failed");
+        const data = await res.json();
+        reviewsCache[providerId] = data;
+        reviewsModalSubtitle.textContent = data.count
+            ? `${data.count} review${data.count === 1 ? '' : 's'}${data.avg_rating != null ? ' · ' + data.avg_rating + ' ★ average' : ''}`
+            : '';
+        renderReviewsList(data.reviews || []);
+    } catch (e) {
+        reviewsModalBody.innerHTML = `<div class="p-reviews-error">Couldn't load reviews. Please try again.</div>`;
+    }
+}
+
+function openReviewsModal(provider) {
+    reviewsModalProviderName.textContent = provider.name;
+    reviewsModalSubtitle.textContent = '';
+    reviewsModalBody.innerHTML = `<div class="p-reviews-loading">Loading reviews...</div>`;
+
+    if (!reviewsModalInstance) {
+        reviewsModalInstance = new bootstrap.Modal(reviewsModalEl);
+    }
+
+    // Bootstrap does not support two modals being open at the same time —
+    // closing one afterwards can leave the other's backdrop stuck on the
+    // page. So we fully close the map modal first, remember that it was
+    // open, show the reviews modal on its own, then reopen the map modal
+    // once reviews are dismissed instead of stacking them.
+    const mapWasOpen = modalElement.classList.contains('show');
+    if (mapWasOpen) {
+        forceCloseModal(modalElement);
+    }
+
+    reviewsModalEl.addEventListener('hidden.bs.modal', function reopenMap() {
+        reviewsModalEl.removeEventListener('hidden.bs.modal', reopenMap);
+        if (mapWasOpen) {
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        }
+    });
+
+    reviewsModalInstance.show();
+
+    loadReviewsForProvider(provider.id);
+}
+
+document.getElementById("closeProviderPanel").addEventListener("click", () => {
+    providerPanel.style.display = "none";
+    activeProviderId = null;
+    document.querySelectorAll(".provider-list-item, .provider-pin-icon").forEach(el => el.classList.remove("is-active"));
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+});
+
+document.getElementById("chipChangeProvider").addEventListener("click", () => {
+    bootstrap.Modal.getOrCreateInstance(modalElement).show();
+});
+
+/* ============================================================
+   ROUTING — Leaflet Routing Machine (OSRM)
+   ============================================================ */
+function drawRouteToProvider(providerId) {
+    const provider = findProvider(providerId);
+    if (!provider) return;
+
+    const startLat = latInput.value ? parseFloat(latInput.value) : userLat;
+    const startLng = lngInput.value ? parseFloat(lngInput.value) : userLng;
+
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+
+    ppRouteStatus.textContent = "Calculating route...";
+
+    routingControl = L.Routing.control({
+        waypoints: [L.latLng(startLat, startLng), L.latLng(provider.lat, provider.lng)],
+        router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving'
+        }),
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: false,
+        show: false,
+        createMarker: () => null,
+        lineOptions: { styles: [{ color: '#2f6feb', weight: 5, opacity: 0.85 }] }
+    }).addTo(map);
+
+    routingControl.on('routesfound', function (e) {
+        const route = e.routes[0];
+        const etaMin = Math.round(route.summary.totalTime / 60);
+        // Distance stays as the haversine value from provider.distanceKm (set in
+        // openProviderPanel) so it matches the nearby providers list. Only ETA
+        // comes from the routing response, since that has no straight-line equivalent.
+        ppEta.textContent = etaMin < 60 ? `${etaMin} min` : `${Math.floor(etaMin / 60)}h ${etaMin % 60}m`;
+        ppRouteStatus.textContent = "";
+    });
+
+    routingControl.on('routingerror', function () {
+        ppRouteStatus.textContent = "Could not calculate route.";
+        ppEta.textContent = "--";
+    });
+}
+
+/* ============================================================
+   SMOOTH PROVIDER MOVEMENT ANIMATION (unchanged from before)
+   ============================================================ */
+function animateMarkerTo(providerId, newLat, newLng, durationMs = 1000) {
+    const m = providerMarkers[providerId];
+    if (!m) return;
+
+    const start = m.getLatLng();
+    const end = L.latLng(newLat, newLng);
+    const startTime = performance.now();
+
+    function step(now) {
+        const t = Math.min((now - startTime) / durationMs, 1);
+        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        m.setLatLng([
+            start.lat + (end.lat - start.lat) * ease,
+            start.lng + (end.lng - start.lng) * ease
+        ]);
+        if (t < 1) {
+            requestAnimationFrame(step);
+        } else {
+            const provider = findProvider(providerId);
+            if (provider) { provider.lat = newLat; provider.lng = newLng; }
+            if (activeProviderId === providerId) drawRouteToProvider(providerId);
+        }
+    }
+    requestAnimationFrame(step);
+}
+
+let providerPollInterval = null;
+function startProviderTracking(providerId) {
+    stopProviderTracking();
+    providerPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/providers/${providerId}/location/`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.latitude && data.longitude) animateMarkerTo(providerId, data.latitude, data.longitude);
+        } catch (e) { /* silent */ }
+    }, 5000);
+}
+function stopProviderTracking() {
+    if (providerPollInterval) { clearInterval(providerPollInterval); providerPollInterval = null; }
+}
+
+/* ============================================================
+   MODAL INIT / MAP SETUP
+   ============================================================ */
+let pendingLocation = null; // holds a setMarker() call that arrived before the map existed
+
+modalElement.addEventListener('shown.bs.modal', function () {
+    // Create the map synchronously — Bootstrap only fires 'shown.bs.modal'
+    // once the modal's CSS transition has finished, so the container
+    // already has real dimensions. No need to gate creation behind a
+    // timeout (that gap was causing early clicks, e.g. "Use My Current
+    // Location", to be silently dropped because `map` didn't exist yet).
+    if (!map) {
+        map = L.map("map").setView([userLat, userLng], 13);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        map.on("click", async function (e) {
+            setMarker(e.latlng.lat, e.latlng.lng);
+            searchInput.value = await fetchAddress(e.latlng.lat, e.latlng.lng);
+        });
+    }
+
+    // Still give the modal's fade transition a moment to fully settle before
+    // asking Leaflet to recompute size, purely as a rendering safety net —
+    // this no longer blocks map/marker creation.
+    map.invalidateSize();
+    setTimeout(() => map.invalidateSize(), 300);
+
+    if (pendingLocation) {
+        // A location came in (e.g. from "Use My Current Location") before
+        // the map was ready — apply it now instead of losing it.
+        const { lat, lng, address } = pendingLocation;
+        pendingLocation = null;
+        setMarker(lat, lng, address);
+    } else if (latInput.value && lngInput.value) {
+        setMarker(latInput.value, lngInput.value);
+    } else {
+        showMapStatus("Tap the map, search, or use your current location to find nearby providers.");
+    }
+});
+
+modalElement.addEventListener('hidden.bs.modal', function () {
+    stopProviderTracking();
+});
+
+/* ============================================================
+   SEARCH AUTOCOMPLETE
+   ============================================================ */
+searchInput.addEventListener("input", function () {
+    clearTimeout(searchTimeout);
+    const query = this.value;
+    if (query.length < 3) { suggestionBox.style.display = "none"; return; }
+
+    searchTimeout = setTimeout(() => {
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`)
+            .then(res => res.json())
+            .then(data => {
+                suggestionBox.innerHTML = "";
+                if (data.length > 0) {
+                    suggestionBox.style.display = "block";
+                    data.forEach(item => {
+                        const div = document.createElement("div");
+                        div.className = "suggestion-item";
+                        div.innerHTML = `<i class="fa-solid fa-location-dot"></i><span>${item.display_name}</span>`;
+                        div.onclick = () => {
+                            setMarker(item.lat, item.lon, item.display_name);
+                            suggestionBox.style.display = "none";
+                        };
+                        suggestionBox.appendChild(div);
+                    });
+                } else {
+                    suggestionBox.style.display = "none";
+                }
+            });
+    }, 400);
+});
+
+document.addEventListener("click", (e) => {
+    if (!e.target.closest(".search-group")) suggestionBox.style.display = "none";
+});
+
+/* ============================================================
+   CURRENT LOCATION
+   ============================================================ */
+document.getElementById("useCurrentLocation").addEventListener("click", function () {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async position => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const address = await fetchAddress(lat, lng);
+                setMarker(lat, lng, address);
+            },
+            () => alert("Unable to retrieve your location")
+        );
+    }
+});
+
+/* ============================================================
+   CONFIRM LOCATION (without picking a provider yet — just locks the pin)
+   ============================================================ */
+document.getElementById("confirmLocation").addEventListener("click", function () {
+    if (latInput.value && lngInput.value) {
+        if (!providerIdInput.value) {
+            displayInput.value = searchInput.value || "Location Selected";
+        }
+        forceCloseModal(modalElement);
+    }
+});
 </script>
 {% endblock %}

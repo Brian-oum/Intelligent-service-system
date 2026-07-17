@@ -1,0 +1,269 @@
+{% extends 'Match/auth_base.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Apply theme before first paint to avoid a light/dark flash -->
+<script>
+    (function () {
+        var stored = localStorage.getItem('fixkona-theme') || '{{ user.theme_preference|default:"system" }}';
+        var resolved = stored === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : stored;
+        document.documentElement.setAttribute('data-theme', resolved);
+    })();
+</script>
+
+<style>
+/* ============ FIXKONA THEME SYSTEM (matches provider_base.html) ============ */
+:root {
+    --lz-paper:     #F5F2ED;
+    --lz-paper-alt: #EDE9E2;
+    --lz-ink:       #0B0E14;
+    --lz-ink-60:    rgba(11, 14, 20, 0.55);
+    --lz-ink-08:    rgba(11, 14, 20, 0.08);
+    --lz-muted:     #6B7280;
+    --lz-signal:    #FF4D2E;
+    --lz-border:    rgba(11, 14, 20, 0.1);
+    --lz-dark-end:  #0B0E14;
+
+    --ink:        var(--lz-dark-end);
+    --panel:      var(--lz-paper);
+    --panel-2:    var(--lz-paper-alt);
+    --panel-line: var(--lz-border);
+    --signal:     var(--lz-signal);
+    --signal-dim: #C23A21;
+    --live:       #1F9D55;
+    --text-muted: var(--lz-muted);
+    --white:      var(--lz-ink);
+}
+:root[data-theme="dark"] {
+    --lz-paper:     #12161F;
+    --lz-paper-alt: #191E29;
+    --lz-ink:       #F2F1ED;
+    --lz-ink-60:    rgba(242, 241, 237, 0.62);
+    --lz-ink-08:    rgba(242, 241, 237, 0.08);
+    --lz-muted:     #9AA3AF;
+    --lz-border:    rgba(242, 241, 237, 0.1);
+    --live:         #39FF6A;
+}
+
+.theme-toggle-fab {
+    position: fixed; top: 24px; right: 24px; z-index: 1200;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid var(--panel-line);
+    background: var(--panel-2); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+.theme-toggle-fab:hover { border-color: var(--signal); color: var(--signal); }
+@media (max-width: 900px) { .theme-toggle-fab { top: 16px; right: 16px; } }
+
+.premium-page {
+    background-color: var(--panel);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    padding: 100px 0 120px;
+    transition: background-color .2s ease, color .2s ease;
+}
+.premium-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--signal);
+    display: block;
+    margin-bottom: 16px;
+}
+.premium-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    letter-spacing: -0.02em;
+    color: var(--white);
+    margin-bottom: 14px;
+}
+.premium-sub { color: var(--text-muted); font-size: 0.95rem; max-width: 560px; }
+
+.premium-steps {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 36px;
+}
+.premium-steps .step { display: flex; align-items: center; gap: 8px; }
+.premium-steps .step.is-active { color: var(--signal); }
+.premium-steps .num {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+}
+.premium-steps .sep { color: var(--panel-line); }
+
+.premium-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 24px; }
+
+.premium-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 36px 30px;
+    display: flex; flex-direction: column;
+    position: relative;
+    transition: border-color 0.3s ease, transform 0.3s ease;
+}
+.premium-card:hover { border-color: rgba(255,255,255,0.22); transform: translateY(-4px); }
+.premium-card.is-featured { border-color: var(--signal); box-shadow: 0 20px 50px rgba(255,77,46,0.14); }
+
+.premium-card__badge {
+    position: absolute; top: -13px; left: 30px;
+    background: var(--signal); color: var(--ink);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 3px;
+}
+.premium-card__name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.4rem; color: var(--white); margin-bottom: 6px; }
+.premium-card__desc { color: var(--lz-ink-60); font-size: 0.86rem; line-height: 1.6; margin-bottom: 24px; min-height: 44px; }
+/* Explicit dark-mode override — belt-and-braces in case a parent stylesheet
+   redefines --text-muted/--lz-ink-60 with low contrast against the card bg. */
+:root[data-theme="dark"] .premium-card__desc { color: #C9D2DC; }
+:root:not([data-theme="dark"]) .premium-card__desc { color: #4B5563; }
+.premium-card__price { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 2.2rem; color: var(--white); }
+.premium-card__cycle { color: var(--text-muted); font-size: 0.8rem; margin-bottom: 26px; }
+
+.premium-card__features { list-style: none; padding: 0; margin: 0 0 28px; flex-grow: 1; }
+.premium-card__features li {
+    font-size: 0.88rem; color: var(--lz-ink-60); padding: 11px 0;
+    border-top: 1px solid var(--panel-line);
+    display: flex; gap: 10px; align-items: flex-start;
+}
+:root[data-theme="dark"] .premium-card__features li { color: #C9D2DC; }
+:root:not([data-theme="dark"]) .premium-card__features li { color: #4B5563; }
+.premium-card__features li:first-child { border-top: none; }
+.premium-card__features li strong { color: var(--white); }
+.premium-card__features li.is-highlight { color: var(--signal); }
+.premium-card__features li .dot { color: var(--signal); flex-shrink: 0; }
+
+.premium-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--signal); color: var(--ink) !important;
+    border: none; border-radius: 2px;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.8rem;
+    padding: 14px 20px; text-decoration: none; width: 100%;
+    transition: background 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+.premium-btn:hover { background: #FF6A4D; color: var(--ink); transform: translateY(-2px); }
+
+@media (max-width: 700px) {
+    .premium-page { padding: 72px 0 80px; }
+    .premium-card { padding: 28px 22px; }
+}
+@media (max-width: 420px) {
+    .premium-steps { gap: 6px; font-size: 0.66rem; }
+    .premium-steps .sep { display: none; }
+}
+</style>
+
+<button type="button" class="theme-toggle-fab" id="themeToggleFab" aria-label="Toggle dark mode">
+    <i class="fa-solid fa-moon"></i>
+</button>
+
+<div class="premium-page">
+    <div class="container">
+
+        <div class="premium-steps">
+            <span class="step is-active"><span class="num">1</span> Choose Package</span>
+            <span class="sep">&mdash;&mdash;</span>
+            <span class="step"><span class="num">2</span> Create Account</span>
+            <span class="sep">&mdash;&mdash;</span>
+            <span class="step"><span class="num">3</span> Business Profile</span>
+        </div>
+
+        <div class="text-center mx-auto mb-5" style="max-width: 640px;">
+            <span class="premium-eyebrow">For Trades &amp; Contractors</span>
+            <h2 class="premium-heading">Sign up as a Pro</h2>
+            <p class="premium-sub mx-auto">
+                First, choose the package that fits your business. You can switch or
+                upgrade later from your dashboard.
+            </p>
+        </div>
+
+        <div class="premium-grid">
+            {% for plan in plans %}
+                <div class="premium-card {% if plan.is_featured %}is-featured{% endif %}">
+                    {% if plan.is_featured %}
+                        <span class="premium-card__badge">★ Featured</span>
+                    {% endif %}
+
+                    <h3 class="premium-card__name">{{ plan.name }}</h3>
+                    <p class="premium-card__desc">{{ plan.description }}</p>
+
+                    <div class="premium-card__price">KES {{ plan.price }}</div>
+                    <p class="premium-card__cycle">per {{ plan.get_billing_cycle_display }} ({{ plan.duration_days }} days)</p>
+
+                    <ul class="premium-card__features">
+                        <li>
+                            <span class="dot">&#9670;</span>
+                            {% if plan.max_requests %}
+                                Up to <strong>{{ plan.max_requests }}</strong> customer requests / period
+                            {% else %}
+                                <strong>Unlimited</strong> customer requests
+                            {% endif %}
+                        </li>
+                        <li>
+                            <span class="dot">&#9670;</span>
+                            {% if plan.max_services %}
+                                List up to <strong>{{ plan.max_services }}</strong> service(s)
+                            {% else %}
+                                <strong>Unlimited</strong> service listings
+                            {% endif %}
+                        </li>
+                        {% if plan.is_featured %}
+                            <li class="is-highlight">
+                                <span class="dot">★</span> Boosted to top of search results
+                            </li>
+                        {% endif %}
+                    </ul>
+
+                    <a href="{% url 'provider_signup_choose_package' %}?plan={{ plan.id }}" class="premium-btn">
+                        Choose {{ plan.name }}
+                    </a>
+                </div>
+            {% empty %}
+                <p class="text-center" style="color: var(--text-muted);">No packages are available right now. Check back soon.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var btn = document.getElementById('themeToggleFab');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function syncIcon() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        syncIcon();
+        btn.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('fixkona-theme', next);
+            syncIcon();
+        });
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+            if (!localStorage.getItem('fixkona-theme') || localStorage.getItem('fixkona-theme') === 'system') {
+                document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                syncIcon();
+            }
+        });
+    })();
+</script>
+{% endblock %}

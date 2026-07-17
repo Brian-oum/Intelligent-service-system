@@ -1,174 +1,196 @@
-{% block content %}
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "Match/user_base.html" %}
+{% load static %}
+{% block title %}Submit Review{% endblock %}
 
+{% block extra_head %}
 <style>
-    :root {
-        --sidebar-bg: #0f172a;
-        --sidebar-accent: #1e293b;
-        --primary: #0ea5e9;
-        --bg-soft: #f8fafc;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --border-color: #e2e8f0;
-        --star-color: #f59e0b;
+    .page-wrap { padding: 44px 44px 60px; max-width: 980px; margin: 0 auto; }
+
+    .breadcrumb-mono {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 16px;
     }
+    .breadcrumb-mono a { color: var(--text-muted); text-decoration: none; }
+    .breadcrumb-mono a:hover { color: var(--signal); }
 
-    body { background: var(--bg-soft); font-family: 'Inter', sans-serif; color: var(--text-main); }
+    .page-header { margin-bottom: 28px; }
 
-    /* Sidebar (Kept from your original) */
-    .sidebar { width: 260px; background: var(--sidebar-bg); height: 100vh; position: fixed; top: 0; left: 0; padding: 24px 0; z-index: 1000; border-right: 1px solid rgba(255,255,255,0.05); }
-    .sidebar .nav-link { color: #94a3b8; padding: 12px 24px; display: flex; align-items: center; gap: 12px; transition: all 0.2s ease; text-decoration: none; font-weight: 500; }
-    .sidebar .nav-link:hover { background: var(--sidebar-accent); color: #fff; }
-    .sidebar .nav-link.active { background: rgba(14, 165, 233, 0.1); color: var(--primary); border-right: 3px solid var(--primary); }
-
-    /* Main Content Layout */
-    .main-content { margin-left: 260px; padding: 3rem; width: calc(100% - 260px); }
-    .page-header { margin-bottom: 2rem; }
-
-    /* Modern Form Card */
-    .request-card {
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 32px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    /* ============ PROVIDER BADGE ============ */
+    .review-provider-badge {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--panel-2);
+        border: 1px dashed var(--panel-line);
+        border-radius: 6px;
+        padding: 16px 18px;
+        margin-bottom: 28px;
     }
+    .review-provider-badge .rpb-icon {
+        width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+        background: rgba(31,157,85,0.14); color: var(--live);
+        display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .review-provider-badge .rpb-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); font-size: 0.96rem; }
+    .review-provider-badge .rpb-sub { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+    .review-provider-badge .rpb-price { font-size: 0.78rem; font-weight: 600; color: #E0A63C; margin-top: 4px; }
+    .review-provider-badge .rpb-price.is-unset { color: var(--text-muted); font-weight: 500; font-style: italic; }
 
-    /* Star Rating Logic */
+    /* ============ FORM PANEL (matches edit/add service) ============ */
+    .form-panel { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 32px; }
+
+    .field-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: block;
+    }
+    .field-error { color: #FF6A4D; font-size: 0.78rem; margin-top: 4px; }
+    .field-hint { color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; }
+
+    input, select, textarea {
+        display: block;
+        width: 100%;
+        padding: 11px 14px;
+        font-size: 0.92rem;
+        color: var(--white);
+        background: var(--panel-2);
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        font-family: 'Inter', sans-serif;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+        outline: 0;
+        border-color: var(--signal);
+        box-shadow: 0 0 0 3px rgba(255,77,46,0.12);
+    }
+    textarea { min-height: 110px; resize: vertical; }
+
+    /* ============ STAR RATING ============ */
     .star-rating-container {
         display: flex;
         flex-direction: row-reverse;
         justify-content: flex-end;
-        gap: 8px;
+        gap: 6px;
     }
     .star-rating-container input { display: none; }
     .star-rating-container label {
-        font-size: 2rem;
-        color: #e2e8f0;
+        font-size: 1.9rem;
+        color: var(--panel-line);
         cursor: pointer;
-        transition: transform 0.2s, color 0.2s;
+        transition: transform 0.15s ease, color 0.15s ease;
+        line-height: 1;
     }
     .star-rating-container label:hover,
     .star-rating-container label:hover ~ label,
     .star-rating-container input:checked ~ label {
-        color: var(--star-color);
+        color: #E0A63C;
     }
-    .star-rating-container label:active { transform: scale(0.9); }
+    .star-rating-container label:active { transform: scale(0.92); }
 
-    /* Form Element Styling */
-    .modern-form label { font-weight: 600; font-size: 0.95rem; color: var(--text-main); display: block; margin-bottom: 8px; }
-    .modern-form input[type="text"], 
-    .modern-form textarea {
-        width: 100%;
-        padding: 12px 16px;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        background-color: #ffffff;
-        transition: all 0.2s;
+    /* ============ TIP CARD (matches add_service) ============ */
+    .tip-card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; padding: 28px; }
+    .tip-icon {
+        width: 34px; height: 34px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255,77,46,0.12); color: var(--signal); font-size: 0.9rem; flex-shrink: 0;
     }
-    .modern-form input:focus, .modern-form textarea:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
-    }
-    
-    .provider-badge {
-        background: var(--bg-soft);
-        padding: 12px;
-        border-radius: 8px;
-        border: 1px dashed var(--border-color);
+    .tip-card h6 { font-family: 'Space Grotesk', sans-serif; color: var(--white); font-weight: 600; margin: 0; }
+    .tip-card p { color: var(--text-muted); }
+
+    @media (max-width: 768px) {
+        .page-wrap { padding: 28px 20px 44px; }
     }
 </style>
+{% endblock %}
 
-<div class="d-flex">
-    <div class="sidebar d-flex flex-column">
-        <div class="text-center mb-5 px-3">
-            <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
-                 class="rounded-circle mb-2 border border-3 border-dark" width="70">
-            <h6 class="fw-bold mb-0 mt-2 text-white">{{ user.username }}</h6>
-            <small style="color: #64748b">Service Seeker</small>
-        </div>
+{% block content %}
+<div class="page-wrap">
 
-        <nav class="nav flex-column">
-            <a class="nav-link" href="{% url 'user_dashboard' %}"><i class="fa-solid fa-house"></i> Dashboard</a>
-            <a class="nav-link" href="{% url 'search_services' %}"><i class="fa-solid fa-plus-circle"></i> Request Service</a>
-            <a class="nav-link active" href="{% url 'my_requests' %}"><i class="fa-solid fa-rectangle-list"></i> My Requests</a>
-            <a class="nav-link" href="{% url 'profile' %}"><i class="fa-solid fa-user-gear"></i> Profile Settings</a>
-        </nav>
-
-        <div class="mt-auto border-top border-secondary">
-            <a class="nav-link text-danger" href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-        </div>
+    <div class="breadcrumb-mono">
+        <a href="{% url 'my_requests' %}">My Requests</a> / <span style="color: var(--white);">Submit Review</span>
     </div>
 
-    <main class="main-content">
-        <div class="container-fluid">
-            <div class="page-header">
-                <h2 class="fw-bold">Submit Review</h2>
-                <p class="text-muted">Share your feedback to help the community.</p>
-            </div>
+    <div class="page-header">
+        <span class="premium-eyebrow">Service Requests</span>
+        <h2 class="premium-heading">Submit Review</h2>
+        <p class="premium-sub">Share your feedback to help the community.</p>
+    </div>
 
-            <div class="row">
-                <div class="col-lg-7">
-                    <div class="request-card">
-                        <div class="provider-badge mb-4 d-flex align-items-center">
-                            <i class="fa-solid fa-circle-check text-success fs-4 me-3"></i>
-                            <div>
-                                <div class="fw-bold text-dark">{{ service_request.service.title }}</div>
-                                <div class="small text-muted">Provided by: {{ service_request.service.provider.company_name }}</div>
-                            </div>
-                        </div>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="form-panel">
 
-                        <form method="post" class="modern-form">
-                            {% csrf_token %}
-                            
-                            {% for field in form %}
-                            <div class="mb-4">
-                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                
-                                {% if "rating" in field.name|lower %}
-                                    <div class="star-rating-container">
-                                        {% for i in "54321" %}
-                                        <input type="radio" id="star{{ i }}" name="{{ field.name }}" value="{{ i }}" 
-                                               {% if field.value|slugify == i %}checked{% endif %}>
-                                        <label for="star{{ i }}"><i class="fa-solid fa-star"></i></label>
-                                        {% endfor %}
-                                    </div>
-                                    <small class="text-muted mt-1 d-block">Click a star to rate</small>
-                                
-                                {% else %}
-                                    {# This renders standard inputs/textareas with the styles defined above #}
-                                    {{ field }}
-                                {% endif %}
-
-                                {% if field.errors %}
-                                    <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-
-                            <div class="pt-3 border-top d-flex gap-3">
-                                <button type="submit" class="btn btn-primary px-5 py-2 fw-bold">
-                                    Post Review
-                                </button>
-                                <a href="{% url 'my_requests' %}" class="btn btn-light px-4 py-2 border">Cancel</a>
-                            </div>
-                        </form>
+                <div class="review-provider-badge">
+                    <div class="rpb-icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <div>
+                        <div class="rpb-title">{{ service_request.service.title }}</div>
+                        <div class="rpb-sub">Provided by {{ service_request.service.provider.company_name }}</div>
+                        {% if service_request.service.min_price %}
+                            <div class="rpb-price">From KES {{ service_request.service.min_price|floatformat:0 }}</div>
+                        {% else %}
+                            <div class="rpb-price is-unset">Rate not listed</div>
+                        {% endif %}
                     </div>
                 </div>
 
-                <div class="col-lg-4 ms-lg-4 mt-4 mt-lg-0">
-                    <div class="alert alert-info border-0 shadow-sm rounded-4 p-4">
-                        <h6 class="fw-bold"><i class="fa-solid fa-circle-info me-2"></i>Why review?</h6>
-                        <p class="small mb-0 opacity-75">Your reviews help high-quality providers grow and ensure other users get the best possible service experience.</p>
+                <form method="POST">
+                    {% csrf_token %}
+
+                    {% for field in form %}
+                    <div class="mb-4">
+                        <label class="field-label">{{ field.label }}</label>
+
+                        {% if "rating" in field.name|lower %}
+                            <div class="star-rating-container">
+                                {% for i in "54321" %}
+                                <input type="radio" id="star{{ i }}" name="{{ field.name }}" value="{{ i }}"
+                                       {% if field.value|slugify == i %}checked{% endif %}>
+                                <label for="star{{ i }}"><i class="fa-solid fa-star"></i></label>
+                                {% endfor %}
+                            </div>
+                            <div class="field-hint">Click a star to rate</div>
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+
+                        {% if field.errors %}
+                            <div class="field-error">{{ field.errors|striptags }}</div>
+                        {% endif %}
+                        {% if field.help_text %}
+                            <div class="field-hint">{{ field.help_text }}</div>
+                        {% endif %}
                     </div>
-                </div>
+                    {% endfor %}
+
+                    <div class="d-flex gap-3 mt-4">
+                        <button type="submit" class="premium-btn">
+                            <i class="fa-solid fa-paper-plane me-2"></i>Post Review
+                        </button>
+                        <a href="{% url 'my_requests' %}" class="premium-btn is-outline">Cancel</a>
+                    </div>
+                </form>
             </div>
         </div>
-    </main>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <div class="col-lg-4">
+            <div class="tip-card">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <div class="tip-icon"><i class="fa-solid fa-lightbulb"></i></div>
+                    <h6>Why review?</h6>
+                </div>
+                <p class="small mb-0">Your reviews help high-quality providers grow and ensure other users get the best possible service experience.</p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -1,0 +1,770 @@
+{% load static %}
+<!-- =====================================================================
+     CHAT WIDGET
+     Include this once near the bottom of any dashboard template that
+     extends a base with Font Awesome + the shared --panel/--signal/etc.
+     design tokens already loaded, e.g.: include this file via
+     Django's include tag, pointing at its path in your templates dir.
+
+     Nothing else is required — it fetches its own data over
+     /chat/api/... and opens websockets to ws/chat/...
+     ===================================================================== -->
+
+<style>
+    :root {
+        --chat-accent: var(--prov-gold, var(--seek-info, #2563EB));
+    }
+
+    /* ---------- Floating launcher ---------- */
+    #chat-fab {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: var(--chat-accent);
+        color: #14140f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        z-index: 1200;
+        transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    #chat-fab:hover { transform: translateY(-2px) scale(1.03); }
+    #chat-fab .fa-xmark { display: none; }
+    #chat-fab.is-open .fa-comment-dots { display: none; }
+    #chat-fab.is-open .fa-xmark { display: inline-block; }
+
+    /* The panel has its own close button in the header (and closes on
+       overlay click / Escape), so once it's open the launcher is just
+       redundant screen real estate sitting in the same bottom-right
+       corner as the send button — hide it instead of stacking. */
+    #chat-fab.is-open {
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.85);
+    }
+
+    #chat-fab-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 5px;
+        border-radius: 10px;
+        background: #E5484D;
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 700;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-family: 'JetBrains Mono', monospace;
+        border: 2px solid var(--bg, #0b0b09);
+    }
+    #chat-fab-badge.is-visible { display: flex; }
+
+    /* ---------- Slide-in panel ---------- */
+    #chat-panel-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 1190;
+    }
+    #chat-panel-overlay.is-open { opacity: 1; pointer-events: auto; }
+
+    #chat-panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 400px;
+        max-width: 100vw;
+        background: var(--panel, #141410);
+        border-left: 1px solid var(--panel-line, #2a2a24);
+        display: flex;
+        flex-direction: column;
+        transform: translateX(100%);
+        transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+        z-index: 1195;
+        font-family: inherit;
+    }
+    #chat-panel.is-open { transform: translateX(0); }
+
+    .chat-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 18px 18px;
+        border-bottom: 1px solid var(--panel-line, #2a2a24);
+        flex-shrink: 0;
+    }
+    .chat-head h6 {
+        margin: 0;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1rem;
+        color: var(--white, #fff);
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .chat-head .chat-sub {
+        font-size: 0.72rem;
+        color: var(--text-muted, #8a8a80);
+        display: block;
+        margin-top: 2px;
+    }
+    .chat-icon-btn {
+        background: var(--panel-2, #1b1b16);
+        border: 1px solid var(--panel-line, #2a2a24);
+        color: var(--text-muted, #8a8a80);
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .chat-icon-btn:hover { color: var(--white, #fff); }
+
+    .chat-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--panel-2, #1b1b16);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: var(--chat-accent);
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+    .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ---------- Conversation list view ---------- */
+    #chat-view-list { flex: 1; overflow-y: auto; }
+    .chat-convo-item {
+        display: flex;
+        gap: 12px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--panel-line, #2a2a24);
+        cursor: pointer;
+        align-items: center;
+    }
+    .chat-convo-item:hover { background: var(--panel-2, #1b1b16); }
+    .chat-convo-body { flex: 1; min-width: 0; }
+    .chat-convo-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .chat-convo-name { font-size: 0.86rem; font-weight: 600; color: var(--white, #fff); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-convo-time { font-size: 0.66rem; color: var(--text-muted, #8a8a80); flex-shrink: 0; }
+    .chat-convo-preview { font-size: 0.78rem; color: var(--text-muted, #8a8a80); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .chat-convo-unread {
+        min-width: 18px; height: 18px; border-radius: 9px; background: var(--signal, #E5484D);
+        color: #fff; font-size: 0.64rem; font-weight: 700; display: flex; align-items: center;
+        justify-content: center; padding: 0 5px; flex-shrink: 0;
+    }
+    #chat-empty-state, #chat-loading-state, #chat-thread-empty-state {
+        padding: 40px 20px; text-align: center; color: var(--text-muted, #8a8a80); font-size: 0.82rem;
+    }
+    #chat-empty-state i, #chat-loading-state i, #chat-thread-empty-state i { font-size: 1.6rem; display: block; margin-bottom: 10px; opacity: 0.6; }
+
+    /* ---------- Thread view ---------- */
+    #chat-view-thread { flex: 1; display: none; flex-direction: column; min-height: 0; }
+    #chat-view-thread.is-active { display: flex; }
+    #chat-view-list.is-hidden { display: none; }
+
+    #chat-messages { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; }
+    #chat-messages-list { display: flex; flex-direction: column; }
+
+    .chat-date-divider {
+        text-align: center;
+        font-size: 0.66rem;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted, #8a8a80);
+        margin: 6px 0 14px;
+        position: relative;
+    }
+
+    .chat-bubble-row { display: flex; margin-bottom: 12px; transition: margin-bottom 0.1s ease; }
+    .chat-bubble-row.is-own { justify-content: flex-end; }
+    .chat-bubble-row.is-grouped { margin-bottom: 3px; }
+    .chat-bubble-row-inner { max-width: 78%; min-width: 0; }
+    .chat-bubble {
+        padding: 9px 13px;
+        border-radius: 16px;
+        font-size: 0.84rem;
+        line-height: 1.4;
+        word-wrap: break-word;
+        background: var(--panel-2, #1b1b16);
+        color: var(--white, #fff);
+        border: 1px solid var(--panel-line, #2a2a24);
+    }
+    /* Consecutive messages from the same sender read as one connected
+       block rather than a stack of separate identical pills — flatten
+       the corner where this bubble meets the previous one. */
+    .chat-bubble-row.is-grouped:not(.is-own) .chat-bubble { border-top-left-radius: 5px; }
+    .chat-bubble-row.is-own.is-grouped .chat-bubble { border-top-right-radius: 5px; }
+    .chat-bubble-row.is-own .chat-bubble {
+        background: var(--chat-accent);
+        color: #14140f;
+        border-color: transparent;
+    }
+    .chat-bubble-time {
+        font-size: 0.6rem;
+        color: var(--text-muted, #8a8a80);
+        margin-top: 3px;
+        display: block;
+        height: 13px;
+    }
+    .chat-bubble-row.is-own .chat-bubble-time { text-align: right; }
+    .chat-bubble-time.is-hidden { display: none; }
+
+    /* ---------- Typing indicator ---------- */
+    #chat-typing-row { display: none; }
+    #chat-typing-row.is-visible { display: flex; margin-bottom: 12px; }
+    .chat-typing-bubble {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 11px 14px;
+        border-radius: 16px;
+        border-bottom-left-radius: 5px;
+        background: var(--panel-2, #1b1b16);
+        border: 1px solid var(--panel-line, #2a2a24);
+    }
+    .chat-typing-bubble span {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--text-muted, #8a8a80);
+        animation: chat-typing-bounce 1.2s infinite ease-in-out;
+    }
+    .chat-typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
+    .chat-typing-bubble span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes chat-typing-bounce {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+        30% { transform: translateY(-4px); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .chat-typing-bubble span { animation: none; opacity: 0.8; }
+    }
+
+    .chat-input-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 14px 16px;
+        border-top: 1px solid var(--panel-line, #2a2a24);
+        flex-shrink: 0;
+    }
+    #chat-input {
+        flex: 1;
+        resize: none;
+        max-height: 100px;
+        background: var(--panel-2, #1b1b16);
+        border: 1px solid var(--panel-line, #2a2a24);
+        border-radius: 10px;
+        color: var(--white, #fff);
+        padding: 9px 12px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        line-height: 1.35;
+    }
+    #chat-input:focus { outline: none; border-color: var(--chat-accent); }
+    #chat-send-btn {
+        width: 38px; height: 38px; border-radius: 10px; border: none; flex-shrink: 0;
+        background: var(--chat-accent); color: #14140f; display: flex; align-items: center;
+        justify-content: center; cursor: pointer; font-size: 0.9rem;
+    }
+    #chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .chat-conn-pill {
+        font-size: 0.62rem; font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
+        letter-spacing: 0.08em; padding: 3px 8px; border-radius: 20px; display: inline-flex;
+        align-items: center; gap: 5px; color: var(--text-muted, #8a8a80);
+    }
+    .chat-conn-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted, #8a8a80); }
+    .chat-conn-pill.is-live .dot { background: var(--live, #3ecf8e); }
+    .chat-conn-pill.is-live { color: var(--live, #3ecf8e); }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 640px) {
+        #chat-panel { width: 100%; }
+        #chat-fab { right: 16px; bottom: 16px; width: 52px; height: 52px; font-size: 1.1rem; }
+    }
+</style>
+
+<button id="chat-fab" type="button" aria-label="Open chat">
+    <i class="fa-solid fa-comment-dots"></i>
+    <i class="fa-solid fa-xmark"></i>
+    <span id="chat-fab-badge">0</span>
+</button>
+
+<div id="chat-panel-overlay"></div>
+
+<div id="chat-panel" role="dialog" aria-label="Chat">
+    <!-- List view -->
+    <div id="chat-view-list">
+        <div class="chat-head">
+            <h6>Messages</h6>
+            <button class="chat-icon-btn" id="chat-close-btn" aria-label="Close chat"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="chat-loading-state">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            Loading conversations…
+        </div>
+        <div id="chat-empty-state" style="display:none;">
+            <i class="fa-regular fa-comments"></i>
+            No conversations yet.
+        </div>
+        <div id="chat-convo-items"></div>
+    </div>
+
+    <!-- Thread view -->
+    <div id="chat-view-thread">
+        <div class="chat-head">
+            <button class="chat-icon-btn" id="chat-back-btn" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="chat-avatar" id="chat-thread-avatar">?</div>
+            <div style="flex:1; min-width:0;">
+                <h6 id="chat-thread-name">&nbsp;</h6>
+                <span class="chat-sub" id="chat-thread-context"></span>
+            </div>
+            <span class="chat-conn-pill" id="chat-conn-pill"><span class="dot"></span><span id="chat-conn-label">Connecting</span></span>
+        </div>
+        <div id="chat-messages">
+            <div id="chat-messages-list"></div>
+            <div id="chat-typing-row">
+                <div class="chat-typing-bubble"><span></span><span></span><span></span></div>
+            </div>
+        </div>
+        <div class="chat-input-row">
+            <textarea id="chat-input" rows="1" placeholder="Write a message…"></textarea>
+            <button id="chat-send-btn" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const CHAT_CURRENT_USER_ID = {{ request.user.id }};
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        return '';
+    }
+    const CSRF_TOKEN = getCookie('csrftoken');
+
+    const fab = document.getElementById('chat-fab');
+    const fabBadge = document.getElementById('chat-fab-badge');
+    const overlay = document.getElementById('chat-panel-overlay');
+    const panel = document.getElementById('chat-panel');
+    const closeBtn = document.getElementById('chat-close-btn');
+    const backBtn = document.getElementById('chat-back-btn');
+
+    const listView = document.getElementById('chat-view-list');
+    const threadView = document.getElementById('chat-view-thread');
+    const loadingState = document.getElementById('chat-loading-state');
+    const emptyState = document.getElementById('chat-empty-state');
+    const convoItemsEl = document.getElementById('chat-convo-items');
+
+    const threadAvatar = document.getElementById('chat-thread-avatar');
+    const threadName = document.getElementById('chat-thread-name');
+    const threadContext = document.getElementById('chat-thread-context');
+    const messagesEl = document.getElementById('chat-messages');
+    const messagesListEl = document.getElementById('chat-messages-list');
+    const typingRowEl = document.getElementById('chat-typing-row');
+    const inputEl = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send-btn');
+    const connPill = document.getElementById('chat-conn-pill');
+    const connLabel = document.getElementById('chat-conn-label');
+
+    let notifySocket = null;
+    let chatSocket = null;
+    let activeConversationId = null;
+    let conversationsCache = [];
+    let panelOpen = false;
+
+    // Message-grouping state for the currently open thread — reset every
+    // time a thread is (re)loaded. Lets consecutive messages from the same
+    // sender render as one connected block instead of a wall of separate
+    // bubbles, and shows a date divider only when the day actually changes.
+    let lastRenderedSenderId = null;
+    let lastRenderedDateKey = null;
+    let lastRenderedRow = null;
+
+    // Typing indicator: how long to show it after the last "typing" event
+    // received (in case a "stopped typing" signal is dropped), and how
+    // often we're willing to send our own outgoing typing pings.
+    let typingHideTimer = null;
+    let typingSendThrottle = 0;
+
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsBase = `${wsScheme}://${window.location.host}`;
+
+    function timeAgoShort(iso) {
+        const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+        if (diff < 60) return 'now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+        return Math.floor(diff / 86400) + 'd';
+    }
+
+    function initials(name) {
+        return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    }
+
+    function setBadge(count) {
+        if (count > 0) {
+            fabBadge.textContent = count > 99 ? '99+' : count;
+            fabBadge.classList.add('is-visible');
+        } else {
+            fabBadge.classList.remove('is-visible');
+        }
+    }
+
+    // ---------------- Panel open/close ----------------
+
+    function openPanel() {
+        panelOpen = true;
+        overlay.classList.add('is-open');
+        panel.classList.add('is-open');
+        fab.classList.add('is-open');
+        loadConversations();
+        connectNotifySocket();
+    }
+
+    function closePanel() {
+        panelOpen = false;
+        overlay.classList.remove('is-open');
+        panel.classList.remove('is-open');
+        fab.classList.remove('is-open');
+    }
+
+    fab.addEventListener('click', () => panelOpen ? closePanel() : openPanel());
+    closeBtn.addEventListener('click', closePanel);
+    overlay.addEventListener('click', closePanel);
+
+    // ---------------- List <-> thread ----------------
+
+    function showList() {
+        activeConversationId = null;
+        threadView.classList.remove('is-active');
+        listView.classList.remove('is-hidden');
+        hideTypingIndicator();
+        if (chatSocket) { chatSocket.close(); chatSocket = null; }
+        loadConversations();
+    }
+
+    function showThread(convo) {
+        activeConversationId = convo.id;
+        listView.classList.add('is-hidden');
+        threadView.classList.add('is-active');
+        threadName.textContent = convo.other_name;
+        threadContext.textContent = convo.service_title ? `Re: ${convo.service_title}` : '';
+        threadAvatar.textContent = initials(convo.other_name);
+        if (convo.other_avatar) {
+            threadAvatar.innerHTML = `<img src="${convo.other_avatar}" alt="">`;
+        } else {
+            threadAvatar.textContent = initials(convo.other_name);
+        }
+        lastRenderedSenderId = null;
+        lastRenderedDateKey = null;
+        lastRenderedRow = null;
+        hideTypingIndicator();
+        loadMessages(convo.id);
+        connectChatSocket(convo.id);
+    }
+
+    backBtn.addEventListener('click', showList);
+
+    // ---------------- REST calls ----------------
+
+    function loadConversations() {
+        fetch('/chat/api/conversations/', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                loadingState.style.display = 'none';
+                conversationsCache = data.conversations || [];
+                setBadge(data.total_unread || 0);
+                renderConversationList();
+            })
+            .catch(() => { loadingState.style.display = 'none'; });
+    }
+
+    function renderConversationList() {
+        convoItemsEl.innerHTML = '';
+        if (!conversationsCache.length) {
+            emptyState.style.display = 'block';
+            return;
+        }
+        emptyState.style.display = 'none';
+        conversationsCache.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'chat-convo-item';
+            item.innerHTML = `
+                <div class="chat-avatar">${c.other_avatar ? `<img src="${c.other_avatar}" alt="">` : initials(c.other_name)}</div>
+                <div class="chat-convo-body">
+                    <div class="chat-convo-top">
+                        <span class="chat-convo-name">${c.other_name}</span>
+                        <span class="chat-convo-time">${c.last_message_at || ''}</span>
+                    </div>
+                    <div class="chat-convo-preview">${c.last_message ? c.last_message.replace(/</g, '&lt;') : 'Say hello 👋'}</div>
+                </div>
+                ${c.unread_count ? `<span class="chat-convo-unread">${c.unread_count}</span>` : ''}
+            `;
+            item.addEventListener('click', () => showThread(c));
+            convoItemsEl.appendChild(item);
+        });
+    }
+
+    function loadMessages(conversationId) {
+        messagesListEl.innerHTML = '<div id="chat-loading-state"><i class="fa-solid fa-circle-notch fa-spin"></i>Loading…</div>';
+        fetch(`/chat/api/conversations/${conversationId}/messages/`, { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                messagesListEl.innerHTML = '';
+                const list = data.messages || [];
+                if (!list.length) {
+                    messagesListEl.innerHTML = `
+                        <div id="chat-thread-empty-state" style="display:block;">
+                            <i class="fa-regular fa-comments"></i>
+                            Say hello 👋
+                        </div>
+                    `;
+                } else {
+                    list.forEach(appendMessage);
+                }
+                scrollToBottom();
+            });
+    }
+
+    function dateKey(iso) {
+        const d = new Date(iso);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    }
+
+    function formatDateDivider(iso) {
+        const d = new Date(iso);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+        if (dateKey(iso) === dateKey(today)) return 'Today';
+        if (dateKey(iso) === dateKey(yesterday)) return 'Yesterday';
+        return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    function maybeInsertDateDivider(iso) {
+        const key = dateKey(iso);
+        if (key === lastRenderedDateKey) return;
+        lastRenderedDateKey = key;
+        const divider = document.createElement('div');
+        divider.className = 'chat-date-divider';
+        divider.textContent = formatDateDivider(iso);
+        messagesListEl.appendChild(divider);
+    }
+
+    function appendMessage(m) {
+        const emptyState = document.getElementById('chat-thread-empty-state');
+        if (emptyState) emptyState.remove();
+
+        maybeInsertDateDivider(m.created_at);
+
+        // Same sender, right after their own previous message, same day —
+        // render as a connected group instead of a separate bubble with
+        // its own full corner radius and timestamp.
+        const isGrouped = m.sender_id != null
+            && m.sender_id === lastRenderedSenderId
+            && dateKey(m.created_at) === lastRenderedDateKey;
+
+        if (isGrouped && lastRenderedRow) {
+            lastRenderedRow.querySelector('.chat-bubble-time').classList.add('is-hidden');
+        }
+
+        const row = document.createElement('div');
+        row.className = 'chat-bubble-row' + (m.is_own ? ' is-own' : '') + (isGrouped ? ' is-grouped' : '');
+        row.innerHTML = `
+            <div class="chat-bubble-row-inner">
+                <div class="chat-bubble"></div>
+                <span class="chat-bubble-time">${timeAgoShort(m.created_at)}</span>
+            </div>
+        `;
+        row.querySelector('.chat-bubble').textContent = m.content;
+        messagesListEl.appendChild(row);
+
+        lastRenderedSenderId = m.sender_id != null ? m.sender_id : (m.is_own ? CHAT_CURRENT_USER_ID : lastRenderedSenderId);
+        lastRenderedRow = row;
+    }
+
+    // ---------------- Typing indicator ----------------
+
+    function showTypingIndicator() {
+        typingRowEl.classList.add('is-visible');
+        scrollToBottom();
+        clearTimeout(typingHideTimer);
+        typingHideTimer = setTimeout(hideTypingIndicator, 3000);
+    }
+
+    function hideTypingIndicator() {
+        clearTimeout(typingHideTimer);
+        typingRowEl.classList.remove('is-visible');
+    }
+
+    function scrollToBottom() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // ---------------- Websockets ----------------
+
+    function connectNotifySocket() {
+        if (notifySocket && notifySocket.readyState === WebSocket.OPEN) return;
+        notifySocket = new WebSocket(`${wsBase}/ws/chat/notify/`);
+        notifySocket.onmessage = (evt) => {
+            const data = JSON.parse(evt.data);
+            if (data.type !== 'notify') return;
+            setBadge(data.total_unread);
+            // If the panel/list is visible, refresh so ordering + preview updates.
+            if (panelOpen && !threadView.classList.contains('is-active')) {
+                loadConversations();
+            }
+            // If it's for the thread currently open, the chat socket handles
+            // rendering the message itself — this just keeps the badge honest.
+        };
+        notifySocket.onclose = () => { setTimeout(() => { if (panelOpen) connectNotifySocket(); }, 3000); };
+    }
+
+    function connectChatSocket(conversationId) {
+        if (chatSocket) chatSocket.close();
+        connLabel.textContent = 'Connecting';
+        connPill.classList.remove('is-live');
+
+        chatSocket = new WebSocket(`${wsBase}/ws/chat/${conversationId}/`);
+
+        chatSocket.onopen = () => {
+            connLabel.textContent = 'Live';
+            connPill.classList.add('is-live');
+        };
+        chatSocket.onclose = () => {
+            connLabel.textContent = 'Offline';
+            connPill.classList.remove('is-live');
+        };
+        chatSocket.onmessage = (evt) => {
+            const data = JSON.parse(evt.data);
+
+            if (data.type === 'typing') {
+                if (data.sender_id !== CHAT_CURRENT_USER_ID) showTypingIndicator();
+                return;
+            }
+
+            if (data.type !== 'message') return;
+
+            // A real message from the other side means they're done typing.
+            hideTypingIndicator();
+
+            // The server echoes every message (including our own) back to
+            // everyone in the thread's group, so ownership is decided by
+            // comparing sender_id — no separate optimistic render needed.
+            appendMessage({
+                sender_id: data.sender_id,
+                content: data.content,
+                created_at: data.created_at,
+                is_own: data.sender_id === CHAT_CURRENT_USER_ID,
+            });
+            scrollToBottom();
+        };
+    }
+
+    function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text || !chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+        chatSocket.send(JSON.stringify({ message: text }));
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    inputEl.addEventListener('input', () => {
+        inputEl.style.height = 'auto';
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+
+        // Let the other side know we're typing — throttled so every
+        // keystroke doesn't open a fresh round trip, just a ping roughly
+        // every 2s while text is actively being entered.
+        const now = Date.now();
+        if (inputEl.value.trim() && chatSocket && chatSocket.readyState === WebSocket.OPEN && now - typingSendThrottle > 2000) {
+            typingSendThrottle = now;
+            chatSocket.send(JSON.stringify({ type: 'typing' }));
+        }
+    });
+
+    // ---------------- Public hook ----------------
+    // Other parts of the dashboard (e.g. a "Message" button next to a
+    // pending request) can call this to jump straight into a thread:
+    //
+    //   window.openChatWith({ providerId: 12 })   // seeker side
+    //   window.openChatWith({ seekerId: 7, requestId: 44 })  // provider side
+    //
+    window.openChatWith = function (opts) {
+        const body = new URLSearchParams();
+        if (opts.providerId) body.append('provider_id', opts.providerId);
+        if (opts.seekerId) body.append('seeker_id', opts.seekerId);
+        if (opts.requestId) body.append('request_id', opts.requestId);
+
+        fetch('/chat/api/start/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString(),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.conversation_id) return;
+                openPanel();
+                fetch('/chat/api/conversations/', { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(listData => {
+                        conversationsCache = listData.conversations || [];
+                        const convo = conversationsCache.find(c => c.id === data.conversation_id);
+                        if (convo) showThread(convo);
+                    });
+            });
+    };
+
+    // Lightweight periodic refresh of the badge count even if the notify
+    // socket happens to be down — belt and braces, not the primary path.
+    setInterval(() => {
+        if (!panelOpen) {
+            fetch('/chat/api/conversations/', { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => setBadge(data.total_unread || 0))
+                .catch(() => {});
+        }
+    }, 30000);
+
+    // Initial badge count on page load.
+    fetch('/chat/api/conversations/', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => setBadge(data.total_unread || 0))
+        .catch(() => {});
+})();
+</script>

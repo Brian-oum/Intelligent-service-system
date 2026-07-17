@@ -1,231 +1,330 @@
-{% block content %}
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% extends "Match/user_base.html" %}
+{% load static %}
 
+{% block title %}My Requests{% endblock %}
+
+{% block extra_head %}
 <style>
     :root {
-        --sidebar-bg: #0f172a;
-        --sidebar-accent: #1e293b;
-        --primary: #0ea5e9;
-        --bg-soft: #f8fafc;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --border-color: #e2e8f0;
+        --seek-info: #2563EB;
     }
 
-    body { background: var(--bg-soft); font-family: 'Inter', sans-serif; color: var(--text-main); }
+    .requests-wrap { padding: 44px 44px 60px; max-width: 1250px; }
+    .requests-wrap .premium-heading { margin-bottom: 6px; }
+    .requests-wrap .premium-eyebrow { margin-bottom: 10px; }
 
-    /* Sidebar Improvements */
-    .sidebar {
-        width: 260px;
-        background: var(--sidebar-bg);
-        height: 100vh;
-        position: fixed;
-        top: 0; left: 0;
-        padding: 24px 0;
-        z-index: 1000;
-        border-right: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .sidebar .nav-link {
-        color: #94a3b8;
-        padding: 12px 24px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        font-weight: 500;
-    }
-
-    .sidebar .nav-link:hover {
-        background: var(--sidebar-accent);
-        color: #fff;
-    }
-
-    .sidebar .nav-link.active {
-        background: rgba(14, 165, 233, 0.1);
-        color: var(--primary);
-        border-right: 3px solid var(--primary);
-    }
-
-    /* Main Content */
-    .main-content {
-        margin-left: 260px;
-        padding: 3rem;
-        width: calc(100% - 260px);
-    }
-
-    .page-header {
-        margin-bottom: 2rem;
-    }
-
-    /* Modern Request Card */
-    .request-card {
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 24px;
-        margin-bottom: 20px;
-        transition: transform 0.2s, box-shadow 0.2s;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .request-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-
-    .card-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1rem;
-    }
-
-    .service-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: var(--text-main);
-        margin-bottom: 2px;
-    }
-
-    .provider-name {
-        color: var(--text-muted);
-        font-size: 0.9rem;
-    }
-
-    /* Soft Badges */
-    .badge-soft {
-        padding: 6px 12px;
+    /* ============ REQUESTS TABLE ============ */
+    .requests-table-card {
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
         border-radius: 6px;
-        font-weight: 600;
-        font-size: 0.75rem;
+        overflow: hidden;
+    }
+
+    table.requests-table { width: 100%; border-collapse: collapse; color: var(--white); margin: 0; }
+    .requests-table thead th {
+        background: var(--panel-2);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .status-pending { background: #fff7ed; color: #c2410c; }
-    .status-accepted { background: #f0fdf4; color: #15803d; }
-    .status-completed { background: #f0f9ff; color: #0369a1; }
-    .status-rejected { background: #fef2f2; color: #b91c1c; }
-
-    .request-desc {
-        color: #475569;
-        font-size: 0.95rem;
-        line-height: 1.5;
-        margin-bottom: 1.25rem;
-    }
-
-    .card-footer-info {
-        display: flex;
-        gap: 20px;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-color);
-        font-size: 0.85rem;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.68rem;
+        letter-spacing: 0.08em;
         color: var(--text-muted);
+        border: none;
+        padding: 16px;
+        text-align: left;
+    }
+    .requests-table tbody td { padding: 16px; vertical-align: middle; border-top: 1px solid var(--panel-line); font-size: 0.88rem; }
+    .requests-table tbody tr { border-left: 3px solid transparent; transition: border-color 0.2s ease, background 0.2s ease; }
+    .requests-table tbody tr:hover { background: var(--panel-2); }
+
+    .rt-service { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
+    .rt-price { font-size: 0.76rem; color: #E0A63C; font-weight: 600; margin-top: 2px; }
+    .rt-price.is-unset { color: var(--text-muted); font-weight: 500; font-style: italic; }
+    .rt-provider { color: var(--text-muted); font-size: 0.82rem; display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+    .rt-provider i { color: var(--signal); }
+    .provider-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid var(--panel-line); flex-shrink: 0; }
+
+    /* Status pills — same palette as the dashboard timeline */
+    .pill {
+        display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.63rem;
+        font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 4px 12px; border-radius: 20px; flex-shrink: 0;
+    }
+    .pill-pending   { background: rgba(255,77,46,0.12); color: var(--signal); }
+    .pill-accepted  { background: rgba(37,99,235,0.12); color: var(--seek-info); }
+    .pill-completed { background: rgba(31,157,85,0.12); color: var(--live); }
+    .pill-rejected  { background: rgba(194,58,33,0.12); color: var(--signal-dim); }
+
+    .row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .icon-btn {
+        width: 34px; height: 34px; border-radius: 6px;
+        border: 1px solid var(--panel-line); background: var(--panel-2);
+        display: flex; align-items: center; justify-content: center;
+        text-decoration: none; transition: border-color .15s ease;
+        cursor: pointer;
+    }
+    .icon-btn:hover { border-color: var(--signal); }
+    .icon-btn.is-view i { color: var(--signal); }
+
+    /* ============ EMPTY STATE ============ */
+    .requests-empty {
+        text-align: center; padding: 60px 20px;
+        background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px;
+    }
+    .requests-empty i { font-size: 1.8rem; color: var(--lz-ink-60); margin-bottom: 14px; display: block; }
+    .requests-empty h5 { font-family: 'Space Grotesk', sans-serif; color: var(--white); margin-bottom: 6px; }
+    .requests-empty p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
+
+    @media (max-width: 768px) {
+        .requests-wrap { padding: 28px 20px 44px; }
     }
 
-    .footer-item i {
-        margin-right: 6px;
-        color: var(--primary);
+    /* ============ REQUEST DETAIL MODAL ============ */
+    .modal-content.request-modal-content {
+        background: var(--panel);
+        color: var(--white);
+        border: 1px solid var(--panel-line);
+        border-radius: 10px;
+    }
+    .request-modal-content .modal-header,
+    .request-modal-content .modal-footer {
+        border-color: var(--panel-line);
+    }
+    .request-modal-content .modal-title {
+        font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white);
+    }
+    .rm-provider {
+        display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+        color: var(--text-muted); font-size: 0.9rem;
+    }
+    .rm-provider img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid var(--panel-line); }
+    .rm-provider .rm-provider-name { color: var(--white); font-weight: 600; font-size: 0.94rem; }
+    .rm-desc { color: var(--lz-ink-60); font-size: 0.9rem; line-height: 1.6; margin-bottom: 18px; }
+    .rm-meta { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--panel-line); font-size: 0.86rem; color: var(--text-muted); }
+    .rm-meta i { margin-right: 8px; color: var(--signal); width: 16px; text-align: center; }
+
+    /* ============ LOAD-IN ANIMATION (matches dashboard) ============ */
+    @keyframes dash-settle {
+        from { opacity: 0; transform: translateY(-6px); letter-spacing: -0.01em; }
+        to   { opacity: 1; transform: translateY(0); letter-spacing: normal; }
+    }
+    @keyframes dash-unveil {
+        from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(8px) scale(0.985); }
+        60%  { opacity: 1; }
+        to   { opacity: 1; clip-path: inset(0 0 0% 0); transform: translateY(0) scale(1); }
+    }
+    @keyframes dash-slide-in {
+        from { opacity: 0; transform: translateX(-16px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .requests-wrap .dash-header { opacity: 0; animation: dash-settle 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.02s forwards; }
+
+    .requests-table-card {
+        opacity: 0;
+        animation: dash-unveil 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+        transform-origin: top center;
+    }
+
+    .requests-empty {
+        opacity: 0;
+        animation: dash-unveil 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+        transform-origin: top center;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .requests-wrap .dash-header, .requests-table-card, .requests-empty {
+            animation: none !important; opacity: 1 !important; transform: none !important; clip-path: none !important;
+        }
     }
 </style>
+{% endblock %}
 
-<div class="d-flex">
-    <div class="sidebar d-flex flex-column">
-        <div class="text-center mb-5 px-3">
-            <div class="position-relative d-inline-block">
-                <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=0ea5e9&color=fff"
-                     class="rounded-circle mb-2 border border-3 border-dark" width="70">
-            </div>
-            <h6 class="fw-bold mb-0 mt-2 text-white">{{ user.username }}</h6>
-            <small style="color: #64748b">Service Seeker</small>
-        </div>
+{% block content %}
+<div class="requests-wrap">
 
-        <nav class="nav flex-column">
-            <a class="nav-link" href="{% url 'user_dashboard' %}">
-                <i class="fa-solid fa-house"></i> Dashboard
-            </a>
-            <a class="nav-link" href="{% url 'search_services' %}">
-                <i class="fa-solid fa-plus-circle"></i> Request Service
-            </a>
-            <a class="nav-link active" href="{% url 'my_requests' %}">
-                <i class="fa-solid fa-rectangle-list"></i> My Requests
-            </a>
-            <a class="nav-link" href="{% url 'profile' %}">
-                <i class="fa-solid fa-user-gear"></i> Profile Settings
-            </a>
-        </nav>
-
-        <div class="mt-auto border-top border-secondary">
-            <a class="nav-link text-danger" href="{% url 'logout' %}">
-                <i class="fa-solid fa-right-from-bracket"></i> Logout
-            </a>
-        </div>
+    <div class="dash-header">
+        <span class="premium-eyebrow">Service Requests</span>
+        <h2 class="premium-heading">My Requests</h2>
+        <p class="premium-sub">Track and manage your ongoing service inquiries.</p>
     </div>
 
-    <div class="main-content">
-        <div class="page-header">
-            <h2 class="fw-bold">My Requests</h2>
-            <p class="text-muted">Track and manage your ongoing service inquiries.</p>
-        </div>
-
-        {% if requests %}
-            {% for req in requests %}
-                <div class="request-card">
-                    <div class="card-top">
-                        <div>
-                            <div class="service-title">{{ req.service.title }}</div>
-                            <div class="provider-name">
-                                <i class="fa-solid fa-building me-1"></i> {{ req.service.provider.company_name }}
-                            </div>
-                        </div>
-                        <span class="badge-soft 
-                            {% if req.status == 'pending' %}status-pending
-                            {% elif req.status == 'accepted' %}status-accepted
-                            {% elif req.status == 'completed' %}status-completed
-                            {% elif req.status == 'rejected' %}status-rejected
-                            {% endif %}"
-                        >{{ req.status }}</span>
-                    </div>
-
-                    <p class="request-desc">
-                        {{ req.description|default:"No specific details provided for this request." }}
-                    </p>
-
-                    <div class="card-footer-info">
-                        <div class="footer-item">
-                            <i class="fa-solid fa-location-dot"></i> {{ req.location }}
-                        </div>
-                        <div class="footer-item">
-                            <i class="fa-solid fa-calendar"></i> {{ req.created_at|date:"M d, Y" }}
-                        </div>
-                        <div class="footer-item ms-auto">
-                            {% if req.status == 'completed' %}
-                                {% if not req.review %}
-                                    <a href="{% url 'submit_review' req.id %}" class="btn btn-sm btn-warning">
-                                        <i class="fa-solid fa-star"></i> Rate & Review
-                                    </a>
-                                {% else %}
-                                    <span class="badge bg-success text-white">
-                                        <i class="fa-solid fa-star"></i> Reviewed
-                                    </span>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="text-center py-5 bg-white rounded-4 border">
-                <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
-                <h5>No requests found</h5>
-                <p class="text-muted">You haven't requested any services yet.</p>
-                <a href="{% url 'search_services' %}" class="btn btn-primary px-4">Start Requesting</a>
+    {% if requests %}
+        <div class="requests-table-card">
+            <div class="table-responsive">
+                <table class="requests-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Service</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Requested</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in requests %}
+                            <tr class="is-{{ req.status }}">
+                                <td class="ps-4">
+                                    <div class="rt-service">{{ req.service.title }}</div>
+                                    {% if req.service.min_price %}
+                                        <div class="rt-price">From KES {{ req.service.min_price|floatformat:0 }}</div>
+                                    {% else %}
+                                        <div class="rt-price is-unset">Rate not listed</div>
+                                    {% endif %}
+                                    <div class="rt-provider">
+                                        {% if req.provider %}
+                                            <img class="provider-avatar" src="{{ req.provider.avatar_url }}" alt="{{ req.provider.company_name }}">
+                                        {% else %}
+                                            <i class="fa-solid fa-building"></i>
+                                        {% endif %}
+                                        {{ req.provider.company_name|default:"Provider unavailable" }}
+                                    </div>
+                                </td>
+                                <td><span class="pill pill-{{ req.status }}">{{ req.status }}</span></td>
+                                <td>{{ req.location }}</td>
+                                <td>{{ req.created_at|date:"M d, Y" }}</td>
+                                <td class="text-end pe-4">
+                                    <div class="row-actions">
+                                        <button
+                                            type="button"
+                                            class="icon-btn is-view"
+                                            title="View"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#requestDetailModal"
+                                            data-service="{{ req.service.title|escapejs }}"
+                                            data-price="{% if req.service.min_price %}From KES {{ req.service.min_price|floatformat:0 }}{% else %}Rate not listed{% endif %}"
+                                            data-provider="{{ req.provider.company_name|default:'Provider unavailable'|escapejs }}"
+                                            data-avatar="{{ req.provider.avatar_url|default:'' }}"
+                                            data-status="{{ req.status }}"
+                                            data-status-label="{{ req.status|capfirst }}"
+                                            data-description="{{ req.description|default:'No specific details provided for this request.'|escapejs }}"
+                                            data-location="{{ req.location|escapejs }}"
+                                            data-date="{{ req.created_at|date:'M d, Y' }}"
+                                            data-has-review="{% if req.review %}1{% else %}0{% endif %}"
+                                            data-review-url="{% if not req.review %}{% url 'submit_review' req.id %}{% endif %}"
+                                        >
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        {% endif %}
+        </div>
+    {% else %}
+        <div class="requests-empty">
+            <i class="fa-solid fa-folder-open"></i>
+            <h5>No requests found</h5>
+            <p>You haven't requested any services yet.</p>
+            <a href="{% url 'search_services' %}" class="premium-btn">Start Requesting</a>
+        </div>
+    {% endif %}
+
+</div>
+
+<!-- Single shared modal, populated from the clicked row's data-* attributes -->
+<div class="modal fade" id="requestDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content request-modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rmServiceTitle">Request details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="rm-provider">
+                    <img id="rmAvatarImg" src="" alt="" style="display:none;">
+                    <i id="rmProviderIcon" class="fa-solid fa-building" style="display:none; color: var(--signal);"></i>
+                    <span class="rm-provider-name" id="rmProviderName"></span>
+                </div>
+
+                <div class="rt-price mb-2" id="rmPrice" style="margin-bottom: 14px;"></div>
+
+                <span class="pill" id="rmStatusPill" style="margin-bottom: 16px;"></span>
+
+                <p class="rm-desc" id="rmDescription" style="margin-top: 14px;"></p>
+
+                <div class="rm-meta">
+                    <div><i class="fa-solid fa-location-dot"></i><span id="rmLocation"></span></div>
+                    <div><i class="fa-solid fa-calendar"></i><span id="rmDate"></span></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="premium-btn is-outline" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="rmRateBtn" class="premium-btn" style="display:none;">
+                    <i class="fa-solid fa-star me-1"></i> Rate &amp; Review
+                </a>
+                <span class="pill pill-completed" id="rmReviewedPill" style="display:none;">
+                    <i class="fa-solid fa-star"></i> Reviewed
+                </span>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        const modalEl = document.getElementById('requestDetailModal');
+        if (!modalEl) return;
+
+        const titleEl        = document.getElementById('rmServiceTitle');
+        const providerNameEl = document.getElementById('rmProviderName');
+        const priceEl        = document.getElementById('rmPrice');
+        const avatarImgEl    = document.getElementById('rmAvatarImg');
+        const providerIconEl = document.getElementById('rmProviderIcon');
+        const statusPillEl   = document.getElementById('rmStatusPill');
+        const descEl         = document.getElementById('rmDescription');
+        const locationEl     = document.getElementById('rmLocation');
+        const dateEl         = document.getElementById('rmDate');
+        const rateBtnEl      = document.getElementById('rmRateBtn');
+        const reviewedPillEl = document.getElementById('rmReviewedPill');
+
+        modalEl.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+            const d = trigger.dataset;
+
+            titleEl.textContent = d.service || 'Request details';
+            providerNameEl.textContent = d.provider || 'Provider unavailable';
+
+            priceEl.textContent = d.price || 'Rate not listed';
+            priceEl.classList.toggle('is-unset', !d.price || d.price === 'Rate not listed');
+
+            if (d.avatar) {
+                avatarImgEl.src = d.avatar;
+                avatarImgEl.style.display = '';
+                providerIconEl.style.display = 'none';
+            } else {
+                avatarImgEl.style.display = 'none';
+                providerIconEl.style.display = '';
+            }
+
+            statusPillEl.textContent = d.statusLabel || d.status || '';
+            statusPillEl.className = 'pill pill-' + (d.status || 'pending');
+
+            descEl.textContent = d.description || 'No specific details provided for this request.';
+            locationEl.textContent = d.location || '';
+            dateEl.textContent = d.date || '';
+
+            const isCompleted = d.status === 'completed';
+            const hasReview = d.hasReview === '1';
+
+            if (isCompleted && !hasReview && d.reviewUrl) {
+                rateBtnEl.href = d.reviewUrl;
+                rateBtnEl.style.display = '';
+                reviewedPillEl.style.display = 'none';
+            } else if (isCompleted && hasReview) {
+                rateBtnEl.style.display = 'none';
+                reviewedPillEl.style.display = '';
+            } else {
+                rateBtnEl.style.display = 'none';
+                reviewedPillEl.style.display = 'none';
+            }
+        });
+    })();
+</script>
 {% endblock %}

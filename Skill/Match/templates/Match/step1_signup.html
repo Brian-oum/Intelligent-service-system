@@ -1,144 +1,458 @@
+{% extends 'Match/auth_base.html' %}
+{% load static %}
+
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+<!-- Apply theme before first paint to avoid a light/dark flash -->
+<script>
+    (function () {
+        var stored = localStorage.getItem('fixkona-theme') || '{{ user.theme_preference|default:"system" }}';
+        var resolved = stored === 'system'
+            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : stored;
+        document.documentElement.setAttribute('data-theme', resolved);
+    })();
+</script>
 
 <style>
-    :root {
-        --form-border-color: #d1d5db;
-        --text-main: #374151;
-    }
+/* ============ FIXKONA THEME SYSTEM (matches provider_base.html) ============ */
+:root {
+    --lz-paper:     #F5F2ED;
+    --lz-paper-alt: #EDE9E2;
+    --lz-ink:       #0B0E14;
+    --lz-ink-60:    rgba(11, 14, 20, 0.55);
+    --lz-ink-08:    rgba(11, 14, 20, 0.08);
+    --lz-muted:     #6B7280;
+    --lz-signal:    #FF4D2E;
+    --lz-border:    rgba(11, 14, 20, 0.1);
+    --lz-dark-end:  #0B0E14;
 
-    .setup-wrapper {
-        min-height: 80vh;
+    --ink:        var(--lz-dark-end);
+    --panel:      var(--lz-paper);
+    --panel-2:    var(--lz-paper-alt);
+    --panel-line: var(--lz-border);
+    --signal:     var(--lz-signal);
+    --signal-dim: #C23A21;
+    --live:       #1F9D55;
+    --text-muted: var(--lz-muted);
+    --white:      var(--lz-ink);
+}
+:root[data-theme="dark"] {
+    --lz-paper:     #12161F;
+    --lz-paper-alt: #191E29;
+    --lz-ink:       #F2F1ED;
+    --lz-ink-60:    rgba(242, 241, 237, 0.62);
+    --lz-ink-08:    rgba(242, 241, 237, 0.08);
+    --lz-muted:     #9AA3AF;
+    --lz-border:    rgba(242, 241, 237, 0.1);
+    --live:         #39FF6A;
+}
+
+.theme-toggle-fab {
+    position: fixed; top: 24px; right: 24px; z-index: 1200;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1px solid var(--panel-line);
+    background: var(--panel-2); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+.theme-toggle-fab:hover { border-color: var(--signal); color: var(--signal); }
+@media (max-width: 900px) { .theme-toggle-fab { top: 16px; right: 16px; } }
+
+.signup-split {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: clamp(320px, 42vw, 600px) 1fr;
+    background: var(--panel);
+    font-family: 'Inter', sans-serif;
+    transition: background-color .2s ease;
+}
+
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(36px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============ LEFT — BRAND PANEL ============
+   Always dark, regardless of light/dark/system theme — same treatment as
+   the always-dark sidebar in provider_base.html. Width fixed to 600px to
+   match the auth image panels on the login and register pages. */
+.signup-split__brand {
+    position: relative;
+    width: 100%;
+    padding: 56px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border-right: 1px solid rgba(255,255,255,0.08);
+    animation: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    /* Background photo of a tradesperson at work, with the same dark
+       gradient wash used on step 2 so text stays legible top-to-bottom. */
+    background:
+        linear-gradient(180deg, rgba(11,14,20,0.35) 0%, rgba(11,14,20,0.55) 45%, rgba(11,14,20,0.94) 100%),
+        url('https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat;
+    background-color: var(--lz-dark-end);
+}
+/* subtle radial glow + grid texture, echoing the landing hero */
+.signup-split__brand::before {
+    content: '';
+    position: absolute;
+    top: -20%; right: -30%;
+    width: 640px; height: 640px;
+    background: radial-gradient(circle, rgba(255,77,46,0.20) 0%, rgba(255,77,46,0) 70%);
+    pointer-events: none;
+}
+.signup-split__brand::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.15) 75%, transparent 100%);
+    pointer-events: none;
+}
+
+.signup-split__logo {
+    position: relative; z-index: 2;
+    display: inline-flex; align-items: center; gap: 10px;
+    text-decoration: none; color: #fff;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.15rem;
+    letter-spacing: -0.01em;
+}
+.signup-split__logo-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--signal); flex-shrink: 0; }
+
+.signup-split__body { position: relative; z-index: 2; max-width: 420px; }
+.signup-split__eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--signal);
+    display: block;
+    margin-bottom: 20px;
+}
+.signup-split__heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.9rem, 3vw, 2.5rem);
+    letter-spacing: -0.02em;
+    color: #FFFFFF;
+    line-height: 1.15;
+    margin-bottom: 18px;
+}
+.signup-split__sub {
+    color: #9AA3AF;
+    font-size: 0.94rem;
+    line-height: 1.65;
+    margin-bottom: 36px;
+}
+
+.signup-split__perks { list-style: none; padding: 0; margin: 0; }
+.signup-split__perks li {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: 0.88rem; color: #C9D2DC;
+    padding: 14px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+.signup-split__perks li:first-child { border-top: none; }
+.signup-split__perks li .ico {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(255,77,46,0.22); color: var(--signal);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; flex-shrink: 0; margin-top: 1px;
+}
+
+.signup-split__plan {
+    position: relative; z-index: 2;
+    background: rgba(11,14,20,0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    padding: 18px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 40px;
+}
+.signup-split__plan-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #9AA3AF; margin-bottom: 4px; display: block;
+}
+.signup-split__plan-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: #FFFFFF; font-size: 1.05rem; }
+.signup-split__plan-price { font-family: 'JetBrains Mono', monospace; color: var(--signal); font-size: 0.82rem; }
+.signup-split__plan-change { color: #9AA3AF; font-size: 0.78rem; text-decoration: none; white-space: nowrap; }
+.signup-split__plan-change:hover { color: #FFFFFF; }
+.signup-split__plan--mobile { display: none; }
+
+/* ============ RIGHT — FORM PANEL ============
+   Theme-aware: follows light / dark / system like the rest of the site. */
+.signup-split__form-side {
+    display: flex; align-items: center; justify-content: center;
+    padding: 56px 40px;
+    background: var(--panel);
+    transition: background-color .2s ease;
+}
+.signup-split__form-card { width: 100%; max-width: 420px; }
+
+.signup-split__steps {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+}
+.signup-split__steps .step { display: flex; align-items: center; gap: 6px; }
+.signup-split__steps .step.is-active { color: var(--signal); }
+.signup-split__steps .num {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem;
+}
+.signup-split__steps .sep { color: var(--panel-line); }
+
+.signup-split__form-heading {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.7rem;
+    color: var(--white); margin-bottom: 6px;
+}
+.signup-split__form-sub { color: var(--text-muted); font-size: 0.88rem; margin-bottom: 32px; }
+
+.signup-split__form-card .mb-3 { margin-bottom: 20px !important; }
+.signup-split__form-card .form-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 9px; display: block;
+}
+.signup-split__form-card .form-control-pill {
+    width: 100%;
+    padding: 13px 22px;
+    background-color: var(--panel-2);
+    border: 1px solid var(--panel-line);
+    border-radius: 50px !important;
+    font-family: 'Inter', sans-serif; font-size: 16px;
+    color: var(--white);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+.signup-split__form-card .form-control-pill::placeholder { color: var(--text-muted); }
+.signup-split__form-card .form-control-pill:focus {
+    border-color: var(--signal);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255,77,46,0.12);
+}
+
+.signup-split__form-card .errorlist {
+    list-style: none; padding: 0; margin: 6px 0 0;
+    color: #FF8A72; font-size: 0.78rem; padding-left: 20px;
+}
+
+.btn-next {
+    background-color: var(--signal);
+    color: var(--ink) !important;
+    border: none;
+    border-radius: 50px;
+    padding: 15px;
+    width: 100%;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    font-size: 15px;
+    margin-top: 10px;
+    transition: background 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+.btn-next:hover { background-color: #FF6A4D; transform: translateY(-1px); color: var(--ink); }
+
+.signup-split__login-note { color: var(--text-muted); font-size: 0.86rem; }
+.signup-split__login-note a { color: var(--white); font-weight: 600; text-decoration: none; }
+.signup-split__login-note a:hover { color: var(--signal); }
+
+@media (max-width: 1000px) {
+    .signup-split__brand { padding: 48px 32px; }
+}
+@media (max-width: 900px) {
+    .signup-split {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+    .signup-split__brand {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        padding: 20px;
+        position: relative;
+        justify-content: flex-end;
+        height: 34vh;
+        min-height: 220px;
+        max-height: 300px;
+        padding: 22px 24px 48px;
+        border-right: none;
     }
-
-    .setup-card {
-        background: #fff;
-        padding: 40px;
-        border-radius: 20px;
-        width: 100%;
-        max-width: 500px;
+    .signup-split__logo { position: absolute; top: 20px; left: 24px; z-index: 3; }
+    .signup-split__brand::before { width: 320px; height: 320px; top: -30%; right: -25%; }
+    .signup-split__eyebrow,
+    .signup-split__sub,
+    .signup-split__perks,
+    .signup-split__plan { display: none; }
+    .signup-split__heading {
+        font-size: 1.3rem;
+        line-height: 1.25;
+        margin-bottom: 0;
     }
-
-    /* Minimalist Header from Screenshot */
-    .setup-header {
-        font-size: 1.6rem;
-        font-weight: 500;
-        color: var(--text-main);
-        border-bottom: 3px solid #000;
-        display: inline-block;
-        padding-bottom: 5px;
-        margin-bottom: 10px;
+    .signup-split__body { max-width: 100%; }
+    .signup-split__plan--mobile { display: flex; margin-top: 0; margin-bottom: 24px; }
+    .signup-split__form-side {
+        position: relative;
+        z-index: 2;
+        align-items: flex-start;
+        margin-top: -28px;
+        padding: 32px 24px 40px;
+        border-radius: 28px 28px 0 0;
+        box-shadow: 0 -14px 30px rgba(0,0,0,0.3);
     }
-
-    .step-indicator {
-        color: #6b7280;
-        font-size: 0.85rem;
-        margin-bottom: 30px;
-        display: block;
-    }
-
-    /* Pill-shaped inputs */
-    .form-control-pill {
-        width: 100%;
-        padding: 12px 25px;
-        border: 1px solid var(--form-border-color);
-        border-radius: 50px !important;
-        font-size: 15px;
-        transition: all 0.2s ease;
-        background-color: #fff;
-        margin-bottom: 5px;
-    }
-
-    .form-control-pill:focus {
-        border-color: #000;
-        outline: none;
-        box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
-    }
-
-    .form-label {
-        font-weight: 600;
-        margin-bottom: 8px;
-        display: block;
-        color: var(--text-main);
-        padding-left: 15px;
-        font-size: 0.9rem;
-    }
-
-    .btn-next {
-        background-color: #000;
-        color: #fff;
-        border: none;
-        border-radius: 50px;
-        padding: 14px;
-        width: 100%;
-        font-weight: 600;
-        font-size: 16px;
-        margin-top: 10px;
-        transition: all 0.3s;
-    }
-
-    .btn-next:hover {
-        background-color: #333;
-        transform: translateY(-1px);
-        color: white;
-    }
-
-    .errorlist {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        color: #b91c1c;
-        font-size: 0.8rem;
-        padding-left: 15px;
-    }
+}
+@media (max-width: 420px) {
+    .signup-split__form-side { padding: 32px 16px; }
+    .signup-split__form-heading { font-size: 1.4rem; }
+}
 </style>
 
-<div class="setup-wrapper">
-    <div class="setup-card shadow-sm">
-        
-        <h2 class="setup-header">Account Details</h2>
-        <span class="step-indicator">Step 1 of 2: Let's set up your login</span>
+<button type="button" class="theme-toggle-fab" id="themeToggleFab" aria-label="Toggle dark mode">
+    <i class="fa-solid fa-moon"></i>
+</button>
 
-        <form method="POST">
-            {% csrf_token %}
-            
-            {% for field in user_form %}
-                <div class="mb-3">
-                    <label class="form-label">{{ field.label }}</label>
-                    {# Render field with manual class if needed, or use the JS fix below #}
-                    {{ field }}
-                    {% if field.errors %}
-                        <div class="mt-1">
-                            {{ field.errors }}
-                        </div>
-                    {% endif %}
+<div class="signup-split">
+
+    <!-- ============ LEFT: BRAND SIDE ============ -->
+    <div class="signup-split__brand">
+        <a href="{% url 'landing_page' %}" class="signup-split__logo">
+            <span class="signup-split__logo-dot"></span> Fixkona
+        </a>
+
+        <div class="signup-split__body">
+            <span class="signup-split__eyebrow">For Trades &amp; Contractors</span>
+            <h1 class="signup-split__heading">Get matched with homeowners who already need your work.</h1>
+            <p class="signup-split__sub">
+                Create your Pro account and start receiving service requests from
+                customers actively looking for what you do best.
+            </p>
+
+            <ul class="signup-split__perks">
+                <li>
+                    <span class="ico">&#10003;</span>
+                    Get discovered by customers searching in your category
+                </li>
+                <li>
+                    <span class="ico">&#10003;</span>
+                    Manage requests, reviews and services from one dashboard
+                </li>
+                <li>
+                    <span class="ico">&#10003;</span>
+                    Upgrade your package any time as your business grows
+                </li>
+            </ul>
+
+            {% if selected_plan %}
+                <div class="signup-split__plan">
+                    <div>
+                        <span class="signup-split__plan-label">Selected Package</span>
+                        <div class="signup-split__plan-name">{{ selected_plan.name }}</div>
+                        <div class="signup-split__plan-price">KES {{ selected_plan.price }} / {{ selected_plan.get_billing_cycle_display }}</div>
+                    </div>
+                    <a href="{% url 'provider_signup_choose_package' %}" class="signup-split__plan-change">Change</a>
                 </div>
-            {% endfor %}
-
-            <button type="submit" class="btn-next mt-3">Next Step →</button>
-        </form>
-
-        <div class="text-center mt-4">
-            <small class="text-muted">Already have a company account? <a href="{% url 'login' %}" class="text-dark fw-bold text-decoration-none">Login</a></small>
+            {% endif %}
         </div>
 
+        <div></div>
     </div>
+
+    <!-- ============ RIGHT: FORM SIDE ============ -->
+    <div class="signup-split__form-side">
+        <div class="signup-split__form-card">
+
+            {% if selected_plan %}
+                <div class="signup-split__plan signup-split__plan--mobile">
+                    <div>
+                        <span class="signup-split__plan-label">Selected Package</span>
+                        <div class="signup-split__plan-name">{{ selected_plan.name }}</div>
+                        <div class="signup-split__plan-price">KES {{ selected_plan.price }} / {{ selected_plan.get_billing_cycle_display }}</div>
+                    </div>
+                    <a href="{% url 'provider_signup_choose_package' %}" class="signup-split__plan-change">Change</a>
+                </div>
+            {% endif %}
+
+            <div class="signup-split__steps">
+                <span class="step is-active"><span class="num">1</span> Account Details</span>
+                <span class="sep">&mdash;&mdash;</span>
+                <span class="step"><span class="num">2</span> Business Profile</span>
+            </div>
+
+            <h2 class="signup-split__form-heading">Account Details</h2>
+            <p class="signup-split__form-sub">Let's set up your login.</p>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                {% for field in user_form %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="mt-1">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <button type="submit" class="btn-next mt-3">Next Step &rarr;</button>
+            </form>
+
+            <div class="text-center mt-4">
+                <small class="signup-split__login-note">
+                    Already have a company account? <a href="{% url 'login' %}">Login</a>
+                </small>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const inputs = document.querySelectorAll('input, select, textarea');
+        const inputs = document.querySelectorAll('.signup-split__form-card input, .signup-split__form-card select, .signup-split__form-card textarea');
         inputs.forEach(input => {
             if (input.type !== 'checkbox' && input.type !== 'radio') {
                 input.classList.add('form-control-pill');
             }
         });
     });
-</script>
 
+    (function () {
+        var btn = document.getElementById('themeToggleFab');
+        if (!btn) return;
+        var icon = btn.querySelector('i');
+        function syncIcon() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+        syncIcon();
+        btn.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('fixkona-theme', next);
+            syncIcon();
+        });
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+            if (!localStorage.getItem('fixkona-theme') || localStorage.getItem('fixkona-theme') === 'system') {
+                document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+                syncIcon();
+            }
+        });
+    })();
+</script>
 {% endblock %}

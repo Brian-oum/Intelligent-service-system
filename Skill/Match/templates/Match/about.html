@@ -1,0 +1,822 @@
+{% extends 'Match/base.html' %}
+{% load static %}
+
+{% block title %}About Us | Fixkona{% endblock %}
+{% block body_class %}hero-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — mirrors Match/landing.html so this page reads as
+   part of the same product, not a bolted-on "about" template.
+   ================================================================ */
+.im, .im-footer {
+    --ink:        #0B0E14;
+    --panel:      #1A1F2B;
+    --panel-line: rgba(255,255,255,0.08);
+    --signal:     #FF4D2E;
+    --signal-dim: #C23A21;
+    --live:       #39FF6A;
+    --text-muted: #7C8591;
+    --white:      #FFFFFF;
+
+    background-color: var(--ink);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+}
+:root {
+    --lz-paper:     #F5F2ED;
+    --lz-paper-alt: #EDE9E2;
+    --lz-ink:       #0B0E14;
+    --lz-ink-60:    rgba(11,14,20,0.55);
+    --lz-ink-08:    rgba(11,14,20,0.08);
+    --lz-muted:     #6B7280;
+    --lz-signal:    #FF4D2E;
+    --lz-border:    rgba(11,14,20,0.1);
+}
+
+.im-display { font-family: 'Space Grotesk', sans-serif; }
+.im-mono    { font-family: 'JetBrains Mono', monospace; }
+
+.im-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ================================================================
+   ABOUT HERO — same visual language as the landing hero (dark,
+   full-bleed photo, vignette + gradient readability layer, kinetic
+   Space Grotesk headline) but static, since an "about" page doesn't
+   need the slideshow machinery.
+   ================================================================ */
+.im-about-hero {
+    position: relative;
+    width: 100%;
+    min-height: 78vh;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    background: var(--ink);
+    padding: 140px 0 90px;
+}
+.im-about-hero__img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: grayscale(20%) contrast(105%) brightness(0.7);
+}
+.im-about-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(11,14,20,0.55) 0%, rgba(11,14,20,0.4) 45%, var(--ink) 96%);
+}
+.im-about-hero__inner { position: relative; z-index: 2; width: 100%; }
+.im-about-hero__tag {
+    color: var(--signal);
+    display: block;
+    margin-bottom: 18px;
+}
+.im-about-hero__title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    font-size: clamp(2.4rem, 5.5vw, 4rem);
+    color: var(--white);
+    max-width: 780px;
+    margin: 0 0 22px;
+}
+.im-about-hero__title .accent { color: var(--signal); }
+.im-about-hero__sub {
+    font-size: 1.05rem;
+    color: #C9D2DC;
+    max-width: 580px;
+    margin: 0;
+}
+
+/* ================================================================
+   SECTIONS (shared pattern from landing.html)
+   ================================================================ */
+.im-section {
+    padding: 130px 0;
+    background-color: var(--ink);
+    border-top: 1px solid var(--panel-line);
+    position: relative; z-index: 5;
+}
+.im-section--light {
+    background-color: var(--lz-paper);
+    color: var(--lz-ink);
+    border-top: none;
+}
+.im-section-heading {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    color: var(--white); letter-spacing: -0.02em;
+}
+.im-section--light .im-section-heading { color: var(--lz-ink); }
+.im-section--light .im-eyebrow { color: var(--lz-signal); }
+
+/* Story split */
+.im-story__copy p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.85;
+    margin-bottom: 20px;
+}
+.im-story__copy p:last-child { margin-bottom: 0; }
+.im-story__image {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    aspect-ratio: 4/5;
+}
+.im-story__image img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(15%) contrast(102%) brightness(0.92);
+}
+
+/* Value / mission cards — same border-top pattern as the landing
+   "how it works" step cards */
+.im-step-card { border-top: 2px solid var(--signal); padding-top: 24px; height: 100%; }
+.im-step-card .im-eyebrow { color: var(--signal); }
+.im-step-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
+.im-step-card p  { color: var(--text-muted); line-height: 1.7; margin: 0; }
+
+/* Stats row */
+.im-stat-row {
+    border-top: 1px solid var(--panel-line);
+    border-bottom: 1px solid var(--panel-line);
+    background: var(--ink);
+}
+.im-stat-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--white); }
+.im-stat-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ================================================================
+   REACH / GLOBE SECTION — this is where the OriginKit globe
+   component will be mounted once connected. #originkitGlobe is a
+   plain container sized to receive it; nothing renders here yet.
+   ================================================================ */
+.im-reach {
+    background: var(--ink);
+    border-top: 1px solid var(--panel-line);
+    padding: 60px 0;
+    position: relative;
+    overflow: hidden;
+}
+.im-reach__grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 60px;
+    align-items: center;
+}
+.im-reach__copy p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.8;
+    max-width: 460px;
+}
+.im-reach__list {
+    list-style: none;
+    padding: 0; margin: 28px 0 0;
+    display: flex; flex-direction: column; gap: 14px;
+}
+.im-reach__list li {
+    display: flex; align-items: baseline; gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; color: #C9D2DC;
+}
+.im-reach__list li span.city {
+    color: var(--white); font-weight: 600;
+    min-width: 120px;
+}
+#originkitGlobe {
+    position: relative;
+    width: 100%;
+    min-height: 340px;
+    height: 600px;
+    background: transparent;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#originkitGlobe canvas { touch-action: none; }
+.im-globe__loading {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+}
+@media (max-width: 900px) {
+    #originkitGlobe { height: 320px; }
+}
+@media (max-width: 900px) {
+    .im-reach__grid { grid-template-columns: 1fr; }
+}
+
+/* Team cards */
+.im-team-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    overflow: hidden;
+    height: 100%;
+    transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.im-team-card:hover { border-color: var(--signal); transform: translateY(-4px); }
+.im-team-card__img { width: 100%; aspect-ratio: 1/1; overflow: hidden; }
+.im-team-card__img img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: grayscale(35%) contrast(105%) brightness(0.92);
+}
+.im-team-card__meta { padding: 20px 22px 24px; }
+.im-team-card__name {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    color: var(--white); font-size: 1.05rem; margin-bottom: 3px;
+}
+.im-team-card__role {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--signal); display: block; margin-bottom: 12px;
+}
+.im-team-card__bio { color: var(--text-muted); font-size: 0.86rem; line-height: 1.65; margin: 0; }
+
+/* CTA (reused from landing) */
+.im-cta-particles {
+    position: relative; width: 100%; min-height: 70vh;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    border-top: 1px solid var(--panel-line);
+}
+.im-cta-particles__inner {
+    position: relative; z-index: 2; text-align: center;
+    padding: 60px 24px; display: flex; flex-direction: column; align-items: center;
+}
+.im-cta-particles__eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #C9D2DC; margin-bottom: 22px; display: block;
+}
+.im-cta-particles__heading {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    color: var(--white); letter-spacing: -0.025em; line-height: 1.07;
+    margin: 0 0 20px;
+}
+.im-cta-particles__btn {
+    display: inline-block; background: #fff; color: #000;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+    text-decoration: none; padding: 18px 54px; border: 2px solid #fff;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+.im-cta-particles__btn:hover { background: transparent; color: #fff; transform: translateY(-2px); }
+
+
+</style>
+
+<div class="im">
+
+    <!-- ============================================================
+         HERO
+         ============================================================ -->
+    <section class="im-about-hero">
+        <img class="im-about-hero__img"
+             src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1800&auto=format&fit=crop"
+             alt="" fetchpriority="high" decoding="async">
+        <div class="im-about-hero__inner container">
+            <span class="im-eyebrow im-about-hero__tag">About Fixkona</span>
+            <h1 class="im-about-hero__title">
+                We're building the fastest way to find <span class="accent">trusted help</span> at home.
+            </h1>
+            <p class="im-about-hero__sub">
+                Fixkona connects homeowners with vetted, reviewed professionals across Kenya — no rigid categories,
+                no guesswork, just the right pro for the job.
+            </p>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         OUR STORY
+         ============================================================ -->
+    <section class="im-section">
+        <div class="container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6 im-story__copy order-2 order-lg-1">
+                    <p class="im-eyebrow mb-3 d-block" style="color:var(--signal);">Our story</p>
+                    <h2 class="im-section-heading display-5 mb-4">Home repairs shouldn't start with a guessing game</h2>
+                    <p>
+                        Finding a reliable tradesperson in Kenya shouldn't take three days of cold calls,
+                        Facebook groups, and hoping the person on the other end is actually qualified. Yet
+                        for most homeowners, that's exactly what happens — phone numbers that lead nowhere,
+                        no way to verify licensing or past work, and no accountability if the job goes wrong.
+                    </p>
+                    <p>
+                        The result is a market built on guesswork: homeowners overpay for underqualified work,
+                        good tradespeople stay invisible because they have no way to prove their track record,
+                        and every job starts from zero trust. Fixkona exists to close that gap — describe the
+                        job in your own words, get matched with licensed, reviewed professionals near you, and
+                        book with confidence.
+                    </p>
+                    <p>
+                        We're still a small team, but we're obsessive about the same thing every day: making it
+                        faster and safer to get quality work done on your home.
+                    </p>
+                </div>
+                <div class="col-lg-6 order-1 order-lg-2">
+                    <div class="im-story__image">
+                        <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1200&auto=format&fit=crop"
+                             alt="A tradesperson at work on site" loading="lazy">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         MISSION / VALUES
+         ============================================================ -->
+    <section class="im-section border-0 pt-0">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-12 text-center">
+                    <p class="im-eyebrow">What we stand for</p>
+                    <h2 class="im-section-heading display-5">The principles behind the product</h2>
+                </div>
+            </div>
+            <div class="row g-5 mt-2">
+                <div class="col-lg-4">
+                    <div class="im-step-card">
+                        <span class="im-eyebrow mb-2 d-block">Trust first</span>
+                        <h3 class="h4 mb-2">Every pro is vetted</h3>
+                        <p>Licensing, past work, and real customer reviews are checked before anyone joins the
+                           network — not after something goes wrong.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="im-step-card">
+                        <span class="im-eyebrow mb-2 d-block">Speed</span>
+                        <h3 class="h4 mb-2">No job sits idle</h3>
+                        <p>Homeowners get matched in minutes, not days. Pros get leads that already match their
+                           trade — no wasted quotes.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="im-step-card">
+                        <span class="im-eyebrow mb-2 d-block">Transparency</span>
+                        <h3 class="h4 mb-2">Clear pricing, no surprises</h3>
+                        <p>Quotes are visible up front and reviews are unfiltered, so decisions are made with the
+                           full picture.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         STATS
+         ============================================================ -->
+    <section class="im-section border-0 pt-0 pb-0">
+        <div class="container">
+            <div class="row im-stat-row py-5 g-4 text-center justify-content-center">
+                <div class="col-md-3">
+                    <span class="display-5 im-stat-value d-block">2022</span>
+                    <span class="im-stat-label mt-2 d-block">Founded</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="display-5 im-stat-value d-block">9,200+</span>
+                    <span class="im-stat-label mt-2 d-block">Vetted professionals</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="display-5 im-stat-value d-block">40,000+</span>
+                    <span class="im-stat-label mt-2 d-block">Households served</span>
+                </div>
+                <div class="col-md-3">
+                    <span class="display-5 im-stat-value d-block">4.8 / 5</span>
+                    <span class="im-stat-label mt-2 d-block">Average job rating</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         REACH — OriginKit globe mounts in #originkitGlobe
+         ============================================================ -->
+    <section class="im-reach">
+        <div class="container">
+            <div class="im-reach__grid">
+                <div class="im-reach__copy">
+                    <p class="im-eyebrow mb-3 d-block" style="color:var(--signal);">Where we operate</p>
+                    <h2 class="im-section-heading display-5 mb-3">Built for Kenya, at scale</h2>
+                    <p>Fixkona connects homeowners with vetted professionals across Kenya, backed by a growing
+                       network of licensed pros and a platform built to scale with demand as we expand
+                       into new regions.</p>
+                    <ul class="im-reach__list">
+                        <li><span class="city">Nationwide</span> coverage &amp; growing</li>
+                        <li><span class="city">Licensed pros</span> across every major trade</li>
+                        <li><span class="city">New regions</span> added as demand grows</li>
+                    </ul>
+                </div>
+                <div id="originkitGlobe">
+                    <span class="im-globe__loading" id="globeLoading">Loading globe…</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    
+</div><!-- /.im -->
+
+<!-- ================================================================
+     CTA
+     ================================================================ -->
+<section class="im-cta-particles">
+    <div class="im-cta-particles__inner">
+        <span class="im-eyebrow im-cta-particles__eyebrow">For trades &amp; contractors</span>
+        <h2 class="im-cta-particles__heading im-display" style="max-width: 600px;">
+            Got a trade? We'll bring the jobs to you.
+        </h2>
+        <p class="im-cta-particles__eyebrow" style="max-width:520px;">
+            Join Fixkona and get matched with homeowners who already described exactly what they need.
+        </p>
+        <a href="{% url 'provider_signup_step1' %}"
+            class="btn im-btn-signal rounded-0 px-5 py-3 text-uppercase im-mono fs-7 im-cta-particles__btn">
+              Sign up as a pro
+            <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
+        </a>
+    </div>
+</section>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+
+<!-- ================================================================
+     GLOBE — vanilla Three.js port of the OriginKit "Globe" component
+     (no React/d3-geo dependency; mounts into #originkitGlobe).
+     Ported props → Fixkona dark theme: navy ocean, faint white
+     continent outlines + dot fill, signal-orange pulsing markers on
+     Nairobi / Mombasa / Kisumu / Nakuru, slow auto-rotate, drag to
+     spin, pauses on hover.
+     ================================================================ -->
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+(async function initFixkonaGlobe() {
+    const container = document.getElementById('originkitGlobe');
+    const loadingEl = document.getElementById('globeLoading');
+    if (!container || !window.WebGLRenderingContext) return;
+
+    // ---- config (OriginKit props mapped onto the Fixkona theme) ----
+    const config = {
+        speedUi: 4,            // matches the "speed: 4" prop from the OriginKit preview
+        smoothingUi: 8,
+        scaleUi: 10,
+        dragSpeedUi: 5,
+        detailUi: 5,
+        direction: 'right',
+        stopOnHover: true,
+        initialLatitude: 6,
+        initialLongitude: -34,
+        oceanColor: '#0B0E14',
+        showOutline: false,
+        outlineColor: '#ffffff',
+        outlineOpacity: 0.28,
+        outlineWidth: 1,
+        showGrid: true,
+        graticuleColor: '#ffffff',
+        graticuleOpacity: 0.22,
+        gridWidth: 1,
+        dotColor: '#ffffff',
+        dotOpacity: 0.85,
+        dotSizeUi: 3,
+        densityUi: 10,
+        markerColor: '#00F7FF',
+        markerSizeUi: 42,
+        markers: [
+            { lat: -1.2921, lng: 36.8219, label: 'Nairobi' },
+            { lat: -4.0435, lng: 39.6682, label: 'Mombasa' },
+            { lat: -0.0917, lng: 34.7680, label: 'Kisumu' },
+            { lat: -0.3031, lng: 36.0800, label: 'Nakuru' }
+        ]
+    };
+
+    // ---- helpers (ported 1:1 from the OriginKit component) ----
+    function mapLinear(v, a, b, c, d) { if (b === a) return c; return c + ((v - a) / (b - a)) * (d - c); }
+    function mapSpeed(ui) { return ui === 0 ? 0 : mapLinear(Math.max(0, Math.min(10, ui)), 0, 10, 0, 0.9); }
+    function mapDensity(ui) { return mapLinear(Math.max(1, Math.min(10, ui)), 1, 10, 24, 8); }
+    function mapScale(ui) { return mapLinear(Math.max(1, Math.min(20, ui)), 1, 20, 0.2, 2); }
+    function mapDotSize(ui) { return mapLinear(Math.max(1, Math.min(10, ui)), 1, 10, 0.1, 0.5); }
+    function mapMarkerSize(ui) { return mapLinear(Math.max(0, Math.min(100, ui)), 0, 100, 0.1, 2.5); }
+    function normSmoothing(ui) { return Math.max(0, Math.min(1, ui / 10)); }
+    function mapDragSensitivity(ui) { return mapLinear(Math.max(0, Math.min(10, ui)), 0, 10, 0.001, 0.02); }
+    function mapDetailStep(ui) { return mapLinear(Math.max(1, Math.min(10, ui)), 1, 10, 10, 1); }
+
+    function simplifyRing(ring, detailUi) {
+        if (ring.length < 2) return ring;
+        if (detailUi >= 10) return ring;
+        const step = Math.max(1, Math.floor(mapDetailStep(detailUi)));
+        const out = [ring[0]];
+        for (let i = step; i < ring.length - 1; i += step) out.push(ring[Math.min(i, ring.length - 1)]);
+        const last = ring[ring.length - 1], first = ring[0];
+        const closed = Math.abs(last[0] - first[0]) < 1e-4 && Math.abs(last[1] - first[1]) < 1e-4;
+        if (!closed) out.push(last);
+        return out.length >= 2 ? out : ring;
+    }
+
+    function latLngToPos(lat, lng) {
+        const latR = lat * Math.PI / 180, lngR = lng * Math.PI / 180;
+        return {
+            x: Math.cos(latR) * Math.sin(lngR),
+            y: Math.sin(latR),
+            z: Math.cos(latR) * Math.cos(lngR)
+        };
+    }
+
+    // ---- scene setup ----
+    const width = container.clientWidth || 480;
+    const height = container.clientHeight || 460;
+
+    const scene = new THREE.Scene();
+    const scaleMultiplier = mapScale(config.scaleUi);
+    const globeRadius = 1 * scaleMultiplier;
+    const cameraDistance = 2.5 / scaleMultiplier;
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
+    camera.position.set(0, 0, cameraDistance);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    const canvas = renderer.domElement;
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;transition:opacity .6s ease;cursor:grab;';
+    container.appendChild(canvas);
+
+    const globeGroup = new THREE.Group();
+    scene.add(globeGroup);
+
+    const oceanMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(globeRadius, 64, 64),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(config.oceanColor) })
+    );
+    globeGroup.add(oceanMesh);
+
+    const outlineGroup = new THREE.Group();
+    globeGroup.add(outlineGroup);
+    const outlineMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(config.outlineColor),
+        transparent: true,
+        opacity: config.outlineOpacity
+    });
+    function addOutlineTube(points3d) {
+        if (!config.showOutline || points3d.length < 2) return;
+        const curve = new THREE.CatmullRomCurve3(points3d);
+        const radius = (config.outlineWidth / 10) * 0.01;
+        const geo = new THREE.TubeGeometry(curve, points3d.length * 2, radius, 6, false);
+        outlineGroup.add(new THREE.Mesh(geo, outlineMat));
+    }
+
+    // lat/long graticule — thin white grid lines across the whole
+    // sphere (both land and ocean), matching the reference look.
+    if (config.showGrid) {
+        const graticuleGroup = new THREE.Group();
+        globeGroup.add(graticuleGroup);
+        const graticuleMat = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(config.graticuleColor),
+            transparent: true,
+            opacity: config.graticuleOpacity
+        });
+        const addGridLine = (points3d) => {
+            if (points3d.length < 2) return;
+            const curve = new THREE.CatmullRomCurve3(points3d);
+            const radius = (config.gridWidth / 10) * 0.01;
+            const geo = new THREE.TubeGeometry(curve, points3d.length * 2, radius, 6, false);
+            graticuleGroup.add(new THREE.Mesh(geo, graticuleMat));
+        };
+        const gridSpacing = 15;
+        for (let lat = -90; lat <= 90; lat += gridSpacing) {
+            const pts = [];
+            for (let i = 0; i <= 64; i++) {
+                const lng = (i / 64) * 360 - 180;
+                const p = latLngToPos(lat, lng);
+                pts.push(new THREE.Vector3(p.x * globeRadius, p.y * globeRadius, p.z * globeRadius));
+            }
+            addGridLine(pts);
+        }
+        for (let lng = -180; lng < 180; lng += gridSpacing) {
+            const pts = [];
+            for (let i = 0; i <= 64; i++) {
+                const lat = (i / 64) * 180 - 90;
+                const p = latLngToPos(lat, lng);
+                pts.push(new THREE.Vector3(p.x * globeRadius, p.y * globeRadius, p.z * globeRadius));
+            }
+            addGridLine(pts);
+        }
+    }
+
+    // markers — signal-orange dot + pulsing halo per city
+    const markerGroup = new THREE.Group();
+    globeGroup.add(markerGroup);
+    const markerRadius = 0.01 * mapMarkerSize(config.markerSizeUi);
+    const markerMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(config.markerColor) });
+    const haloMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(config.markerColor), transparent: true, opacity: 0.25 });
+    const markerMeshes = [];
+    config.markers.forEach((m) => {
+        const p = latLngToPos(m.lat, m.lng);
+        const group = new THREE.Group();
+        group.position.set(p.x * globeRadius, p.y * globeRadius, p.z * globeRadius);
+        group.add(new THREE.Mesh(new THREE.SphereGeometry(markerRadius, 12, 12), markerMat));
+        const halo = new THREE.Mesh(new THREE.SphereGeometry(markerRadius * 1.5, 12, 12), haloMat);
+        group.add(halo);
+        markerGroup.add(group);
+        markerMeshes.push({ halo });
+    });
+
+    // ---- rotation state ----
+    const rotationSpeed = (config.direction === 'left' ? -1 : 1) * mapSpeed(config.speedUi);
+    const smoothingN = normSmoothing(config.smoothingUi);
+    const lerpFactor = smoothingN === 0 ? 1 : mapLinear(smoothingN, 0, 1, 0.4, 0.03);
+    const velocityDecay = mapLinear(smoothingN, 0, 1, 0.7, 0.96);
+
+    const initLngR = config.initialLongitude * Math.PI / 180;
+    const initLatR = config.initialLatitude * Math.PI / 180;
+    const rotation = { x: initLngR, y: initLatR };
+    const target = { x: initLngR, y: initLatR };
+    const velocity = { x: 0, y: 0 };
+    globeGroup.rotation.y = rotation.x;
+    globeGroup.rotation.x = rotation.y;
+
+    let isDragging = false, isHovering = false, lastX = 0, lastY = 0;
+
+    function animate(t) {
+        const threshold = 0.01;
+        if (!isDragging && rotationSpeed !== 0 && (!config.stopOnHover || !isHovering)) {
+            target.x += rotationSpeed * 0.01;
+        }
+        if (!isDragging && smoothingN > 0) {
+            if (Math.abs(velocity.x) > threshold || Math.abs(velocity.y) > threshold) {
+                target.x += velocity.x; target.y += velocity.y;
+                target.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, target.y));
+                velocity.x *= velocityDecay; velocity.y *= velocityDecay;
+            } else { velocity.x = 0; velocity.y = 0; }
+        }
+        rotation.x += (target.x - rotation.x) * lerpFactor;
+        rotation.y += (target.y - rotation.y) * lerpFactor;
+        rotation.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation.y));
+        globeGroup.rotation.y = rotation.x;
+        globeGroup.rotation.x = rotation.y;
+
+        const pulse = 1 + Math.sin(t * 0.003) * 0.25;
+        markerMeshes.forEach(({ halo }) => halo.scale.setScalar(pulse));
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    // ---- drag to rotate / hover to pause ----
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true; canvas.style.cursor = 'grabbing';
+        velocity.x = 0; velocity.y = 0; lastX = e.clientX; lastY = e.clientY;
+        function onMove(ev) {
+            const sens = mapDragSensitivity(config.dragSpeedUi);
+            const ddx = ev.clientX - lastX, ddy = ev.clientY - lastY;
+            target.x += ddx * sens; target.y += ddy * sens;
+            target.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, target.y));
+            velocity.x = ddx * sens * 0.3; velocity.y = ddy * sens * 0.3;
+            lastX = ev.clientX; lastY = ev.clientY;
+        }
+        function onUp() {
+            isDragging = false; canvas.style.cursor = 'grab';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    });
+    if (config.stopOnHover) {
+        canvas.addEventListener('mouseenter', () => { isHovering = true; });
+        canvas.addEventListener('mouseleave', () => { isHovering = false; });
+    }
+
+    new ResizeObserver(() => {
+        const w = container.clientWidth || width, h = container.clientHeight || height;
+        camera.aspect = w / h; camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    }).observe(container);
+
+    // ---- land data: continent outlines + dot fill ----
+    // (110m resolution — plenty for a decorative embed, far lighter
+    // than the 50m set, so we don't spawn thousands of tube meshes)
+    try {
+        const res = await fetch('https://raw.githubusercontent.com/martynafford/natural-earth-geojson/refs/heads/master/110m/physical/ne_110m_land.json');
+        if (!res.ok) throw new Error('land data request failed: ' + res.status);
+        const land = await res.json();
+
+        // continent outline tubes
+        land.features.forEach((feature) => {
+            const geom = feature.geometry;
+            if (!geom || !geom.coordinates) return;
+            const processRing = (ring) => {
+                if (ring.length < 2) return;
+                const simplified = simplifyRing(ring, config.detailUi);
+                const pts = simplified.map(([lng, lat]) => {
+                    const p = latLngToPos(lat, lng);
+                    return new THREE.Vector3(p.x * globeRadius, p.y * globeRadius, p.z * globeRadius);
+                });
+                if (pts.length > 0 && pts[0].distanceTo(pts[pts.length - 1]) > 0.001) pts.push(pts[0].clone());
+                addOutlineTube(pts);
+            };
+            if (geom.type === 'Polygon' && geom.coordinates.length) processRing(geom.coordinates[0]);
+            else if (geom.type === 'MultiPolygon') geom.coordinates.forEach((poly) => poly.length && processRing(poly[0]));
+        });
+
+        // land/ocean raster mask — manual equirectangular projection,
+        // equivalent to the OriginKit component's d3 geoEquirectangular
+        // but with no external projection library required.
+        const bw = 1024, bh = 512;
+        const rc = document.createElement('canvas');
+        rc.width = bw; rc.height = bh;
+        const ctx = rc.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, bw, bh);
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        const project = (lng, lat) => [(lng + 180) / 360 * bw, (90 - lat) / 180 * bh];
+        land.features.forEach((feature) => {
+            const geom = feature.geometry;
+            if (!geom || !geom.coordinates) return;
+            const drawRing = (ring) => {
+                if (ring.length < 2) return;
+                const [sx, sy] = project(ring[0][0], ring[0][1]);
+                ctx.moveTo(sx, sy);
+                for (let i = 1; i < ring.length; i++) {
+                    const [x, y] = project(ring[i][0], ring[i][1]);
+                    ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+            };
+            if (geom.type === 'Polygon' && geom.coordinates.length) drawRing(geom.coordinates[0]);
+            else if (geom.type === 'MultiPolygon') geom.coordinates.forEach((poly) => poly.length && drawRing(poly[0]));
+        });
+        ctx.fill();
+        const pixels = ctx.getImageData(0, 0, bw, bh).data;
+        const isOnLand = (lng, lat) => {
+            const x = Math.round(((lng + 180) / 360) * bw) % bw;
+            const y = Math.max(0, Math.min(bh - 1, Math.round(((90 - lat) / 180) * bh)));
+            return pixels[(y * bw + x) * 4] > 128;
+        };
+
+        const spacing = mapDensity(config.densityUi);
+        const baseStep = spacing * 0.08;
+        const coords = [];
+        for (let lat = -90; lat <= 90; lat += baseStep) {
+            const latRad = Math.abs(lat) * Math.PI / 180;
+            const cosLat = Math.cos(latRad);
+            const lngStep = cosLat > 0.01 ? baseStep / Math.max(0.3, cosLat) : 360;
+            for (let lng = -180; lng < 180; lng += lngStep) {
+                if (isOnLand(lng, lat)) coords.push([lng, lat]);
+            }
+        }
+        if (coords.length) {
+            const dotGeo = new THREE.SphereGeometry(0.01 * mapDotSize(config.dotSizeUi), 4, 4);
+            const dotMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(config.dotColor), transparent: true, opacity: config.dotOpacity });
+            const inst = new THREE.InstancedMesh(dotGeo, dotMat, coords.length);
+            const m = new THREE.Matrix4();
+            coords.forEach(([lng, lat], i) => {
+                const p = latLngToPos(lat, lng);
+                m.setPosition(p.x * globeRadius, p.y * globeRadius, p.z * globeRadius);
+                inst.setMatrixAt(i, m);
+            });
+            inst.instanceMatrix.needsUpdate = true;
+            globeGroup.add(inst);
+        }
+
+        renderer.render(scene, camera);
+        canvas.style.opacity = '1';
+        if (loadingEl) loadingEl.style.display = 'none';
+    } catch (err) {
+        console.error('[Fixkona Globe] failed to load land data', err);
+        renderer.render(scene, camera);
+        canvas.style.opacity = '1';
+        if (loadingEl) loadingEl.textContent = 'Map data unavailable — showing base globe.';
+    }
+})();
+</script>
+{% endblock %}
