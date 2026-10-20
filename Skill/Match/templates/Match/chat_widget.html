@@ -303,7 +303,56 @@
     /* ---------- Responsive ---------- */
     @media (max-width: 640px) {
         #chat-panel { width: 100%; }
-        #chat-fab { right: 16px; bottom: 16px; width: 52px; height: 52px; font-size: 1.1rem; }
+        #chat-fab {
+            right: 16px;
+            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+            width: 52px;
+            height: 52px;
+            font-size: 1.1rem;
+        }
+        /* Comfortable thumb-reach tap targets once we're on touch */
+        .chat-icon-btn { width: 38px; height: 38px; }
+        #chat-send-btn { width: 42px; height: 42px; }
+
+        /* More width for message text once the panel is edge-to-edge */
+        .chat-bubble-row-inner { max-width: 86%; }
+
+        /* iOS Safari auto-zooms on any input under 16px — this was the
+           actual mobile bug: focusing the composer would zoom the whole
+           page in. Bumping to 16px here (only on mobile, so desktop
+           keeps the tighter 0.85rem) stops that. */
+        #chat-input { font-size: 16px; }
+
+        .chat-head { padding: 14px 16px; }
+
+        /* Keep the composer clear of the home-indicator / gesture bar
+           on notched phones instead of sitting flush against it. */
+        .chat-input-row {
+            padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        }
+    }
+
+    @media (max-width: 380px) {
+        .chat-head h6 { font-size: 0.92rem; }
+        .chat-avatar { width: 32px; height: 32px; font-size: 0.72rem; }
+        .chat-bubble-row-inner { max-width: 92%; }
+        .chat-bubble { font-size: 0.82rem; padding: 8px 12px; }
+        /* Thread header gets crowded at this width (back button, avatar,
+           name, connection pill) — drop the "Connecting/Live" label and
+           keep just the status dot so the conversation name has room. */
+        #chat-conn-label { display: none; }
+        .chat-conn-pill { padding: 0; gap: 0; }
+        .chat-conn-pill .dot { width: 8px; height: 8px; }
+    }
+
+    /* Landscape phones: the panel is full-height already, but a short
+       viewport (~360-400px tall) leaves little room for the message
+       list once the header + composer are accounted for — tighten both
+       so the actual conversation doesn't get squeezed to a sliver. */
+    @media (max-height: 420px) and (max-width: 900px) {
+        .chat-head { padding: 10px 16px; }
+        .chat-input-row { padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px)); }
+        #chat-empty-state, #chat-loading-state, #chat-thread-empty-state { padding: 20px; }
     }
 </style>
 

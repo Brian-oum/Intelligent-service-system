@@ -287,13 +287,74 @@
 .im-step-card p  { color: var(--text-muted); line-height: 1.7; margin: 0; }
 
 /* ================================================================
-   WHY BOOK THROUGH US — value cards (same border-top pattern as
-   the landing "how it works" step cards)
+   SERVICE DETAIL MODAL — opens on tile click, lists everything
+   under that category. Same dark panel language as the rest of
+   the page (ink background, signal accent, mono eyebrows).
    ================================================================ */
-.im-step-card { border-top: 2px solid var(--signal); padding-top: 24px; height: 100%; }
-.im-step-card .im-eyebrow { color: var(--signal); }
-.im-step-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
-.im-step-card p  { color: var(--text-muted); line-height: 1.7; margin: 0; }
+.im-service-modal .modal-content {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 8px;
+    color: var(--white);
+}
+.im-service-modal .modal-header {
+    border-bottom: 1px solid var(--panel-line);
+    padding: 28px 32px 22px;
+    align-items: flex-start;
+}
+.im-service-modal__tag {
+    color: var(--signal);
+    display: block;
+    margin-bottom: 8px;
+}
+.im-service-modal__title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 1.6rem;
+    color: var(--white);
+    margin: 0;
+}
+.im-service-modal .modal-body { padding: 28px 32px; }
+.im-service-modal__desc {
+    color: #C9D2DC;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin: 0 0 26px;
+    max-width: 640px;
+}
+.im-service-modal__list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+.im-service-modal__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 14px 16px;
+    text-decoration: none !important;
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+.im-service-modal__item:hover {
+    border-color: var(--signal);
+    background: rgba(255,77,46,0.08);
+    color: var(--white);
+}
+.im-service-modal__item i { color: var(--signal); font-size: 0.75rem; }
+.im-service-modal .modal-footer {
+    border-top: 1px solid var(--panel-line);
+    padding: 22px 32px 28px;
+}
+@media (max-width: 560px) {
+    .im-service-modal__list { grid-template-columns: 1fr; }
+}
 
 /* ================================================================
    PRICING STRIP
@@ -337,7 +398,22 @@
 }
 .im-faq .accordion-button:not(.collapsed) { color: var(--lz-signal); background: transparent; }
 .im-faq .accordion-button:focus { box-shadow: none; border-color: transparent; }
-.im-faq .accordion-button::after { filter: none; }
+.im-faq .accordion-button::after {
+    content: '+';
+    background-image: none !important;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--lz-ink);
+    width: auto;
+    height: auto;
+    line-height: 1;
+    transition: none;
+}
+.im-faq .accordion-button:not(.collapsed)::after {
+    content: '\2212';
+    color: var(--lz-signal);
+}
 .im-faq .accordion-body {
     color: var(--lz-muted);
     font-size: 0.92rem;
@@ -381,6 +457,50 @@
     .im-search-box { flex-wrap: wrap; padding: 16px; gap: 12px; }
     .im-search__submit { width: 100%; }
 }
+
+/* ================================================================
+   SCROLL-REVEAL ANIMATIONS
+   ================================================================ */
+@media (prefers-reduced-motion: no-preference) {
+    .im-reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    .im-reveal.is-visible { opacity: 1; transform: translateY(0); }
+    .im-reveal-group .im-reveal:nth-child(1) { transition-delay: 0s; }
+    .im-reveal-group .im-reveal:nth-child(2) { transition-delay: 0.06s; }
+    .im-reveal-group .im-reveal:nth-child(3) { transition-delay: 0.12s; }
+    .im-reveal-group .im-reveal:nth-child(4) { transition-delay: 0.18s; }
+    .im-reveal-group .im-reveal:nth-child(5) { transition-delay: 0.24s; }
+    .im-reveal-group .im-reveal:nth-child(6) { transition-delay: 0.3s; }
+    .im-reveal-group .im-reveal:nth-child(7) { transition-delay: 0.36s; }
+    .im-reveal-group .im-reveal:nth-child(8) { transition-delay: 0.42s; }
+    .im-reveal-group .im-reveal:nth-child(9) { transition-delay: 0.48s; }
+    .im-reveal-group .im-reveal:nth-child(10) { transition-delay: 0.54s; }
+    .im-reveal-group .im-reveal:nth-child(11) { transition-delay: 0.6s; }
+
+    .im-hero-fade { opacity: 0; transform: translateY(20px); animation: imFadeUp 0.9s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .im-hero-fade.delay-1 { animation-delay: 0.1s; }
+    .im-hero-fade.delay-2 { animation-delay: 0.22s; }
+    .im-hero-fade.delay-3 { animation-delay: 0.34s; }
+    .im-hero-fade.delay-4 { animation-delay: 0.46s; }
+    @keyframes imFadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* filter pills — quick press feedback */
+    .im-filter-pill { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
+    .im-filter-pill:active { transform: scale(0.96); }
+
+    /* service tiles already have hover transitions in the base CSS;
+       just make sure the reveal fade plays nicely alongside them */
+    .im-service-tile.im-reveal:hover { transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .im-reveal { opacity: 1; transform: none; }
+}
 </style>
 
 <div class="im">
@@ -393,15 +513,15 @@
              src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1800&auto=format&fit=crop"
              alt="" fetchpriority="high" decoding="async">
         <div class="im-services-hero__inner container">
-            <span class="im-eyebrow im-services-hero__tag">Our Services</span>
-            <h1 class="im-services-hero__title">
+            <span class="im-eyebrow im-services-hero__tag im-hero-fade delay-1">Our Services</span>
+            <h1 class="im-services-hero__title im-hero-fade delay-2">
                 Every trade you need, <span class="accent">under one roof.</span>
             </h1>
-            <p class="im-services-hero__sub">
+            <p class="im-services-hero__sub im-hero-fade delay-3">
                 From a dripping tap to a full renovation, Fixkona matches you with vetted, reviewed
                 professionals across Kenya — browse by category below or describe the job in your own words.
             </p>
-            <form action="{% url 'search_services' %}" method="GET" class="im-search-box d-flex align-items-center">
+            <form action="{% url 'search_services' %}" method="GET" class="im-search-box d-flex align-items-center im-hero-fade delay-4">
                 <i class="fa-solid fa-magnifying-glass me-3 fs-5" style="color:var(--text-muted);" aria-hidden="true"></i>
                 <input type="text" name="q" placeholder="Describe your project — repaint living room, leaky faucet..."
                        class="im-search__input" aria-label="Describe your project or problem" required>
@@ -415,14 +535,14 @@
          ============================================================ -->
     <section class="im-section">
         <div class="container">
-            <div class="row mb-4">
+            <div class="row mb-4 im-reveal">
                 <div class="col-lg-7">
                     <p class="im-eyebrow mb-3 d-block" style="color:var(--signal);">Browse by category</p>
                     <h2 class="im-section-heading display-5">Twelve trades, thousands of vetted pros</h2>
                 </div>
             </div>
 
-            <div class="im-filter-row" id="serviceFilters" role="tablist" aria-label="Filter services by group">
+            <div class="im-filter-row im-reveal" id="serviceFilters" role="tablist" aria-label="Filter services by group">
                 <button type="button" class="im-filter-pill is-active" data-filter="all" role="tab" aria-selected="true">All services</button>
                 <button type="button" class="im-filter-pill" data-filter="repairs" role="tab" aria-selected="false">Repairs &amp; Maintenance</button>
                 <button type="button" class="im-filter-pill" data-filter="build" role="tab" aria-selected="false">Renovation &amp; Build</button>
@@ -430,9 +550,9 @@
                 <button type="button" class="im-filter-pill" data-filter="specialty" role="tab" aria-selected="false">Specialty</button>
             </div>
 
-            <div class="im-service-bento" id="serviceBento">
+            <div class="im-service-bento im-reveal-group" id="serviceBento">
 
-                <a href="{% url 'search_services' %}?q=plumbing" class="im-service-tile im-service-tile--lg" data-group="repairs">
+                <a href="{% url 'search_services' %}?q=plumbing" class="im-service-tile im-service-tile--lg im-reveal" data-group="repairs" data-service="plumbing">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1585704032915-c3400ca199e7?q=80&w=1200&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -446,7 +566,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=electrical" class="im-service-tile" data-group="repairs">
+                <a href="{% url 'search_services' %}?q=electrical" class="im-service-tile im-reveal" data-group="repairs" data-service="electrical">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -458,7 +578,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=roofing" class="im-service-tile" data-group="repairs">
+                <a href="{% url 'search_services' %}?q=roofing" class="im-service-tile im-reveal" data-group="repairs" data-service="roofing">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1632759145351-1d592919f522?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -470,7 +590,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=hvac" class="im-service-tile" data-group="repairs">
+                <a href="{% url 'search_services' %}?q=hvac" class="im-service-tile im-reveal" data-group="repairs" data-service="hvac">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1631545806609-947c31ab5a44?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -482,7 +602,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=renovation" class="im-service-tile im-service-tile--lg" data-group="build">
+                <a href="{% url 'search_services' %}?q=renovation" class="im-service-tile im-service-tile--lg im-reveal" data-group="build" data-service="renovation">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=1200&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -496,7 +616,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=carpentry" class="im-service-tile" data-group="build">
+                <a href="{% url 'search_services' %}?q=carpentry" class="im-service-tile im-reveal" data-group="build" data-service="carpentry">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1601058268499-e52658b8bb88?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -508,7 +628,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=painting" class="im-service-tile" data-group="build">
+                <a href="{% url 'search_services' %}?q=painting" class="im-service-tile im-reveal" data-group="build" data-service="painting">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -520,7 +640,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=interior+design" class="im-service-tile" data-group="build">
+                <a href="{% url 'search_services' %}?q=interior+design" class="im-service-tile im-reveal" data-group="build" data-service="interior-design">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -532,7 +652,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=cleaning" class="im-service-tile im-service-tile--lg" data-group="home-care">
+                <a href="{% url 'search_services' %}?q=cleaning" class="im-service-tile im-service-tile--lg im-reveal" data-group="home-care" data-service="cleaning">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -546,7 +666,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=landscaping" class="im-service-tile" data-group="home-care">
+                <a href="{% url 'search_services' %}?q=landscaping" class="im-service-tile im-reveal" data-group="home-care" data-service="landscaping">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1558904541-efa843a96f01?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -558,7 +678,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=pest+control" class="im-service-tile" data-group="specialty">
+                <a href="{% url 'search_services' %}?q=pest+control" class="im-service-tile im-reveal" data-group="specialty" data-service="pest-control">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1632743072659-e4a97e6e3f8e?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -570,7 +690,7 @@
                     </div>
                 </a>
 
-                <a href="{% url 'search_services' %}?q=moving" class="im-service-tile" data-group="specialty">
+                <a href="{% url 'search_services' %}?q=moving" class="im-service-tile im-reveal" data-group="specialty" data-service="moving">
                     <img class="im-service-tile__img" loading="lazy"
                          src="https://images.unsplash.com/photo-1600518464441-9154a4dea21b?q=80&w=800&auto=format&fit=crop" alt="">
                     <div class="im-service-tile__content">
@@ -585,6 +705,33 @@
             </div>
         </div>
     </section>
+
+    <!-- ============================================================
+         SERVICE DETAIL MODAL — populated by JS when a tile is clicked
+         ============================================================ -->
+    <div class="modal fade im-service-modal" id="serviceModal" tabindex="-1" aria-labelledby="serviceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <span class="im-eyebrow im-service-modal__tag" id="serviceModalTag"></span>
+                        <h3 class="im-service-modal__title" id="serviceModalLabel"></h3>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="im-service-modal__desc" id="serviceModalDesc"></p>
+                    <div class="im-service-modal__list" id="serviceModalList"></div>
+                </div>
+                <div class="modal-footer">
+                    <a href="{% url 'search_services' %}" class="btn im-btn-signal rounded-0 px-4 py-2 text-uppercase im-mono fs-7" id="serviceModalCta">
+                        Describe your job
+                        <i class="fa-solid fa-arrow-right ms-2" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         (function () {
@@ -609,6 +756,132 @@
                     tile.classList.toggle('is-hidden', !match);
                 });
             });
+
+            // --------------------------------------------------------
+            // Category → sub-service catalogue for the detail modal.
+            // Each sub-service links straight into the search page
+            // with a pre-filled query.
+            // --------------------------------------------------------
+            var SEARCH_URL = "{% url 'search_services' %}";
+            var SERVICE_CATALOGUE = {
+                'plumbing': {
+                    tag: '812 pros active',
+                    title: 'Plumbing',
+                    desc: 'Leaks, clogs, burst pipes and fixture installs handled fast by licensed plumbers.',
+                    items: ['Leak repair', 'Pipe installation', 'Drain unblocking', 'Water heater repair', 'Bathroom fittings', 'Burst pipe emergency']
+                },
+                'electrical': {
+                    tag: '605 pros active',
+                    title: 'Electrical',
+                    desc: 'Wiring, fittings and fault-finding from licensed, insured electricians.',
+                    items: ['Wiring & rewiring', 'Socket & switch installation', 'Lighting installation', 'Fault finding & repairs', 'Backup power / inverter setup', 'Electrical safety inspection']
+                },
+                'roofing': {
+                    tag: '318 pros active',
+                    title: 'Roofing & Gutters',
+                    desc: 'Leak repairs, replacements and full re-roofs from vetted roofing specialists.',
+                    items: ['Roof leak repair', 'Gutter cleaning & repair', 'Roof sheet replacement', 'Waterproofing', 'New roof installation', 'Storm damage repair']
+                },
+                'hvac': {
+                    tag: '203 pros active',
+                    title: 'HVAC & Appliances',
+                    desc: 'Installation and repair for cooling, heating and everyday home appliances.',
+                    items: ['AC installation & repair', 'Fridge & freezer repair', 'Washing machine repair', 'Water heater servicing', 'Cooker & oven repair', 'General appliance servicing']
+                },
+                'renovation': {
+                    tag: '189 pros active',
+                    title: 'Renovation',
+                    desc: 'Full kitchen, bathroom and whole-home renovations managed start to finish.',
+                    items: ['Kitchen renovation', 'Bathroom renovation', 'Full home renovation', 'Extensions & additions', 'Flooring installation', 'Project management']
+                },
+                'carpentry': {
+                    tag: '456 pros active',
+                    title: 'Carpentry',
+                    desc: 'Custom builds, fittings and repairs from experienced carpenters.',
+                    items: ['Custom furniture', 'Kitchen cabinets', 'Door & window fitting', 'Wardrobes & closets', 'Furniture repair', 'Decking & outdoor structures']
+                },
+                'painting': {
+                    tag: '714 pros active',
+                    title: 'Painting & Finish',
+                    desc: 'Interior, exterior and specialty finishes from vetted painting crews.',
+                    items: ['Interior painting', 'Exterior painting', 'Wall finishes & texture', 'Wallpaper installation', 'Fence & gate painting', 'Varnishing & wood finishing']
+                },
+                'interior-design': {
+                    tag: '298 pros active',
+                    title: 'Interior Design',
+                    desc: 'Space planning and styling from concept through to finished room.',
+                    items: ['Space planning', 'Full home styling', 'Colour consultation', 'Furniture sourcing', '3D renders & mood boards', 'Office & commercial design']
+                },
+                'cleaning': {
+                    tag: '340 pros active',
+                    title: 'Cleaning',
+                    desc: 'Deep cleans, move-outs and recurring visits from vetted local cleaners.',
+                    items: ['Deep cleaning', 'Move-in / move-out cleaning', 'Recurring home cleaning', 'Carpet & upholstery cleaning', 'Post-construction cleaning', 'Office cleaning']
+                },
+                'landscaping': {
+                    tag: '276 pros active',
+                    title: 'Landscaping',
+                    desc: 'Garden design and upkeep from planning through to planting.',
+                    items: ['Garden design', 'Lawn care & mowing', 'Irrigation systems', 'Tree trimming & removal', 'Paving & walkways', 'Fencing']
+                },
+                'pest-control': {
+                    tag: '147 pros active',
+                    title: 'Pest Control',
+                    desc: 'Safe, effective treatment for common household pests.',
+                    items: ['General pest treatment', 'Termite control', 'Rodent control', 'Fumigation', 'Mosquito control', 'Bed bug treatment']
+                },
+                'moving': {
+                    tag: '164 pros active',
+                    title: 'Moving & Hauling',
+                    desc: 'Local and long-distance moves handled by reliable, insured movers.',
+                    items: ['Local moving', 'Office relocation', 'Furniture hauling', 'Packing services', 'Junk removal', 'Long-distance moving']
+                }
+            };
+
+            function initServiceModal() {
+                var modalEl = document.getElementById('serviceModal');
+                if (!modalEl || typeof bootstrap === 'undefined') {
+                    // Bootstrap's bundle is loaded with `defer` at the bottom of the
+                    // page, so it can still be missing on the first check. Retry
+                    // briefly instead of silently falling back to plain links.
+                    return window.setTimeout(initServiceModal, 50);
+                }
+
+                var bsModal = new bootstrap.Modal(modalEl);
+                var modalTag = document.getElementById('serviceModalTag');
+                var modalTitle = document.getElementById('serviceModalLabel');
+                var modalDesc = document.getElementById('serviceModalDesc');
+                var modalList = document.getElementById('serviceModalList');
+                var modalCta = document.getElementById('serviceModalCta');
+
+                tiles.forEach(function (tile) {
+                    var key = tile.getAttribute('data-service');
+                    var data = key && SERVICE_CATALOGUE[key];
+                    if (!data) return;
+
+                    tile.addEventListener('click', function (e) {
+                        e.preventDefault();
+
+                        modalTag.textContent = data.tag;
+                        modalTitle.textContent = data.title;
+                        modalDesc.textContent = data.desc;
+                        modalCta.href = SEARCH_URL + '?q=' + encodeURIComponent(data.title);
+
+                        modalList.innerHTML = '';
+                        data.items.forEach(function (name) {
+                            var link = document.createElement('a');
+                            link.className = 'im-service-modal__item';
+                            link.href = SEARCH_URL + '?q=' + encodeURIComponent(name);
+                            link.innerHTML = '<span>' + name + '</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i>';
+                            modalList.appendChild(link);
+                        });
+
+                        bsModal.show();
+                    });
+                });
+            }
+
+            initServiceModal();
         })();
     </script>
 
@@ -623,8 +896,8 @@
                     <h2 class="im-section-heading display-5">Every job, backed the same way</h2>
                 </div>
             </div>
-            <div class="row g-5 mt-2">
-                <div class="col-lg-4">
+            <div class="row g-5 mt-2 im-reveal-group">
+                <div class="col-lg-4 im-reveal">
                     <div class="im-step-card">
                         <span class="im-eyebrow mb-2 d-block">Vetted first</span>
                         <h3 class="h4 mb-2">Every pro is checked</h3>
@@ -632,7 +905,7 @@
                            network — across all twelve trades.</p>
                     </div>
                 </div>
-                <div class="col-lg-4">
+                <div class="col-lg-4 im-reveal">
                     <div class="im-step-card">
                         <span class="im-eyebrow mb-2 d-block">Transparent</span>
                         <h3 class="h4 mb-2">Clear quotes, no surprises</h3>
@@ -640,7 +913,7 @@
                            locked in until you say so.</p>
                     </div>
                 </div>
-                <div class="col-lg-4">
+                <div class="col-lg-4 im-reveal">
                     <div class="im-step-card">
                         <span class="im-eyebrow mb-2 d-block">Fast</span>
                         <h3 class="h4 mb-2">Matched in minutes</h3>
@@ -657,29 +930,29 @@
          ============================================================ -->
     <section class="im-section border-0 pt-0 pb-0">
         <div class="container">
-            <div class="row im-pricing-row py-5 g-4 text-center justify-content-center">
-                <div class="col-md-3">
+            <div class="row im-pricing-row py-5 g-4 text-center justify-content-center im-reveal-group">
+                <div class="col-md-3 im-reveal">
                     <div class="im-pricing-card">
                         <div class="im-pricing-card__icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                         <h4>Free to request</h4>
                         <p>Posting a job and getting quotes costs nothing.</p>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 im-reveal">
                     <div class="im-pricing-card">
                         <div class="im-pricing-card__icon"><i class="fa-solid fa-scale-balanced"></i></div>
                         <h4>Pay the pro directly</h4>
                         <p>Pricing is set by each professional, shown up front.</p>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 im-reveal">
                     <div class="im-pricing-card">
                         <div class="im-pricing-card__icon"><i class="fa-solid fa-shield-halved"></i></div>
                         <h4>Booking protection</h4>
                         <p>Disputes are reviewed by our support team, free of charge.</p>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 im-reveal">
                     <div class="im-pricing-card">
                         <div class="im-pricing-card__icon"><i class="fa-solid fa-star"></i></div>
                         <h4>Rated after every job</h4>
@@ -702,8 +975,8 @@
                 </div>
             </div>
             <div class="im-faq">
-                <div class="accordion" id="servicesFaq">
-                    <div class="accordion-item">
+                <div class="accordion im-reveal-group" id="servicesFaq">
+                    <div class="accordion-item im-reveal">
                         <h3 class="accordion-header">
                             <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
                                 How much does it cost to request a service?
@@ -716,7 +989,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="accordion-item">
+                    <div class="accordion-item im-reveal">
                         <h3 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
                                 How are professionals vetted?
@@ -730,7 +1003,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="accordion-item">
+                    <div class="accordion-item im-reveal">
                         <h3 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
                                 Can I get quotes from more than one pro?
@@ -743,7 +1016,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="accordion-item">
+                    <div class="accordion-item im-reveal">
                         <h3 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
                                 What if a job isn't done to a good standard?
@@ -756,7 +1029,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="accordion-item">
+                    <div class="accordion-item im-reveal">
                         <h3 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
                                 Do I need an account to request a service?
@@ -780,7 +1053,7 @@
      CTA
      ================================================================ -->
 <section class="im-cta-particles">
-    <div class="im-cta-particles__inner">
+    <div class="im-cta-particles__inner im-reveal">
         <span class="im-eyebrow im-cta-particles__eyebrow">Don't see your trade?</span>
         <h2 class="im-cta-particles__heading im-display" style="max-width: 640px;">
             Tell us the job — we'll find the right pro.
@@ -798,4 +1071,28 @@
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+
+<!-- ================================================================
+     SCROLL-REVEAL TRIGGER — adds .is-visible to .im-reveal elements
+     as they enter the viewport.
+     ================================================================ -->
+<script>
+(function () {
+    var els = document.querySelectorAll('.im-reveal');
+    if (!els.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('is-visible'); });
+        return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+    els.forEach(function (el) { io.observe(el); });
+})();
+</script>
 {% endblock %}

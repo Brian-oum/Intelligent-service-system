@@ -138,6 +138,24 @@ def about_page(request):
 
 def services(request):
     return render(request, 'Match/services.html')
+
+def contact_page(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+
+        send_mail(
+            subject=f"[Contact] {subject} — {name}",
+            message=f"From: {name} <{email}>\n\n{message}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=['hello@fixkona.com'],
+        )
+        messages.success(request, "Thanks — we've got your message and will reply within a day.")
+        return redirect('contact_page')
+
+    return render(request, 'Match/contact.html')
 # =========================
 # Normal User Registration
 # =========================
@@ -1411,8 +1429,14 @@ from django.db.models.functions import TruncMonth
 import json
 
 
-def get_report_data(provider):
-    """Aggregate all stats needed for the report."""
+def get_report_data(provider, month=None, year=None):
+    """Aggregate all stats needed for the report.
+
+    month/year are both optional. Pass:
+      - year only        -> whole calendar year
+      - year + month     -> single month
+      - neither          -> all-time (original behaviour)
+    """
 
     now = timezone.now()
     thirty_days_ago = now - timedelta(days=30)
@@ -1420,9 +1444,54 @@ def get_report_data(provider):
     services = provider.services.filter(is_active=True)
 
     from .models import ServiceRequest, Review
+    from datetime import date
+    from dateutil.relativedelta import relativedelta
 
-    requests_qs = ServiceRequest.objects.filter(provider=provider)
+    base_requests_qs = ServiceRequest.objects.filter(provider=provider)
+    requests_qs = base_requests_qs
     reviews_qs = Review.objects.filter(provider=provider)
+
+    # ─────────────────────────────────────────────────────
+    # Years that actually have request data, for the filter
+    # dropdown — computed off the unfiltered base queryset.
+    # ─────────────────────────────────────────────────────
+    from django.db.models.functions import ExtractYear
+
+    available_years = list(
+        base_requests_qs
+        .annotate(yr=ExtractYear('created_at'))
+        .values_list('yr', flat=True)
+        .distinct()
+        .order_by('-yr')
+    )
+    if not available_years:
+        available_years = [now.year]
+
+    # ─────────────────────────────────────────────────────
+    # Apply the month/year period filter, if any
+    # ─────────────────────────────────────────────────────
+    period_start = None
+    period_end = None
+    period_label = 'All Time'
+
+    if year and month:
+        period_start = date(year, month, 1)
+        period_end = period_start + relativedelta(months=1)
+        period_label = period_start.strftime('%B %Y')
+    elif year:
+        period_start = date(year, 1, 1)
+        period_end = date(year + 1, 1, 1)
+        period_label = str(year)
+
+    if period_start:
+        requests_qs = requests_qs.filter(
+            created_at__gte=period_start,
+            created_at__lt=period_end
+        )
+        reviews_qs = reviews_qs.filter(
+            created_at__gte=period_start,
+            created_at__lt=period_end
+        )
 
     # ─────────────────────────────────────────────────────
     # Main statistics
@@ -1456,23 +1525,36 @@ def get_report_data(provider):
     total_reviews = reviews_qs.count()
 
     # ─────────────────────────────────────────────────────
-    # Monthly chart data
+    # Monthly chart data:
+    #  - single month selected  -> that one month only
+    #  - year selected          -> Jan-Dec of that year
+    #  - all time                -> trailing last 12 months
+    # Always zero-filled for months with no requests.
     # ─────────────────────────────────────────────────────
-    monthly_data = (
-        requests_qs
-        .annotate(month=TruncMonth('created_at'))
-        .values('month')
-        .annotate(total=Count('id'))
-        .order_by('month')
-    )
-
+    today = date.today()
     months = []
     monthly_requests = []
 
-    for item in monthly_data:
-        if item['month']:
-            months.append(item['month'].strftime('%b'))
-            monthly_requests.append(item['total'])
+    if year and month:
+        chart_months = [date(year, month, 1)]
+    elif year:
+        chart_months = [date(year, m, 1) for m in range(1, 13)]
+    else:
+        chart_months = [
+            today.replace(day=1) - relativedelta(months=i)
+            for i in range(11, -1, -1)
+        ]
+
+    for month_start in chart_months:
+        month_end = month_start + relativedelta(months=1)
+        months.append(month_start.strftime('%b %Y'))
+        # Use the unfiltered base queryset here so the chart still
+        # reflects real per-month counts regardless of the period filter.
+        count = base_requests_qs.filter(
+            created_at__gte=month_start,
+            created_at__lt=month_end
+        ).count()
+        monthly_requests.append(count)
 
     # ─────────────────────────────────────────────────────
     # Rating distribution
@@ -1568,6 +1650,17 @@ def get_report_data(provider):
         # IMPORTANT FOR CHART
         'months': json.dumps(months),
         'monthly_requests': json.dumps(monthly_requests),
+
+        # ── Month/year filter state ──────────────────────
+        'available_years': available_years,
+        'selected_month': month,
+        'selected_year': year,
+        'period_label': period_label,
+        'month_choices': [
+            (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+            (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+            (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December'),
+        ],
     }
 
  
@@ -1577,9 +1670,19 @@ def provider_report_page(request, provider_id):
     """Renders the visual report page in the browser."""
     from .models import ServiceProvider
     from django.shortcuts import get_object_or_404, render
- 
+
     provider = get_object_or_404(ServiceProvider, pk=provider_id)
-    data = get_report_data(provider)
+
+    # Optional ?month=&year= filter, e.g. /report/12/?year=2026&month=3
+    raw_month = request.GET.get('month')
+    raw_year = request.GET.get('year')
+    month = int(raw_month) if raw_month and raw_month.isdigit() else None
+    year = int(raw_year) if raw_year and raw_year.isdigit() else None
+    # A month without a year isn't a valid period — ignore it.
+    if month and not year:
+        month = None
+
+    data = get_report_data(provider, month=month, year=year)
     return render(request, 'Match/report.html', data)
  
  

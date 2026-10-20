@@ -29,12 +29,15 @@
         margin-bottom: 26px;
         overflow: hidden;
     }
+    .stat-seg-link { text-decoration: none; color: inherit; display: block; transition: background 0.15s ease; }
+    .stat-seg-link:hover { background: var(--panel-2); text-decoration: none; color: inherit; }
     .stat-seg {
         padding: 26px 28px;
         border-right: 1px solid var(--panel-line);
         position: relative;
+        height: 100%;
     }
-    .stat-seg:last-child { border-right: none; }
+    .stat-seg-link:last-child .stat-seg { border-right: none; }
     .stat-seg .seg-top {
         display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
     }
@@ -144,8 +147,8 @@
     @media (max-width: 768px) {
         .dash-wrap { padding: 28px 20px 44px; }
         .stat-ledger { grid-template-columns: repeat(2, 1fr); }
-        .stat-seg:nth-child(2) { border-right: none; }
-        .stat-seg:nth-child(1), .stat-seg:nth-child(2) { border-bottom: 1px solid var(--panel-line); }
+        .stat-seg-link:nth-child(2) .stat-seg { border-right: none; }
+        .stat-seg-link:nth-child(1) .stat-seg, .stat-seg-link:nth-child(2) .stat-seg { border-bottom: 1px solid var(--panel-line); }
     }
 
     /* ============ CHART CARD — compact preview + tap-to-expand ============
@@ -241,10 +244,10 @@
         animation: dash-unveil 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         transform-origin: top center;
     }
-    .stat-seg:nth-child(1) { animation-delay: 0.10s; }
-    .stat-seg:nth-child(2) { animation-delay: 0.18s; }
-    .stat-seg:nth-child(3) { animation-delay: 0.26s; }
-    .stat-seg:nth-child(4) { animation-delay: 0.34s; }
+    .stat-seg-link:nth-child(1) .stat-seg { animation-delay: 0.10s; }
+    .stat-seg-link:nth-child(2) .stat-seg { animation-delay: 0.18s; }
+    .stat-seg-link:nth-child(3) .stat-seg { animation-delay: 0.26s; }
+    .stat-seg-link:nth-child(4) .stat-seg { animation-delay: 0.34s; }
 
     .stat-seg .seg-icon {
         opacity: 0;
@@ -257,10 +260,10 @@
         animation: dash-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         animation-delay: calc(0.08s + 0.1s);
     }
-    .stat-seg:nth-child(1) .seg-value { animation-delay: 0.24s; }
-    .stat-seg:nth-child(2) .seg-value { animation-delay: 0.32s; }
-    .stat-seg:nth-child(3) .seg-value { animation-delay: 0.40s; }
-    .stat-seg:nth-child(4) .seg-value { animation-delay: 0.48s; }
+    .stat-seg-link:nth-child(1) .seg-value { animation-delay: 0.24s; }
+    .stat-seg-link:nth-child(2) .seg-value { animation-delay: 0.32s; }
+    .stat-seg-link:nth-child(3) .seg-value { animation-delay: 0.40s; }
+    .stat-seg-link:nth-child(4) .seg-value { animation-delay: 0.48s; }
 
     .dash-card {
         opacity: 0;
@@ -338,34 +341,42 @@
     </div>
 
     <div class="stat-ledger">
-        <div class="stat-seg">
-            <div class="seg-top">
-                <span class="seg-label">Total requests</span>
-                <span class="seg-icon"><i class="fa-solid fa-layer-group"></i></span>
+        <a href="{% url 'my_requests' %}" class="stat-seg-link">
+            <div class="stat-seg">
+                <div class="seg-top">
+                    <span class="seg-label">Total requests</span>
+                    <span class="seg-icon"><i class="fa-solid fa-layer-group"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ total_requests }}">0</div>
             </div>
-            <div class="seg-value" data-count-to="{{ total_requests }}">0</div>
-        </div>
-        <div class="stat-seg is-signal">
-            <div class="seg-top">
-                <span class="seg-label">Pending</span>
-                <span class="seg-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+        </a>
+        <a href="{% url 'my_requests' %}?status=pending" class="stat-seg-link">
+            <div class="stat-seg is-signal">
+                <div class="seg-top">
+                    <span class="seg-label">Pending</span>
+                    <span class="seg-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ pending_requests }}">0</div>
             </div>
-            <div class="seg-value" data-count-to="{{ pending_requests }}">0</div>
-        </div>
-        <div class="stat-seg">
-            <div class="seg-top">
-                <span class="seg-label">Accepted</span>
-                <span class="seg-icon"><i class="fa-solid fa-handshake-angle"></i></span>
+        </a>
+        <a href="{% url 'my_requests' %}?status=accepted" class="stat-seg-link">
+            <div class="stat-seg">
+                <div class="seg-top">
+                    <span class="seg-label">Accepted</span>
+                    <span class="seg-icon"><i class="fa-solid fa-handshake-angle"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ accepted_requests }}">0</div>
             </div>
-            <div class="seg-value" data-count-to="{{ accepted_requests }}">0</div>
-        </div>
-        <div class="stat-seg is-live">
-            <div class="seg-top">
-                <span class="seg-label">Completed</span>
-                <span class="seg-icon"><i class="fa-solid fa-circle-check"></i></span>
+        </a>
+        <a href="{% url 'my_requests' %}?status=completed" class="stat-seg-link">
+            <div class="stat-seg is-live">
+                <div class="seg-top">
+                    <span class="seg-label">Completed</span>
+                    <span class="seg-icon"><i class="fa-solid fa-circle-check"></i></span>
+                </div>
+                <div class="seg-value" data-count-to="{{ completed_requests }}">0</div>
             </div>
-            <div class="seg-value" data-count-to="{{ completed_requests }}">0</div>
-        </div>
+        </a>
     </div>
 
     <div class="dash-grid">

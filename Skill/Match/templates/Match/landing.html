@@ -14,12 +14,7 @@
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="preload" as="image" fetchpriority="high"
-      href="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop"
-      imagesrcset="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=800&auto=format&fit=crop 800w,
-                   https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop 1200w,
-                   https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop 1600w,
-                   https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2400&auto=format&fit=crop 2400w"
-      imagesizes="100vw">
+      href="{% static 'images/cleaning.webp' %}">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
@@ -485,33 +480,33 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
 
 /* slow diagonal push, top-left origin drift */
 @keyframes im-cinema-pan-a {
-    0%   { transform: scale(1.04) translate(1.5%, 1%)   rotate(0deg); }
-    50%  { transform: scale(1.12) translate(-1.5%, -0.5%) rotate(-0.3deg); }
-    100% { transform: scale(1.2)  translate(-2.5%, -1.5%) rotate(-0.5deg); }
+    0%   { transform: scale(1.005) translate(0.6%, 0.4%)   rotate(0deg); }
+    50%  { transform: scale(1.012) translate(-0.6%, -0.2%) rotate(-0.3deg); }
+    100% { transform: scale(1.02)  translate(-1%, -0.6%) rotate(-0.5deg); }
 }
 /* slow pull-back to the right */
 @keyframes im-cinema-pan-b {
-    0%   { transform: scale(1.18) translate(-2%, 0.5%)  rotate(0deg); }
-    50%  { transform: scale(1.1)  translate(1%, -1%)    rotate(0.25deg); }
-    100% { transform: scale(1.02) translate(2.5%, -1.8%) rotate(0.4deg); }
+    0%   { transform: scale(1.018) translate(-0.8%, 0.2%)  rotate(0deg); }
+    50%  { transform: scale(1.01) translate(0.4%, -0.4%)    rotate(0.25deg); }
+    100% { transform: scale(1.002) translate(1%, -0.7%) rotate(0.4deg); }
 }
 /* vertical drift, gentle rise */
 @keyframes im-cinema-pan-c {
-    0%   { transform: scale(1.06) translate(0, 2%)      rotate(0deg); }
-    50%  { transform: scale(1.13) translate(-0.8%, -0.5%) rotate(-0.3deg); }
-    100% { transform: scale(1.2)  translate(-1.2%, -2.2%) rotate(-0.5deg); }
+    0%   { transform: scale(1.006) translate(0, 0.8%)      rotate(0deg); }
+    50%  { transform: scale(1.012) translate(-0.3%, -0.2%) rotate(-0.3deg); }
+    100% { transform: scale(1.02)  translate(-0.5%, -0.9%) rotate(-0.5deg); }
 }
 /* diagonal push toward lower-right */
 @keyframes im-cinema-pan-d {
-    0%   { transform: scale(1.02) translate(-1.8%, -1.5%) rotate(0deg); }
-    50%  { transform: scale(1.1)  translate(0.8%, 0.5%)   rotate(0.3deg); }
-    100% { transform: scale(1.18) translate(2.2%, 1.8%)   rotate(0.5deg); }
+    0%   { transform: scale(1.002) translate(-0.7%, -0.6%) rotate(0deg); }
+    50%  { transform: scale(1.01) translate(0.3%, 0.2%)   rotate(0.3deg); }
+    100% { transform: scale(1.018) translate(0.9%, 0.7%)   rotate(0.5deg); }
 }
 /* slow pull-out, settles wide */
 @keyframes im-cinema-pan-e {
-    0%   { transform: scale(1.2)  translate(1.5%, -1.2%) rotate(0deg); }
-    50%  { transform: scale(1.12) translate(-1%, 0.8%)   rotate(-0.25deg); }
-    100% { transform: scale(1.03) translate(-2%, 1.6%)   rotate(-0.4deg); }
+    0%   { transform: scale(1.02)  translate(0.6%, -0.5%) rotate(0deg); }
+    50%  { transform: scale(1.012) translate(-0.4%, 0.3%)   rotate(-0.25deg); }
+    100% { transform: scale(1.003) translate(-0.8%, 0.6%)   rotate(-0.4deg); }
 }
 
 /* Cinematic vignette — darkens the corners so the frame reads like
@@ -1732,7 +1727,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
     .im-showcase__slide-heading,
     .im-showcase__slide-body,
     .im-showcase__slide-link { transition: none !important; }
-    .im-hero-slide.is-active img { animation: none !important; transform: scale(1.08) !important; }
+    .im-hero-slide.is-active img { animation: none !important; transform: scale(1.005) !important; }
     .im-dispatch-dot { animation: none; }
 }
 </style>
@@ -1799,27 +1794,6 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
         // Safety net: never let a slow subresource hold the page hostage.
         setTimeout(release, MAX_WAIT);
 
-        // Piggyback the deferred hero-image loading on the same
-        // "page is actually ready" signal used to release the preloader.
-        function loadHeroSlides() {
-            var imgs = document.querySelectorAll('.im-hero-slide img[data-src]');
-            imgs.forEach(function (img, i) {
-                setTimeout(function () {
-                    var srcset = img.getAttribute('data-srcset');
-                    if (srcset) {
-                        img.srcset = srcset;
-                        img.removeAttribute('data-srcset');
-                    }
-                    img.src = img.getAttribute('data-src');
-                    img.removeAttribute('data-src');
-                }, i * 250);
-            });
-        }
-        if (document.readyState === 'complete') {
-            loadHeroSlides();
-        } else {
-            window.addEventListener('load', loadHeroSlides, { once: true });
-        }
     })();
     </script>
 
@@ -1829,45 +1803,29 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
     <section class="im-hero-cinematic">
         <div class="im-hero-slideshow" aria-hidden="true" id="heroSlideshow">
             <div class="im-hero-slide is-active" data-index="0">
-                <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop"
-                     srcset="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=800&auto=format&fit=crop 800w,
-                             https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1200&auto=format&fit=crop 1200w,
-                             https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=1600&auto=format&fit=crop 1600w,
-                             https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=2400&auto=format&fit=crop 2400w"
+                <img src="{% static 'images/cleaning.webp' %}"
+                     srcset="{% static 'images/cleaning.webp' %} 800w,
+                             {% static 'images/cleaning.webp' %}1200w,
+                             {% static 'images/cleaning.webp' %}1600w,
+                             {% static 'images/cleaning.webp' %} 2400w"
                      sizes="100vw"
                      alt="" fetchpriority="high" decoding="async">
             </div>
             <div class="im-hero-slide" data-index="1">
-                <img data-src="https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1600&auto=format&fit=crop"
-                     data-srcset="https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=800&auto=format&fit=crop 800w,
-                                  https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1200&auto=format&fit=crop 1200w,
-                                  https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=1600&auto=format&fit=crop 1600w,
-                                  https://images.unsplash.com/photo-1504148455328-c376907d081c?q=80&w=2400&auto=format&fit=crop 2400w"
-                     sizes="100vw" alt="" decoding="async">
+                <img src="{% static 'images/repair.webp' %}"
+                     alt="" decoding="async">
             </div>
             <div class="im-hero-slide" data-index="2">
-                <img data-src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1600&auto=format&fit=crop"
-                     data-srcset="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800&auto=format&fit=crop 800w,
-                                  https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1200&auto=format&fit=crop 1200w,
-                                  https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1600&auto=format&fit=crop 1600w,
-                                  https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=2400&auto=format&fit=crop 2400w"
-                     sizes="100vw" alt="" decoding="async">
+                <img src="{% static 'images/electrical-repair.webp' %}"
+                     alt="" decoding="async">
             </div>
             <div class="im-hero-slide" data-index="3">
-                <img data-src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1600&auto=format&fit=crop"
-                     data-srcset="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=800&auto=format&fit=crop 800w,
-                                  https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1200&auto=format&fit=crop 1200w,
-                                  https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=1600&auto=format&fit=crop 1600w,
-                                  https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?q=80&w=2400&auto=format&fit=crop 2400w"
-                     sizes="100vw" alt="" decoding="async">
+                <img src="{% static 'images/interior.webp' %}"
+                     alt="" decoding="async">
             </div>
             <div class="im-hero-slide" data-index="4">
-                <img data-src="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1600&auto=format&fit=crop"
-                     data-srcset="https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=800&auto=format&fit=crop 800w,
-                                  https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1200&auto=format&fit=crop 1200w,
-                                  https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1600&auto=format&fit=crop 1600w,
-                                  https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=2400&auto=format&fit=crop 2400w"
-                     sizes="100vw" alt="" decoding="async">
+                <img src="{% static 'images/renovation.webp' %}"
+                     alt="" decoding="async">
             </div>
         </div>
 
@@ -1935,7 +1893,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
                     <a href="{% url 'search_services' %}?q=cleaning"
                        class="im-hero-service-card" data-index="0">
                         <img class="im-hero-service-card__img" loading="lazy"
-                             src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?q=80&w=600&auto=format&fit=crop"
+                             src="{% static 'images/cleaning.webp' %}"
                              alt="Cleaning">
                         <div class="im-hero-service-card__meta">
                             <span class="im-hero-service-card__tag">340 pros active</span>
@@ -2210,7 +2168,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
                 <h2 class="im-split__title" id="split-heading">
                     Getting started has<br>never been this easy.
                 </h2>
-                <p class="im-split__sub">No account needed. Describe the job, we handle the rest.</p>
+                <p class="im-split__sub">Register. Describe the job, we handle the rest.</p>
             </div>
 
             <div class="im-split__grid">
@@ -2233,7 +2191,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
                                         <!-- 01 — Login -->
                                         <div class="im-phone__view is-active" data-view="0">
                                             <p class="im-phone__tag">Sign in</p>
-                                            <div class="im-phone__login-mark">eF</div>
+                                            <div class="im-phone__login-mark">Fixkona</div>
                                             <div class="im-phone__field">you@email.com</div>
                                             <div class="im-phone__field">••••••••</div>
                                             <div class="im-phone__btn im-phone__btn--signal">Sign In</div>
@@ -2270,7 +2228,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
                                                     <div class="im-phone__pro-name">Maria's Cleaning Co.</div>
                                                     <div class="im-phone__pro-meta">★ 4.9 · 2.1 mi</div>
                                                 </div>
-                                                <div class="im-phone__pro-price">$85</div>
+                                                <div class="im-phone__pro-price"> ksh5000</div>
                                             </div>
                                             <div class="im-phone__pro-card">
                                                 <div class="im-phone__pro-avatar"></div>
@@ -2278,7 +2236,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
                                                     <div class="im-phone__pro-name">Bright Home Crew</div>
                                                     <div class="im-phone__pro-meta">★ 4.8 · 3.4 mi</div>
                                                 </div>
-                                                <div class="im-phone__pro-price">$92</div>
+                                                <div class="im-phone__pro-price">ksh6500</div>
                                             </div>
                                             <div class="im-phone__pro-card">
                                                 <div class="im-phone__pro-avatar"></div>
@@ -2286,7 +2244,7 @@ html.im-lock-scroll body { overflow: hidden; height: 100%; }
                                                     <div class="im-phone__pro-name">ShineRight Pros</div>
                                                     <div class="im-phone__pro-meta">★ 4.9 · 1.6 mi</div>
                                                 </div>
-                                                <div class="im-phone__pro-price">$78</div>
+                                                <div class="im-phone__pro-price">Ksh7000</div>
                                             </div>
                                         </div>
 

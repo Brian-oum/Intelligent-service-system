@@ -225,28 +225,32 @@ header a.logo img {
                 height: 100vh;
                 height: 100dvh;
                 width: min(80vw, 320px);
-                background: var(--white);
+                background: var(--ink);
                 flex-direction: column;
                 align-items: flex-start;
                 justify-content: flex-start;
                 gap: 4px;
                 padding: 90px 28px 28px;
-                transform: translateX(100%);
+                transform: translateX(100%) translateZ(0);
+                -webkit-transform: translateX(100%) translateZ(0);
+                will-change: transform;
                 transition: transform 0.3s ease;
                 box-shadow: -16px 0 40px rgba(11, 14, 20, 0.16);
                 z-index: 1000;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
-            #siteNav.is-open { transform: translateX(0); }
+            #siteNav.is-open { transform: translateX(0) translateZ(0); -webkit-transform: translateX(0) translateZ(0); }
 
-            #siteNav a { color: var(--ink); width: 100%; padding: 12px 0; border-bottom: 1px solid rgba(11, 14, 20, 0.07); }
-            body.hero-page header #siteNav.is-open a:not(.nav-cta) { color: var(--ink); }
+            #siteNav a { color: var(--white); width: 100%; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+            body.hero-page header #siteNav.is-open a:not(.nav-cta) { color: var(--white); }
 
             #siteNav a.nav-cta { width: 100%; text-align: center; margin-top: 10px; border-bottom: none; }
 
             .dropdown { width: 100%; }
-            .dropdown > span { color: var(--ink); padding: 12px 0; width: 100%; border-bottom: 1px solid rgba(11, 14, 20, 0.07); }
-            body.hero-page header #siteNav.is-open .dropdown > span { color: var(--ink); }
+            .dropdown > span { color: var(--white); padding: 12px 0; width: 100%; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+            body.hero-page header #siteNav.is-open .dropdown > span { color: var(--white); }
 
             .dropdown-content {
                 display: none;
@@ -258,7 +262,8 @@ header a.logo img {
                 width: 100%;
             }
 
-            .dropdown-content a { padding: 10px 0 10px 12px; border-bottom: none; }
+            .dropdown-content a { padding: 10px 0 10px 12px; border-bottom: none; color: var(--white); }
+            .dropdown-content a:hover { background: rgba(255, 255, 255, 0.06); color: var(--white); }
         }
 
         /* ===================================================================
@@ -494,6 +499,7 @@ header a.logo img {
         <a href="{% url 'landing_page' %}">Home</a>
         <a href="{% url 'about_page' %}">About Us</a>
         <a href="{% url 'services' %}">Services</a>
+        <a href="{% url 'contact_page' %}">Contact Us</a>
         {% if user.is_authenticated %}
             <div class="dropdown" id="navDropdown">
                 <span>{{ user.username }} <i class="fa fa-caret-down"></i></span>
@@ -609,7 +615,7 @@ header a.logo img {
     <!-- Bottom bar -->
     <div class="im-footer__bottom">
         <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <p class="mb-0 small">&copy; 2026 Intelligent Service Matching System. All rights reserved.</p>
+            <p class="mb-0 small">&copy; 2026 Fixkona Solutions. All rights reserved.</p>
             <nav aria-label="Legal links" class="d-flex gap-4 flex-wrap">
                 <a href="#" class="small">Privacy Policy</a>
                 <a href="#" class="small">Terms of Service</a>

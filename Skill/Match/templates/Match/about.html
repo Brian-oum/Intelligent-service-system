@@ -155,7 +155,7 @@
     border-bottom: 1px solid var(--panel-line);
     background: var(--ink);
 }
-.im-stat-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--white); }
+.im-stat-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: var(--white); font-variant-numeric: tabular-nums; }
 .im-stat-label {
     font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
     letter-spacing: 0.1em; text-transform: uppercase;
@@ -289,7 +289,38 @@
 }
 .im-cta-particles__btn:hover { background: transparent; color: #fff; transform: translateY(-2px); }
 
+/* ================================================================
+   SCROLL-REVEAL ANIMATIONS
+   ================================================================ */
+@media (prefers-reduced-motion: no-preference) {
+    .im-reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    .im-reveal.is-visible { opacity: 1; transform: translateY(0); }
+    .im-reveal-group .im-reveal:nth-child(1) { transition-delay: 0s; }
+    .im-reveal-group .im-reveal:nth-child(2) { transition-delay: 0.08s; }
+    .im-reveal-group .im-reveal:nth-child(3) { transition-delay: 0.16s; }
+    .im-reveal-group .im-reveal:nth-child(4) { transition-delay: 0.24s; }
+    .im-reveal-group .im-reveal:nth-child(5) { transition-delay: 0.32s; }
+    .im-reveal-group .im-reveal:nth-child(6) { transition-delay: 0.4s; }
 
+    .im-hero-fade { opacity: 0; transform: translateY(20px); animation: imFadeUp 0.9s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .im-hero-fade.delay-1 { animation-delay: 0.1s; }
+    .im-hero-fade.delay-2 { animation-delay: 0.22s; }
+    .im-hero-fade.delay-3 { animation-delay: 0.34s; }
+    @keyframes imFadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .im-stat-value { transition: transform 0.25s ease; }
+    .im-stat-row .col-md-3:hover .im-stat-value { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .im-reveal { opacity: 1; transform: none; }
+}
 </style>
 
 <div class="im">
@@ -302,11 +333,11 @@
              src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1800&auto=format&fit=crop"
              alt="" fetchpriority="high" decoding="async">
         <div class="im-about-hero__inner container">
-            <span class="im-eyebrow im-about-hero__tag">About Fixkona</span>
-            <h1 class="im-about-hero__title">
+            <span class="im-eyebrow im-about-hero__tag im-hero-fade delay-1">About Fixkona</span>
+            <h1 class="im-about-hero__title im-hero-fade delay-2">
                 We're building the fastest way to find <span class="accent">trusted help</span> at home.
             </h1>
-            <p class="im-about-hero__sub">
+            <p class="im-about-hero__sub im-hero-fade delay-3">
                 Fixkona connects homeowners with vetted, reviewed professionals across Kenya — no rigid categories,
                 no guesswork, just the right pro for the job.
             </p>
@@ -319,7 +350,7 @@
     <section class="im-section">
         <div class="container">
             <div class="row align-items-center g-5">
-                <div class="col-lg-6 im-story__copy order-2 order-lg-1">
+                <div class="col-lg-6 im-story__copy order-2 order-lg-1 im-reveal">
                     <p class="im-eyebrow mb-3 d-block" style="color:var(--signal);">Our story</p>
                     <h2 class="im-section-heading display-5 mb-4">Home repairs shouldn't start with a guessing game</h2>
                     <p>
@@ -340,7 +371,7 @@
                         faster and safer to get quality work done on your home.
                     </p>
                 </div>
-                <div class="col-lg-6 order-1 order-lg-2">
+                <div class="col-lg-6 order-1 order-lg-2 im-reveal">
                     <div class="im-story__image">
                         <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=1200&auto=format&fit=crop"
                              alt="A tradesperson at work on site" loading="lazy">
@@ -361,8 +392,8 @@
                     <h2 class="im-section-heading display-5">The principles behind the product</h2>
                 </div>
             </div>
-            <div class="row g-5 mt-2">
-                <div class="col-lg-4">
+            <div class="row g-5 mt-2 im-reveal-group">
+                <div class="col-lg-4 im-reveal">
                     <div class="im-step-card">
                         <span class="im-eyebrow mb-2 d-block">Trust first</span>
                         <h3 class="h4 mb-2">Every pro is vetted</h3>
@@ -370,7 +401,7 @@
                            network — not after something goes wrong.</p>
                     </div>
                 </div>
-                <div class="col-lg-4">
+                <div class="col-lg-4 im-reveal">
                     <div class="im-step-card">
                         <span class="im-eyebrow mb-2 d-block">Speed</span>
                         <h3 class="h4 mb-2">No job sits idle</h3>
@@ -378,7 +409,7 @@
                            trade — no wasted quotes.</p>
                     </div>
                 </div>
-                <div class="col-lg-4">
+                <div class="col-lg-4 im-reveal">
                     <div class="im-step-card">
                         <span class="im-eyebrow mb-2 d-block">Transparency</span>
                         <h3 class="h4 mb-2">Clear pricing, no surprises</h3>
@@ -395,21 +426,21 @@
          ============================================================ -->
     <section class="im-section border-0 pt-0 pb-0">
         <div class="container">
-            <div class="row im-stat-row py-5 g-4 text-center justify-content-center">
-                <div class="col-md-3">
-                    <span class="display-5 im-stat-value d-block">2022</span>
+            <div class="row im-stat-row py-5 g-4 text-center justify-content-center im-reveal-group">
+                <div class="col-md-3 im-reveal">
+                    <span class="display-5 im-stat-value d-block" data-counter data-target="2022" data-decimals="0" data-suffix="">2022</span>
                     <span class="im-stat-label mt-2 d-block">Founded</span>
                 </div>
-                <div class="col-md-3">
-                    <span class="display-5 im-stat-value d-block">9,200+</span>
+                <div class="col-md-3 im-reveal">
+                    <span class="display-5 im-stat-value d-block" data-counter data-target="9200" data-decimals="0" data-suffix="+">9,200+</span>
                     <span class="im-stat-label mt-2 d-block">Vetted professionals</span>
                 </div>
-                <div class="col-md-3">
-                    <span class="display-5 im-stat-value d-block">40,000+</span>
+                <div class="col-md-3 im-reveal">
+                    <span class="display-5 im-stat-value d-block" data-counter data-target="40000" data-decimals="0" data-suffix="+">40,000+</span>
                     <span class="im-stat-label mt-2 d-block">Households served</span>
                 </div>
-                <div class="col-md-3">
-                    <span class="display-5 im-stat-value d-block">4.8 / 5</span>
+                <div class="col-md-3 im-reveal">
+                    <span class="display-5 im-stat-value d-block" data-counter data-target="4.8" data-decimals="1" data-suffix=" / 5">4.8 / 5</span>
                     <span class="im-stat-label mt-2 d-block">Average job rating</span>
                 </div>
             </div>
@@ -422,7 +453,7 @@
     <section class="im-reach">
         <div class="container">
             <div class="im-reach__grid">
-                <div class="im-reach__copy">
+                <div class="im-reach__copy im-reveal">
                     <p class="im-eyebrow mb-3 d-block" style="color:var(--signal);">Where we operate</p>
                     <h2 class="im-section-heading display-5 mb-3">Built for Kenya, at scale</h2>
                     <p>Fixkona connects homeowners with vetted professionals across Kenya, backed by a growing
@@ -434,7 +465,7 @@
                         <li><span class="city">New regions</span> added as demand grows</li>
                     </ul>
                 </div>
-                <div id="originkitGlobe">
+                <div id="originkitGlobe" class="im-reveal">
                     <span class="im-globe__loading" id="globeLoading">Loading globe…</span>
                 </div>
             </div>
@@ -448,7 +479,7 @@
      CTA
      ================================================================ -->
 <section class="im-cta-particles">
-    <div class="im-cta-particles__inner">
+    <div class="im-cta-particles__inner im-reveal">
         <span class="im-eyebrow im-cta-particles__eyebrow">For trades &amp; contractors</span>
         <h2 class="im-cta-particles__heading im-display" style="max-width: 600px;">
             Got a trade? We'll bring the jobs to you.
@@ -466,6 +497,104 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+
+<!-- ================================================================
+     SCROLL-REVEAL TRIGGER — adds .is-visible to .im-reveal elements
+     as they enter the viewport.
+     ================================================================ -->
+<script>
+(function () {
+    var els = document.querySelectorAll('.im-reveal');
+    if (!els.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('is-visible'); });
+        return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+    els.forEach(function (el) { io.observe(el); });
+})();
+</script>
+
+<!-- ================================================================
+     STAT COUNTERS — animated count-up for [data-counter] elements
+     (Squarespace-style: eased number roll from 0 → target, triggered
+     once the stat scrolls into view).
+     ================================================================ -->
+<script>
+(function () {
+    var counters = document.querySelectorAll('[data-counter]');
+    if (!counters.length) return;
+
+    function formatValue(num, decimals, suffix) {
+        var fixed = decimals > 0 ? num.toFixed(decimals) : Math.round(num).toString();
+        var parts = fixed.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.') + suffix;
+    }
+
+    function easeOutExpo(t) {
+        return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    }
+
+    function animateCounter(el) {
+        var target = parseFloat(el.getAttribute('data-target'));
+        var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+        var suffix = el.getAttribute('data-suffix') || '';
+        var duration = 1800;
+        var start = null;
+
+        function step(timestamp) {
+            if (start === null) start = timestamp;
+            var progress = Math.min((timestamp - start) / duration, 1);
+            var eased = easeOutExpo(progress);
+            el.textContent = formatValue(target * eased, decimals, suffix);
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                el.textContent = formatValue(target, decimals, suffix);
+            }
+        }
+        requestAnimationFrame(step);
+    }
+
+    var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    counters.forEach(function (el) {
+        var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+        var suffix = el.getAttribute('data-suffix') || '';
+        // Start every counter at zero so the roll-up has somewhere to climb from.
+        el.textContent = formatValue(0, decimals, suffix);
+    });
+
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+        counters.forEach(function (el) {
+            var target = parseFloat(el.getAttribute('data-target'));
+            var decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+            var suffix = el.getAttribute('data-suffix') || '';
+            el.textContent = formatValue(target, decimals, suffix);
+        });
+        return;
+    }
+
+    var counterIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                animateCounter(entry.target);
+                counterIO.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.4, rootMargin: '0px 0px -40px 0px' });
+
+    counters.forEach(function (el) { counterIO.observe(el); });
+})();
+</script>
 
 <!-- ================================================================
      GLOBE — vanilla Three.js port of the OriginKit "Globe" component
@@ -715,6 +844,29 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
         canvas.addEventListener('mouseenter', () => { isHovering = true; });
         canvas.addEventListener('mouseleave', () => { isHovering = false; });
     }
+
+    // ---- touch to rotate (mobile) ----
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        isDragging = true;
+        velocity.x = 0; velocity.y = 0;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        e.preventDefault();
+        const sens = mapDragSensitivity(config.dragSpeedUi);
+        const ddx = e.touches[0].clientX - lastX, ddy = e.touches[0].clientY - lastY;
+        target.x += ddx * sens; target.y += ddy * sens;
+        target.y = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, target.y));
+        velocity.x = ddx * sens * 0.3; velocity.y = ddy * sens * 0.3;
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+    }, { passive: false });
+
+    function onTouchEnd() { isDragging = false; }
+    canvas.addEventListener('touchend', onTouchEnd, { passive: true });
+    canvas.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
     new ResizeObserver(() => {
         const w = container.clientWidth || width, h = container.clientHeight || height;
