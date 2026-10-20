@@ -1,0 +1,432 @@
+{% extends 'Match/base.html' %}
+{% load static %}
+
+{% block title %}Contact Us | Fixkona{% endblock %}
+{% block body_class %}hero-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ================================================================
+   DESIGN TOKENS — mirrors Match/about.html so this page reads as
+   part of the same product, not a bolted-on "contact" template.
+   ================================================================ */
+.im, .im-footer {
+    --ink:        #0B0E14;
+    --panel:      #1A1F2B;
+    --panel-line: rgba(255,255,255,0.08);
+    --signal:     #FF4D2E;
+    --signal-dim: #C23A21;
+    --live:       #39FF6A;
+    --text-muted: #7C8591;
+    --white:      #FFFFFF;
+
+    background-color: var(--ink);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+}
+
+.im-display { font-family: 'Space Grotesk', sans-serif; }
+.im-mono    { font-family: 'JetBrains Mono', monospace; }
+
+.im-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+/* ================================================================
+   CONTACT HERO — same visual language as the about hero (dark,
+   full-bleed photo, vignette + gradient readability layer, Space
+   Grotesk headline), scaled down since there's no story to open with.
+   ================================================================ */
+.im-contact-hero {
+    position: relative;
+    width: 100%;
+    min-height: 56vh;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    background: var(--ink);
+    padding: 140px 0 80px;
+}
+.im-contact-hero__img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    filter: grayscale(20%) contrast(105%) brightness(0.7);
+}
+.im-contact-hero::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(11,14,20,0.55) 0%, rgba(11,14,20,0.4) 45%, var(--ink) 96%);
+}
+.im-contact-hero__inner { position: relative; z-index: 2; width: 100%; }
+.im-contact-hero__tag {
+    color: var(--signal);
+    display: block;
+    margin-bottom: 18px;
+}
+.im-contact-hero__title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    color: var(--white);
+    max-width: 720px;
+    margin: 0 0 20px;
+}
+.im-contact-hero__title .accent { color: var(--signal); }
+.im-contact-hero__sub {
+    font-size: 1.05rem;
+    color: #C9D2DC;
+    max-width: 560px;
+    margin: 0;
+}
+
+/* ================================================================
+   SECTIONS (shared pattern from about.html)
+   ================================================================ */
+.im-section {
+    padding: 110px 0;
+    background-color: var(--ink);
+    border-top: 1px solid var(--panel-line);
+    position: relative; z-index: 5;
+}
+.im-section-heading {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    color: var(--white); letter-spacing: -0.02em;
+}
+
+/* Channel cards — same border-top pattern as about's value cards */
+.im-step-card { border-top: 2px solid var(--signal); padding-top: 24px; height: 100%; }
+.im-step-card .im-eyebrow { color: var(--signal); }
+.im-step-card h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--white); }
+.im-step-card p  { color: var(--text-muted); line-height: 1.7; margin: 0; }
+.im-step-card a.im-step-card__link {
+    color: var(--white);
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-block;
+    margin-top: 4px;
+}
+.im-step-card a.im-step-card__link:hover { color: var(--signal); }
+
+/* Form panel — same card treatment as about's team cards */
+.im-contact-panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 44px;
+}
+@media (max-width: 767px) {
+    .im-contact-panel { padding: 30px 24px; }
+}
+
+.im-field { margin-bottom: 22px; }
+.im-field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: block;
+}
+.im-field .form-control,
+.im-field .form-select {
+    background: var(--ink);
+    border: 1px solid var(--panel-line);
+    color: var(--white);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    padding: 12px 14px;
+    border-radius: 3px;
+}
+.im-field .form-control::placeholder { color: rgba(255,255,255,0.28); }
+.im-field .form-control:focus,
+.im-field .form-select:focus {
+    background: var(--ink);
+    border-color: var(--signal);
+    color: var(--white);
+    box-shadow: 0 0 0 3px rgba(255,77,46,0.12);
+}
+.im-field textarea.form-control { min-height: 140px; resize: vertical; }
+
+.im-btn-signal {
+    background: var(--signal);
+    color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 2px solid var(--signal);
+    padding: 15px 38px;
+    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.im-btn-signal:hover { background: transparent; color: var(--white); border-color: var(--signal); }
+
+.im-status-line {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-top: 26px;
+    padding-top: 22px;
+    border-top: 1px solid var(--panel-line);
+}
+.im-status-line .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--live);
+    box-shadow: 0 0 0 3px rgba(57,255,106,0.18);
+    flex-shrink: 0;
+}
+
+.im-alert {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 13px 16px;
+    border-radius: 3px;
+    margin-bottom: 22px;
+}
+.im-alert.success { background: rgba(57,255,106,0.1); border: 1px solid rgba(57,255,106,0.28); color: #6CFFA0; }
+.im-alert.error   { background: rgba(255,77,46,0.1);  border: 1px solid rgba(255,77,46,0.3);  color: #FF8266; }
+
+/* CTA (reused from about.html) */
+.im-cta-particles {
+    position: relative; width: 100%; min-height: 60vh;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    border-top: 1px solid var(--panel-line);
+}
+.im-cta-particles__inner {
+    position: relative; z-index: 2; text-align: center;
+    padding: 60px 24px; display: flex; flex-direction: column; align-items: center;
+}
+.im-cta-particles__eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: #C9D2DC; margin-bottom: 22px; display: block;
+}
+.im-cta-particles__heading {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: clamp(2.2rem, 5.5vw, 3.8rem);
+    color: var(--white); letter-spacing: -0.025em; line-height: 1.07;
+    margin: 0 0 20px;
+}
+.im-cta-particles__btn {
+    display: inline-block; background: #fff; color: #000;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+    text-decoration: none; padding: 18px 54px; border: 2px solid #fff;
+    transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
+}
+.im-cta-particles__btn:hover { background: transparent; color: #fff; transform: translateY(-2px); }
+
+/* ================================================================
+   SCROLL-REVEAL ANIMATIONS
+   ================================================================ */
+@media (prefers-reduced-motion: no-preference) {
+    .im-reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    .im-reveal.is-visible { opacity: 1; transform: translateY(0); }
+    .im-reveal-group .im-reveal:nth-child(1) { transition-delay: 0s; }
+    .im-reveal-group .im-reveal:nth-child(2) { transition-delay: 0.08s; }
+    .im-reveal-group .im-reveal:nth-child(3) { transition-delay: 0.16s; }
+    .im-reveal-group .im-reveal:nth-child(4) { transition-delay: 0.24s; }
+
+    .im-hero-fade { opacity: 0; transform: translateY(20px); animation: imFadeUp 0.9s cubic-bezier(0.16,1,0.3,1) forwards; }
+    .im-hero-fade.delay-1 { animation-delay: 0.1s; }
+    .im-hero-fade.delay-2 { animation-delay: 0.22s; }
+    .im-hero-fade.delay-3 { animation-delay: 0.34s; }
+    @keyframes imFadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .im-reveal { opacity: 1; transform: none; }
+}
+</style>
+
+<div class="im">
+
+    <!-- ============================================================
+         HERO
+         ============================================================ -->
+    <section class="im-contact-hero">
+        <img class="im-contact-hero__img"
+             src="https://images.unsplash.com/photo-1553877522-43269d4ea984?q=80&w=1800&auto=format&fit=crop"
+             alt="" fetchpriority="high" decoding="async">
+        <div class="im-contact-hero__inner container">
+            <span class="im-eyebrow im-contact-hero__tag im-hero-fade delay-1">Contact Fixkona</span>
+            <h1 class="im-contact-hero__title im-hero-fade delay-2">
+                Let's get your request to the <span class="accent">right person</span>.
+            </h1>
+            <p class="im-contact-hero__sub im-hero-fade delay-3">
+                Questions about a booking, a provider, or partnering with Fixkona? Reach out below — our
+                team typically replies within one business day.
+            </p>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         CONTACT FORM + CHANNELS (form left, channels right)
+         ============================================================ -->
+    <section class="im-section">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-12 text-center">
+                    <p class="im-eyebrow">Get in touch</p>
+                    <h2 class="im-section-heading display-5">Tell us what you need, or reach us directly</h2>
+                </div>
+            </div>
+            <div class="row g-5">
+                <!-- Form -->
+                <div class="col-lg-7 im-reveal">
+                    <div class="im-contact-panel h-100">
+                        <p class="im-eyebrow mb-3 d-block" style="color:var(--signal);">Send a message</p>
+                        <h2 class="im-section-heading display-6 mb-4">Tell us what you need</h2>
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="im-alert {% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="post" action="{% url 'contact_page' %}">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-6 im-field">
+                                    <label for="contact-name">Full name</label>
+                                    <input type="text" class="form-control" id="contact-name" name="name" placeholder="Jane Wanjiru" required>
+                                </div>
+                                <div class="col-md-6 im-field">
+                                    <label for="contact-email">Email address</label>
+                                    <input type="email" class="form-control" id="contact-email" name="email" placeholder="jane@email.com" required>
+                                </div>
+                                <div class="col-12 im-field">
+                                    <label for="contact-subject">Subject</label>
+                                    <select class="form-select" id="contact-subject" name="subject" required>
+                                        <option value="" disabled selected>What's this about?</option>
+                                        <option value="booking">A booking or service request</option>
+                                        <option value="provider">Becoming a service provider</option>
+                                        <option value="billing">Billing or payments</option>
+                                        <option value="partnership">Partnerships &amp; media</option>
+                                        <option value="other">Something else</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 im-field mb-0">
+                                    <label for="contact-message">Message</label>
+                                    <textarea class="form-control" id="contact-message" name="message" placeholder="Tell us a bit about what you need..." required></textarea>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn im-btn-signal rounded-0 text-uppercase mt-2">
+                                Send message
+                            </button>
+                        </form>
+
+                        <div class="im-status-line">
+                            <span class="dot"></span>
+                            Support team is online now — average reply time under 24h
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channels -->
+                <div class="col-lg-5">
+                    <div class="row g-4 im-reveal-group">
+                        <div class="col-12 im-reveal">
+                            <div class="im-step-card">
+                                <span class="im-eyebrow mb-2 d-block">Office</span>
+                                <h3 class="h5 mb-2">Nairobi, Kenya</h3>
+                                <p>Westlands Business Park,<br>Waiyaki Way</p>
+                            </div>
+                        </div>
+                        <div class="col-12 im-reveal">
+                            <div class="im-step-card">
+                                <span class="im-eyebrow mb-2 d-block">Phone</span>
+                                <h3 class="h5 mb-2">Call us</h3>
+                                <p>Mon–Sat, 8am–6pm EAT</p>
+                                <a class="im-step-card__link im-mono" href="tel:+254700000000">+254 700 000 000</a>
+                            </div>
+                        </div>
+                        <div class="col-12 im-reveal">
+                            <div class="im-step-card">
+                                <span class="im-eyebrow mb-2 d-block">Email</span>
+                                <h3 class="h5 mb-2">Send a note</h3>
+                                <p>For general enquiries &amp; support</p>
+                                <a class="im-step-card__link im-mono" href="mailto:hello@fixkona.com">hello@fixkona.com</a>
+                            </div>
+                        </div>
+                        <div class="col-12 im-reveal">
+                            <div class="im-step-card">
+                                <span class="im-eyebrow mb-2 d-block">Response time</span>
+                                <h3 class="h5 mb-2">Under 24 hours</h3>
+                                <p>Our support team monitors enquiries every business day.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div><!-- /.im -->
+
+<!-- ================================================================
+     CTA
+     ================================================================ -->
+<section class="im-cta-particles">
+    <div class="im-cta-particles__inner im-reveal">
+        <span class="im-eyebrow im-cta-particles__eyebrow">For trades &amp; contractors</span>
+        <h2 class="im-cta-particles__heading im-display" style="max-width: 600px;">
+            Got a trade? We'll bring the jobs to you.
+        </h2>
+        <p class="im-cta-particles__eyebrow" style="max-width:520px;">
+            Join Fixkona and get matched with homeowners who already described exactly what they need.
+        </p>
+        <a href="{% url 'provider_signup_step1' %}"
+            class="btn im-btn-signal rounded-0 px-5 py-3 text-uppercase im-mono fs-7 im-cta-particles__btn">
+            Sign up as a pro
+        </a>
+    </div>
+</section>
+
+<!-- ================================================================
+     SCROLL-REVEAL TRIGGER — adds .is-visible to .im-reveal elements
+     as they enter the viewport.
+     ================================================================ -->
+<script>
+(function () {
+    var els = document.querySelectorAll('.im-reveal');
+    if (!els.length) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+        els.forEach(function (el) { el.classList.add('is-visible'); });
+        return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+    els.forEach(function (el) { io.observe(el); });
+})();
+</script>
+{% endblock %}

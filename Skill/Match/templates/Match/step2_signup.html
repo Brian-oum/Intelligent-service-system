@@ -533,23 +533,28 @@
                             <h5>Verification Documents</h5>
                         </div>
                         <p class="text-muted small mb-3">
-                            We need these three documents to verify your business. Accepted formats: PDF, JPG, PNG.
+                            We need these four documents to verify your business. Accepted formats: PDF, JPG, PNG.
                         </p>
                         <div class="row mt-2">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label>{{ documents_form.business_certificate.label }}</label>
                                 {{ documents_form.business_certificate }}
                                 <div class="form-text">{{ documents_form.business_certificate.help_text }}</div>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label>{{ documents_form.kra_pin_certificate.label }}</label>
                                 {{ documents_form.kra_pin_certificate }}
                                 <div class="form-text">{{ documents_form.kra_pin_certificate.help_text }}</div>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-3">
                                 <label>{{ documents_form.national_id.label }}</label>
                                 {{ documents_form.national_id }}
                                 <div class="form-text">{{ documents_form.national_id.help_text }}</div>
+                            </div>
+                            <div class="col-lg-3 col-md-6 mb-3">
+                                <label>{{ documents_form.good_conduct_certificate.label }}</label>
+                                {{ documents_form.good_conduct_certificate }}
+                                <div class="form-text">{{ documents_form.good_conduct_certificate.help_text }}</div>
                             </div>
                         </div>
                     </section>

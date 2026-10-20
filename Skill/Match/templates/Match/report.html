@@ -372,10 +372,10 @@
       font-weight: 700;
       white-space: nowrap;
     }
-    .badge-pending   { background: #fff8e1; color: #b45309; border: 1px solid #fde68a; }
-    .badge-accepted  { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-    .badge-completed { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    .badge-rejected  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .badge-pending   { background: rgba(255,183,3,.12);  color: #B4780A; border: 1px solid rgba(255,183,3,.3); }
+    .badge-accepted  { background: rgba(76,201,240,.12); color: #0F7CA8; border: 1px solid rgba(76,201,240,.3); }
+    .badge-completed { background: rgba(31,157,85,.12);  color: var(--success); border: 1px solid rgba(31,157,85,.3); }
+    .badge-rejected  { background: rgba(255,77,109,.12); color: var(--danger);  border: 1px solid rgba(255,77,109,.3); }
 
     /* ── Mini progress (service table) ─────────────────────────────────── */
     .mini-prog { display: flex; align-items: center; gap: .5rem; }
@@ -486,6 +486,7 @@
     }
     .funnel-bar-inner {
       height: 100%;
+      width: 0;
       border-radius: 6px;
       display: flex;
       align-items: center;
@@ -493,7 +494,7 @@
       font-size: .78rem;
       font-weight: 700;
       color: #fff;
-      transition: width .9s cubic-bezier(.4,0,.2,1);
+      transition: width 1s cubic-bezier(.22,1,.36,1);
     }
     .funnel-count { font-family: var(--mono); font-size: .8rem; font-weight: 700; width: 32px; text-align: right; }
     .funnel-label { font-size: .78rem; width: 80px; }
@@ -510,9 +511,59 @@
       .page { padding: 0; }
     }
 
+    /* ── Period filter (month / year) ───────────────────────────────────── */
+    .period-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .8rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .9rem 1.2rem;
+      margin-bottom: 1.8rem;
+    }
+    .period-filter { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+    .period-select {
+      padding: .5rem 2.1rem .5rem .9rem;
+      border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background-color: var(--bg);
+      color: var(--text);
+      font-size: .8rem;
+      font-weight: 600;
+      font-family: var(--font);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%236B7280' d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right .7rem center;
+      background-size: 12px;
+      transition: border-color .18s;
+    }
+    .period-select:focus { outline: none; border-color: var(--accent); }
+    .period-current {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .82rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .period-current strong { color: var(--text); font-family: var(--font-heading); }
+    @media (max-width: 560px) {
+      .period-bar { flex-direction: column; align-items: stretch; }
+      .period-filter { width: 100%; }
+      .period-select { flex: 1; }
+    }
+
     /* ── Responsive ──────────────────────────────────────────────────────── */
     @media (max-width: 1100px) {
-      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      /* 5 KPI cards → row 1: single full-width card, rows 2-3: 2 cards each */
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .kpi-grid > .kpi-link:first-child { grid-column: 1 / -1; }
       .insight-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 900px) {
@@ -527,7 +578,6 @@
       }
       .sidebar.open { transform: translateX(0); }
       .main-wrap { width: 100%; }
-      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
       .grid-3   { grid-template-columns: 1fr; }
       .insight-grid { grid-template-columns: 1fr; }
       .hero { flex-direction: column; align-items: flex-start; }
@@ -539,14 +589,15 @@
 
     /* ── Animations ──────────────────────────────────────────────────────── */
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
+      from { opacity: 0; transform: translateY(28px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-up { animation: fadeUp .45s ease both; }
+    .fade-up { animation: fadeUp .6s cubic-bezier(.22,1,.36,1) both; }
     .delay-1 { animation-delay: .05s; }
-    .delay-2 { animation-delay: .1s; }
-    .delay-3 { animation-delay: .15s; }
-    .delay-4 { animation-delay: .2s; }
+    .delay-2 { animation-delay: .15s; }
+    .delay-3 { animation-delay: .25s; }
+    .delay-4 { animation-delay: .35s; }
+    .delay-5 { animation-delay: .45s; }
 
     /* ── Scrollbar ───────────────────────────────────────────────────────── */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -594,7 +645,7 @@
       </button>
       <div class="topbar-left">
         <h4>Performance Report</h4>
-        <p>{{ provider.company_name }} &nbsp;·&nbsp; Generated {{ generated_at|date:"d M Y, H:i" }}</p>
+        <p>{{ provider.company_name }} &nbsp;·&nbsp; Viewing: {{ period_label }} &nbsp;·&nbsp; Generated {{ generated_at|date:"d M Y, H:i" }}</p>
       </div>
     </div>
     <div class="topbar-actions">
@@ -609,6 +660,35 @@
 
   <!-- Page -->
   <div class="page">
+
+    <!-- Period filter -->
+    <div class="period-bar fade-up">
+      <form method="get" class="period-filter">
+        <select name="month" class="period-select" aria-label="Month">
+          <option value="">Month (all)</option>
+          {% for m_val, m_name in month_choices %}
+            <option value="{{ m_val }}" {% if selected_month == m_val %}selected{% endif %}>{{ m_name }}</option>
+          {% endfor %}
+        </select>
+        <select name="year" class="period-select" aria-label="Year">
+          <option value="">Year (all time)</option>
+          {% for y in available_years %}
+            <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-accent">
+          <i class="fas fa-filter"></i> View
+        </button>
+        {% if selected_year %}
+          <a href="{{ request.path }}" class="btn btn-outline">
+            <i class="fas fa-times"></i> Clear
+          </a>
+        {% endif %}
+      </form>
+      <div class="period-current">
+        <i class="fas fa-calendar-alt"></i> Showing: <strong>{{ period_label }}</strong>
+      </div>
+    </div>
 
     <!-- KPI Row -->
     <div class="kpi-grid fade-up delay-1">
@@ -677,11 +757,11 @@
 
       <!-- Rating -->
       <a href="#reviews-section" class="kpi-link">
-        <div class="kpi-card" style="--kpi-color:#a855f7">
-          <div class="kpi-icon" style="background:rgba(168,85,247,.1); color:#a855f7">
+        <div class="kpi-card" style="--kpi-color:var(--accent2)">
+          <div class="kpi-icon" style="background:rgba(124,106,255,.1); color:var(--accent2)">
             <i class="fas fa-star"></i>
           </div>
-          <div class="kpi-val" style="color:#000000">
+          <div class="kpi-val" style="color:var(--navy)">
             {% if avg_rating %}{{ avg_rating|floatformat:1 }}{% else %}—{% endif %}
           </div>
           <div class="kpi-lbl">Avg Rating</div>
@@ -716,7 +796,7 @@
           <div class="funnel-step">
             <div class="funnel-label" style="color:var(--info); font-weight:700; font-size:.78rem">Received</div>
             <div class="funnel-bar-outer">
-              <div class="funnel-bar-inner" style="width:100%; background:var(--info)">Total</div>
+              <div class="funnel-bar-inner" id="fReceived" style="background:var(--info)">Total</div>
             </div>
             <div class="funnel-count" style="color:var(--info)">{{ total_requests }}</div>
           </div>
@@ -757,7 +837,7 @@
     </div>
 
     <!-- Status breakdown + Rating -->
-    <div class="grid-2 fade-up delay-2">
+    <div class="grid-2 fade-up delay-3">
 
       <!-- Status pie + bars -->
       <div class="card">
@@ -883,8 +963,8 @@
 
     <!-- Service Performance Table -->
     {% if service_breakdown %}
-    <div class="sec-title fade-up delay-3">Service Performance</div>
-    <div class="table-wrap fade-up delay-3">
+    <div class="sec-title fade-up delay-4">Service Performance</div>
+    <div class="table-wrap fade-up delay-4">
       <table class="data-table">
         <thead>
           <tr>
@@ -944,8 +1024,8 @@
 
     <!-- Recent requests table -->
     {% if recent_detail %}
-    <div class="sec-title fade-up delay-3">Recent Requests</div>
-    <div class="table-wrap fade-up delay-3">
+    <div class="sec-title fade-up delay-5">Recent Requests</div>
+    <div class="table-wrap fade-up delay-5">
       <table class="data-table">
         <thead>
           <tr>
@@ -1011,12 +1091,33 @@
   const completedReqs  = {{ completed_requests|default:0 }};
   const rejectedReqs   = {{ rejected_requests|default:0 }};
 
+  /* ── Brand colors, read from the CSS custom properties so charts
+     always match the site palette instead of hardcoded hex ──────────── */
+  const rootStyle    = getComputedStyle(document.documentElement);
+  const cssVar        = name => rootStyle.getPropertyValue(name).trim();
+  const colorAccent   = cssVar('--accent')  || '#FF4D2E';
+  const colorWarning  = cssVar('--warning') || '#ffb703';
+  const colorInfo     = cssVar('--info')    || '#4cc9f0';
+  const colorSuccess  = cssVar('--success') || '#1F9D55';
+  const colorDanger   = cssVar('--danger')  || '#ff4d6d';
+  const colorMuted    = cssVar('--muted')   || '#6B7280';
+  const colorNavy     = cssVar('--navy')    || '#0B0E14';
+
   /* ── Monthly Line Chart ──────────────────────────────────────────────── */
   const ctxLine = document.getElementById('monthlyChart').getContext('2d');
 
   const gradient = ctxLine.createLinearGradient(0, 0, 0, 280);
-  gradient.addColorStop(0, 'rgba(0,212,170,0.25)');
-  gradient.addColorStop(1, 'rgba(0,212,170,0.0)');
+  gradient.addColorStop(0, hexToRgba(colorAccent, 0.25));
+  gradient.addColorStop(1, hexToRgba(colorAccent, 0.0));
+
+  function hexToRgba(hex, alpha) {
+    hex = hex.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
 
   new Chart(ctxLine, {
     type: 'line',
@@ -1025,13 +1126,13 @@
       datasets: [{
         label: 'Requests',
         data: monthlyReqs,
-        borderColor: '#00d4aa',
+        borderColor: colorAccent,
         backgroundColor: gradient,
         fill: true,
         tension: 0.45,
         pointRadius: 5,
         pointHoverRadius: 8,
-        pointBackgroundColor: '#00d4aa',
+        pointBackgroundColor: colorAccent,
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
         borderWidth: 2.5
@@ -1040,10 +1141,34 @@
     options: {
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      animation: {
+        x: {
+          type: 'number',
+          easing: 'linear',
+          duration: 400,
+          from: NaN, // point starts "undrawn" until its delay elapses
+          delay(ctx) {
+            if (ctx.type !== 'data' || ctx.xStarted) return 0;
+            ctx.xStarted = true;
+            return ctx.index * 90;
+          }
+        },
+        y: {
+          type: 'number',
+          easing: 'linear',
+          duration: 400,
+          from: ctx => ctx.chart.scales.y.getPixelForValue(0), // rise up from the baseline
+          delay(ctx) {
+            if (ctx.type !== 'data' || ctx.yStarted) return 0;
+            ctx.yStarted = true;
+            return ctx.index * 90;
+          }
+        }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#111827',
+          backgroundColor: colorNavy,
           titleColor: '#fff',
           bodyColor: 'rgba(255,255,255,.7)',
           borderColor: 'rgba(255,255,255,.08)',
@@ -1058,12 +1183,12 @@
         y: {
           beginAtZero: true,
           grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
-          ticks: { color: '#6B7280', font: { size: 11 }, maxTicksLimit: 6 },
+          ticks: { color: colorMuted, font: { size: 11 }, maxTicksLimit: 6 },
           border: { display: false }
         },
         x: {
           grid: { display: false },
-          ticks: { color: '#6B7280', font: { size: 11 } },
+          ticks: { color: colorMuted, font: { size: 11 } },
           border: { display: false }
         }
       }
@@ -1078,7 +1203,7 @@
       labels: ['Pending', 'Accepted', 'Completed', 'Rejected'],
       datasets: [{
         data: [pendingReqs, acceptedReqs, completedReqs, rejectedReqs],
-        backgroundColor: ['#ffb703','#4cc9f0','#06d6a0','#ff4d6d'],
+        backgroundColor: [colorWarning, colorInfo, colorSuccess, colorDanger],
         borderWidth: 0,
         hoverOffset: 6
       }]
@@ -1086,10 +1211,16 @@
     options: {
       maintainAspectRatio: false,
       cutout: '72%',
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 900,
+        easing: 'easeOutQuart'
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#111827',
+          backgroundColor: colorNavy,
           titleColor: '#fff',
           bodyColor: 'rgba(255,255,255,.7)',
           borderColor: 'rgba(255,255,255,.08)',
@@ -1100,18 +1231,27 @@
     }
   });
 
-  /* ── Funnel widths ───────────────────────────────────────────────────── */
-  function setFunnel(id, count) {
+  /* ── Funnel widths (staggered fill-in animation) ─────────────────────── */
+  function setFunnel(id, count, delay) {
     const el = document.getElementById(id);
     if (!el) return;
     const pct = totalRequests > 0 ? Math.round((count / totalRequests) * 100) : 0;
-    el.style.width = Math.max(pct, 8) + '%';
-    el.textContent = pct + '%';
+    // Bar starts at width:0 (see CSS) — wait a frame so the browser
+    // registers that starting state, then set the real width so the
+    // existing `transition: width .9s` on .funnel-bar-inner animates
+    // it filling in, staggered step by step.
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        el.style.width = Math.max(pct, 8) + '%';
+        el.textContent = pct + '%';
+      });
+    }, delay);
   }
-  setFunnel('fPending',   pendingReqs);
-  setFunnel('fAccepted',  acceptedReqs);
-  setFunnel('fCompleted', completedReqs);
-  setFunnel('fRejected',  rejectedReqs);
+  setFunnel('fReceived',  totalRequests,  0);
+  setFunnel('fPending',   pendingReqs,   120);
+  setFunnel('fAccepted',  acceptedReqs,  240);
+  setFunnel('fCompleted', completedReqs, 360);
+  setFunnel('fRejected',  rejectedReqs,  480);
 
   /* ── Activity Heatmap ────────────────────────────────────────────────── */
   (function buildHeatmap() {
@@ -1124,7 +1264,7 @@
       const alpha = 0.1 + ratio * 0.85;
       const cell  = document.createElement('div');
       cell.className = 'heatmap-cell';
-      cell.style.background = `rgba(0,212,170,${alpha.toFixed(2)})`;
+      cell.style.background = hexToRgba(colorAccent, alpha);
       cell.title = `${m}: ${val} request${val !== 1 ? 's' : ''}`;
       cell.innerHTML = `<div class="month-lbl">${m.substring(0,3)}</div><div class="month-val">${val}</div>`;
       grid.appendChild(cell);
@@ -1140,5 +1280,19 @@
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('overlay').classList.remove('show');
   }
+
+  /* ── Period filter validation ───────────────────────────────────────── */
+  (function () {
+    const form = document.querySelector('.period-filter');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      const month = form.month.value;
+      const year = form.year.value;
+      if (month && !year) {
+        e.preventDefault();
+        alert('Please also select a year when filtering by a specific month.');
+      }
+    });
+  })();
 </script>
 {% endblock %}

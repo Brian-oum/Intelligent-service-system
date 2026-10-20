@@ -176,7 +176,14 @@ class CompanyDocumentsForm(forms.Form):
         }),
         help_text="ID of the business owner or authorized representative.",
     )
-
+    good_conduct_certificate = forms.FileField(
+        label="Certificate of Good Conduct",
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'form-control',
+            'accept': '.pdf,.jpg,.jpeg,.png'
+        }),
+        help_text=" Your Certificate of good conduct",
+    )
     # Document names are fixed (not user-typed) so we can label each
     # CompanyDocument row consistently no matter what the uploader names
     # the underlying file.
